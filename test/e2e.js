@@ -185,3 +185,15 @@ console.log('\nALL OK');
   assert(G.doGet({ parameter: { k: key } }).html.includes('function normPhone_('));
   console.log('phones OK');
 }
+
+// ---------- Final summary text ----------
+{
+  G.menuFinal();
+  const html = env.ui.lastDialog;
+  const text = html.match(/<textarea id="t">([\s\S]*?)<\/textarea>/)[1];
+  console.log('FINAL TEXT:\n' + text);
+  assert(text.includes('סיכום התקופה') && text.includes('ימי מניין'));
+  assert(/משתתפים בהגרלה \(\d+\)|עדיין אין/.test(text));
+  assert.equal(env.log.filter(l => l[0] === 'dialog').slice(-1)[0][1], 'סיכום התקופה — טקסט להדבקה בוואטסאפ');
+  console.log('final text OK');
+}

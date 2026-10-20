@@ -15,7 +15,7 @@
  *   Duplicates.gs      finding and merging duplicate people
  *   Utils.gs           dates, settings, keys, small helpers
  *   Secrets.gs         YOUR private values (deployment ID, gabbai code …). Not in git — copy Secrets.gs.example.
- *   KioskPage.html, AdminPage.html, LinkDialog.html, WeeklyTextDialog.html, BadLinkPage.html   the pages
+ *   KioskPage.html, AdminPage.html, LinkDialog.html, ReportTextDialog.html, BadLinkPage.html   the pages
  *   (Apps Script needs every file name unique across .gs and .html, hence the suffixes.)
  *
  * INSTALL — see README.md (manual copy into the editor, or `clasp push`).
@@ -140,7 +140,7 @@ function writeHelp_(sh) {
     [''],
     ['דוחות והגרלה'],
     ['דוח שבועי: נוכחות כל אחד ב-7 הימים האחרונים, וגם טקסט מוכן להדבקה בוואטסאפ.'],
-    ['דוח סופי: נוכחות לכל התקופה. משתתפים בהגרלה מי שהגיע ל-75% מימי המניין ומעלה (ניתן לשנות בהגדרות).'],
+    ['דוח סופי: נוכחות לכל התקופה, וגם סיכום קצר להדבקה בוואטסאפ. משתתפים בהגרלה מי שהגיע ל-75% מימי המניין ומעלה (ניתן לשנות בהגדרות).'],
     ['ימי מניין: ראשון עד שישי. ימים שבהם אין רישום (למשל יום טוב) — רשמו בעמודה E בגיליון הגדרות.'],
     [''],
     ['כפילויות'],

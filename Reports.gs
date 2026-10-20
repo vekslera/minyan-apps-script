@@ -17,9 +17,15 @@ function menuWeekly() {
   const stats = computeStats_(ctx, start, end);
   writeReport_(ctx, 'שבוע עד ' + end.slice(8, 10) + '.' + end.slice(5, 7),
                'נוכחות שבועית — ' + fmtKey_(start) + ' עד ' + fmtKey_(stats.end), stats, false);
-  const text = weeklyText_(ctx, stats);
-  ui.showModalDialog(HtmlService.createHtmlOutput(page_('WeeklyTextDialog').replace('__TEXT__', () => escHtml_(text))).setWidth(520).setHeight(520),
-                     'טקסט להדבקה בוואטסאפ');
+  showReportText_(ctx, weeklyText_(ctx, stats), 'דוח שבועי — טקסט להדבקה בוואטסאפ');
+}
+
+/** The dialog with a ready-to-paste text; warns when entries are still waiting for review. */
+function showReportText_(ctx, text, title) {
+  const pending = countPending_(ctx.ss);
+  const note = pending ? '<p class="warn">שימו לב: ' + pending + ' רישומים ממתינים בבדיקה ועדיין לא נספרו.</p>' : '';
+  const html = page_('ReportTextDialog').replace('__TEXT__', () => escHtml_(text)).replace('__NOTE__', () => note);
+  SpreadsheetApp.getUi().showModalDialog(HtmlService.createHtmlOutput(html).setWidth(520).setHeight(560), title);
 }
 
 function weeklyText_(ctx, stats) {
@@ -38,6 +44,30 @@ function menuFinal() {
   const stats = computeStats_(ctx, s.start, s.end);
   const soFar = s.end > todayKey_(ctx.tz) ? ' (עד היום)' : '';
   writeReport_(ctx, SH.FINAL, 'נוכחות לתקופה' + soFar, stats, true);
+  showReportText_(ctx, finalText_(ctx, stats, !!soFar), 'סיכום התקופה — טקסט להדבקה בוואטסאפ');
+}
+
+/** Short summary for WhatsApp: who is in the lottery, and how many came but did not reach the threshold. */
+function finalText_(ctx, stats, soFar) {
+  const n = stats.days.length;
+  const eligible = stats.rows.filter(r => r.eligible);
+  const others = stats.rows.length - eligible.length;
+  const lines = ['*' + ctx.settings.name + ' — סיכום התקופה ' + fmtShort_(stats.start) + ' עד ' + fmtShort_(stats.end) +
+                 (soFar ? ' (עד היום)' : '') + '*',
+                 n + ' ימי מניין · בהגרלה משתתפים מי שהגיעו ל-' + stats.threshold + '% ומעלה', ''];
+  if (eligible.length) {
+    lines.push('✓ משתתפים בהגרלה (' + eligible.length + '):');
+    eligible.forEach((r, i) => lines.push((i + 1) + '. ' + displayName_(r.person) + ' — ' + r.count + '/' + n +
+                                         ' (' + Math.round(r.pct * 100) + '%)'));
+  } else {
+    lines.push('עדיין אין מי שהגיע ל-' + stats.threshold + '% מימי המניין.');
+  }
+  if (others) {
+    const who = others === 1 ? 'מתפלל אחד השתתף' : others + ' מתפללים השתתפו';
+    lines.push('', (eligible.length ? 'עוד ' : '') + who + ' במניין בתקופה.');
+  }
+  lines.push('', 'יישר כח לכל המתפללים!');
+  return lines.join('\n');
 }
 
 /** Minyan days = Sunday–Friday in the range, up to today, minus the "no minyan" dates. */

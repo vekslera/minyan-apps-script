@@ -98,7 +98,7 @@ In the script editor:
 
 1. Click the default file **`Code.gs`** → ⋮ → **Rename / שינוי שם** → `Setup`. Replace its content with the content of `Setup.gs`.
 2. For each of the other `.gs` files (`Admin`, `Config`, `Data`, `Duplicates`, `HebrewCalendar`, `Kiosk`, `Matching`, `Names`, `Reports`, `Utils`, `WhatsApp`): **Files / קבצים → + → Script / סקריפט**. Type the name **without `.gs`** and paste the content.
-3. For each `.html` file: **+ → HTML**. Type the name **exactly**, without `.html`: `KioskPage`, `AdminPage`, `LinkDialog`, `WeeklyTextDialog`, `BadLinkPage`, then paste.
+3. For each `.html` file: **+ → HTML**. Type the name **exactly**, without `.html`: `KioskPage`, `AdminPage`, `LinkDialog`, `ReportTextDialog`, `BadLinkPage`, then paste.
 4. **Optional:** create `Secrets` (+ → Script) from `Secrets.gs.example`. Without it, everything is configured in the הגדרות sheet.
 5. Save (Ctrl+S).
 
@@ -253,7 +253,7 @@ Don't create a new deployment for an update: it gets a new address.
 | `Utils.gs` | Dates, settings, keys, private-settings loader, small helpers |
 | `KioskPage.html` | The registration page (tablet) |
 | `AdminPage.html` | Import + review dialog |
-| `LinkDialog.html`, `WeeklyTextDialog.html`, `BadLinkPage.html` | Small dialogs/pages |
+| `LinkDialog.html`, `ReportTextDialog.html`, `BadLinkPage.html` | Small dialogs/pages |
 | `appsscript.json` | Manifest (time zone, V8, web-app access) |
 | `Secrets.gs.example` | Template for your private `Secrets.gs` |
 | `deploy.ps1`, `deploy.sh` | Push + update the existing web-app deployment |
