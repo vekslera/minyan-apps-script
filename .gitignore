@@ -1,0 +1,16 @@
+# Private — never commit
+.clasp.json
+.clasprc.json
+Secrets.gs
+
+# Local tooling / OS
+node_modules/
+*.zip
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+test/shots/
+shots/

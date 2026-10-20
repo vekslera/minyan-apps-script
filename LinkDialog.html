@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head><base target="_top"><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+body{margin:0;padding:14px 18px;font-family:'Assistant',Arial,sans-serif;font-size:15px;color:#1c2230}
+.box{display:flex;gap:18px;align-items:flex-start}
+#qr{flex:none;width:180px;height:180px}
+.url{direction:ltr;text-align:left;word-break:break-all;background:#f6f3ec;border:1px solid #dcd6ca;border-radius:8px;padding:8px;font-size:12px;margin:8px 0}
+.btn{font:inherit;font-weight:700;padding:7px 14px;border-radius:8px;border:1px solid #1f4e79;background:#1f4e79;color:#fff;cursor:pointer;text-decoration:none;display:inline-block}
+.btn.light{background:#fff;color:#1f4e79}
+.muted{color:#626a7a;font-size:14px}
+</style></head>
+<body>
+<div class="box">
+  <div id="qr"></div>
+  <div>
+    <b>פתחו את הקישור בטאבלט שבבית הכנסת</b> (או סרקו את הקוד במצלמה).
+    <div class="url" id="url">__LINK__</div>
+    <a class="btn" href="__LINK__" target="_blank">פתיחה</a>
+    <button class="btn light" id="copy" type="button">העתקה</button>
+    <p class="muted">קוד גבאי: <b>__PIN__</b><br>בתחתית הדף לוחצים "מצב גבאי" כדי לרשום אחרים או תאריכים קודמים.</p>
+    <p class="muted">שמרו את הקישור לעצמכם. מי שאין לו את הקישור לא יכול להירשם.</p>
+  </div>
+</div>
+<script>
+try { new QRCode(document.getElementById('qr'), { text: '__LINK__', width: 180, height: 180 }); } catch (e) {}
+document.getElementById('copy').onclick = function () {
+  var t = document.getElementById('url').textContent, b = this;
+  function ok() { b.textContent = 'הועתק ✓'; }
+  if (navigator.clipboard) navigator.clipboard.writeText(t).then(ok, fallback); else fallback();
+  function fallback() { var r = document.createRange(); r.selectNodeContents(document.getElementById('url')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); try { document.execCommand('copy'); ok(); } catch (e) {} }
+};
+</script>
+</body></html>

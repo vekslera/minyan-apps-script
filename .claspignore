@@ -1,0 +1,7 @@
+# Only the Apps Script files are uploaded by `clasp push`.
+**/node_modules/**
+test/**
+*.example
+*.md
+*.ps1
+*.sh
