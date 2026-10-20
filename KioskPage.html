@@ -133,7 +133,7 @@ footer{text-align:center;margin-top:20px}
 </script>
 <script>
 var KEY = '__KEY__';
-var S = { info: null, pin: '', selectedId: '', phoneId: '', seq: 0, lookupTimer: null, resetTimer: null, busy: false };
+var S = { info: null, roster: [], pin: '', selectedId: '', phoneId: '', seq: 0, lookupTimer: null, resetTimer: null, busy: false };
 
 function $(id) { return document.getElementById(id); }
 function show(el, on) { (typeof el === 'string' ? $(el) : el).hidden = !on; }
@@ -181,6 +181,7 @@ function gregDate(k) {
 function init() {
   call('kioskInit', [KEY], function (info) {
     S.info = info;
+    S.roster = info.roster || S.roster;
     $('title').textContent = info.name || 'רישום נוכחות';
     var h = hebDate(info.today);
     $('hebDate').textContent = h;
@@ -207,23 +208,32 @@ function refreshClosed() {
 }
 
 // ---------- Live lookup ----------
+// Names are matched right here on the page (the same code as the server, see sharedJs_ in Utils.gs) against
+// the roster sent by kioskInit, so typing never waits for the server. Only a complete phone number is
+// looked up on the server, because the page never receives phone numbers.
 function onPhone() {
   S.phoneId = '';
   var p = normPhone($('phone').value);
-  if (validPhone_(p)) scheduleLookup(0);
-  else { show('phoneHit', false); show('names', true); scheduleLookup(); }
+  if (validPhone_(p)) phoneLookup(p);
+  else { S.seq++; show('phoneHit', false); show('names', true); localSuggest(); }
 }
-function onName() { S.selectedId = ''; scheduleLookup(); }
-function scheduleLookup(delay) {
+function onName() {
+  S.selectedId = '';
   clearTimeout(S.lookupTimer);
-  S.lookupTimer = setTimeout(lookup, delay == null ? 350 : delay);
+  S.lookupTimer = setTimeout(localSuggest, 120);
 }
-function lookup() {
-  var q = { phone: $('phone').value, first: $('first').value, last: $('last').value };
-  var phone = normPhone(q.phone);
-  if (!validPhone_(phone) && q.last.trim().length < 2 && q.first.trim().length < 2) { renderChips([]); return; }
+function localSuggest() {
+  if (S.phoneId) return;
+  var first = $('first').value, last = $('last').value;
+  if (norm_(last).length < 2 && norm_(first).length < 2) { renderChips([]); return; }
+  renderChips(suggest_(S.roster, clean_(first), clean_(last)).slice(0, 6).map(function (c) {
+    var p = c.person;
+    return { id: p.id, name: (p.first + ' ' + p.last).trim(), first: p.first, last: p.last, hint: p.hint };
+  }));
+}
+function phoneLookup(phone) {
   var my = ++S.seq;
-  call('kioskLookup', [KEY, q], function (res) {
+  call('kioskLookup', [KEY, { phone: phone }], function (res) {
     if (my !== S.seq) return;
     var hit = $('phoneHit');
     if (res.byPhone) {
@@ -236,12 +246,10 @@ function lookup() {
       return;
     }
     show('names', true);
-    if (validPhone_(phone)) {
-      hit.className = 'hit new';
-      hit.textContent = 'מספר חדש — נא למלא שם משפחה ושם פרטי';
-      show(hit, true);
-    } else show(hit, false);
-    renderChips(res.cands || []);
+    hit.className = 'hit new';
+    hit.textContent = 'מספר חדש — נא למלא שם משפחה ושם פרטי';
+    show(hit, true);
+    localSuggest();
   }, function () {});
 }
 function renderChips(cands) {
@@ -283,6 +291,7 @@ function submit(ev) {
 function done(res) {
   setBusy(false);
   if (!res.ok) return showMsg(res.message);
+  if (res.person && !S.roster.some(function (p) { return p.id === res.person.id; })) S.roster.push(res.person);
   var g = !!S.pin, other = res.date !== S.info.today;
   var mark = $('mark'), title = '', text = '';
   if (res.status === 'pending') {
@@ -356,6 +365,7 @@ setInterval(function () {
   call('kioskInit', [KEY], function (info) {
     var changed = !S.info || info.today !== S.info.today;
     S.info = info;
+    S.roster = info.roster || S.roster;
     if (changed) { $('hebDate').textContent = hebDate(info.today); $('gregDate').textContent = gregDate(info.today); if (S.pin) gabbaiUi(true); }
     refreshClosed();
   }, function () {});

@@ -127,14 +127,15 @@ function writeReport_(ctx, sheetName, title, stats, withEligibility) {
     sh.getRange(6, 1, data.length, header.length).setValues(data);
     sh.getRange(6, 5, data.length, 1).setNumberFormat('0%');
     if (withEligibility) {
-      stats.rows.forEach((r, i) => { if (r.eligible) sh.getRange(6 + i, 1, 1, fixed.length).setBackground('#dcfce7'); });
+      sh.getRange(6, 1, data.length, fixed.length)
+        .setBackgrounds(stats.rows.map(r => fixed.map(() => r.eligible ? '#dcfce7' : null)));
     }
     if (dayHdr.length) sh.getRange(6, fixed.length + 1, data.length, dayHdr.length).setHorizontalAlignment('center');
   }
   sh.setFrozenRows(5);
   sh.setFrozenColumns(1);
   sh.setColumnWidth(1, 170);
-  for (let c = fixed.length + 1; c <= header.length; c++) sh.setColumnWidth(c, 58);
+  if (dayHdr.length) sh.setColumnWidths(fixed.length + 1, dayHdr.length, 58);
   sh.activate();
 }
 

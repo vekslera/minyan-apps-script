@@ -14,14 +14,20 @@ function ensureSheet_(ss, name, header) {
 }
 
 function readSettings_(ss, tz) {
-  const sh = ss.getSheetByName(SH.SETTINGS);
-  if (!sh) throw new Error('המערכת עדיין לא הוגדרה — הריצו את "הגדרה ראשונית"');
-  const n = Math.max(sh.getLastRow(), 2);
-  const v = sh.getRange(1, 1, n, 5).getValues();
-  const map = {};
-  v.forEach(r => { const k = String(r[0]).trim(); if (k) map[k] = r[1]; });
+  // The sheet part is cached (cleared by onEdit of the הגדרות sheet); Secrets.gs is applied on top every time.
+  let raw = cacheGetJson_(CACHE_KEYS.SETTINGS);
+  if (!raw) {
+    const sh = sheet_(ss, SH.SETTINGS);
+    if (!sh) throw new Error('המערכת עדיין לא הוגדרה — הריצו את "הגדרה ראשונית"');
+    const v = sh.getRange(1, 1, Math.max(sh.getLastRow(), 2), 5).getValues();
+    const map = {};
+    v.forEach(r => { const k = String(r[0]).trim(); if (k) map[k] = r[1] instanceof Date ? toKey_(r[1], tz) : r[1]; });
+    raw = { map: map, excluded: v.slice(1).map(r => toKey_(r[4], tz)).filter(Boolean) };
+    cachePutJson_(CACHE_KEYS.SETTINGS, raw);
+  }
+  const map = raw.map;
   const num = (x, d) => (x === '' || x == null || isNaN(Number(x))) ? d : Number(x);
-  const excluded = new Set(v.slice(1).map(r => toKey_(r[4], tz)).filter(Boolean));
+  const excluded = new Set(raw.excluded);
   return { name: String(map[SET.NAME] || 'מניין שחרית').trim(), start: toKey_(map[SET.START], tz), end: toKey_(map[SET.END], tz),
            threshold: num(map[SET.PCT], 75), from: num(map[SET.FROM], 5), to: num(map[SET.TO], 11),
            // Values in Secrets.gs (not in git) win over the sheet.
@@ -33,6 +39,29 @@ function readSettings_(ss, tz) {
 function isOpenHour_(s, tz) {
   const h = Number(Utilities.formatDate(new Date(), tz, 'H'));
   return h >= s.from && h < s.to;
+}
+
+// ---- Script cache: makes registration-page lookups cheap. Never the source of truth for writes. ----
+
+const CACHE_KEYS = { PEOPLE: 'people.v1', SETTINGS: 'settings.v1' };
+const CACHE_SECONDS = 600;
+function cache_() { try { return CacheService.getScriptCache(); } catch (e) { return null; } }
+function cacheGetJson_(k) {
+  const c = cache_();
+  if (!c) return null;
+  try { const v = c.get(k); return v ? JSON.parse(v) : null; } catch (e) { return null; }
+}
+function cachePutJson_(k, v) {
+  const c = cache_();
+  if (!c) return;
+  try {
+    const s = JSON.stringify(v);
+    if (s.length < 95000) c.put(k, s, CACHE_SECONDS); else c.remove(k);      // a cache entry holds up to 100 KB
+  } catch (e) {}
+}
+function cacheClear_() {
+  const c = cache_();
+  if (c) { try { c.removeAll([CACHE_KEYS.PEOPLE, CACHE_KEYS.SETTINGS]); } catch (e) {} }
 }
 
 function countPending_(ss) {
@@ -118,5 +147,12 @@ function page_(name) {
  * logic. Only self-contained functions belong here.
  */
 function sharedJs_() {
-  return [normPhone_, validPhone_, fmtPhone_].map(f => f.toString()).join('\n');
+  const fns = [normPhone_, validPhone_, fmtPhone_,
+               clean_, norm_, skel_, levRatio_, sim_, splitFull_, nameVariants_, knownFulls_, nameScore_, suggest_,
+               nickCanon_, firstNames_, alsoSurnames_, isFirstName_, canonFirst_, firstSim_];
+  const consts = { FINALS: FINALS, NICKNAMES: NICKNAMES, FIRST_NAMES_EXTRA: FIRST_NAMES_EXTRA };
+  const regexes = { TITLES_RE: TITLES_RE, INVISIBLE_RE: INVISIBLE_RE, EMOJI_RE: EMOJI_RE };
+  return Object.keys(consts).map(k => 'var ' + k + ' = ' + JSON.stringify(consts[k]) + ';')
+    .concat(Object.keys(regexes).map(k => 'var ' + k + ' = ' + regexes[k].toString() + ';'))
+    .concat(fns.map(f => f.toString())).join('\n');
 }

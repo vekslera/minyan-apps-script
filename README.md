@@ -26,7 +26,7 @@ Everything the users see is in Hebrew. The code and this README are in English.
 9. [Updating the code later](#9-updating-the-code-later)
 10. [Troubleshooting](#10-troubleshooting)
 11. [Files](#11-files) and [private settings](#12-private-settings-secretsgs)
-12. [Local tests](#13-local-tests)
+12. [Local tests](#13-local-tests) and [performance notes](#14-performance-notes)
 
 Google's menus are shown here as **English / עברית**, because the labels depend on your Google language setting.
 
@@ -278,4 +278,13 @@ The tests run the real `.gs` files in Node.js against a simulated Sheet. They ne
 node test/e2e.js           # end-to-end: registration, import, review, reports, settings  → "ALL OK"
 node test/hebcal_check.js  # Hebrew calendar vs. the ICU calendar, 2023–2028
 node test/ui.js            # renders the pages in Chromium; needs:  npm install playwright
+node test/profile.js       # counts Google-service calls per action on a month of sample data
 ```
+
+## 14. Performance notes
+
+- **Each call to a Google service is the main cost**, roughly 30–150 ms on Google's servers. `test/profile.js` counts them per action.
+- **Name suggestions run in the page.** The registration page matches names itself, against the list of names it gets once on load and refreshes every 5 minutes. That list never includes phone numbers. Typing never waits for the server; only a complete phone number is checked there.
+- **Cache for read-only lookups.** People and settings are kept in the script cache for up to 10 minutes. The cache is cleared whenever the script writes, and by the `onEdit` trigger whenever someone edits the אנשים or הגדרות sheet by hand. Every write reads the sheet fresh, so the cache can never overwrite data.
+- **Deleting rows by hand** fires no `onEdit`. The tablet may then show a deleted name for up to 10 minutes; registrations are not affected.
+- **Large sheets load only when needed.** The attendance history and the review sheet are read only by actions that use them.

@@ -70,7 +70,7 @@ function menuMerge() {
     const p = ctx.byId[id];
     att.push([r[0], id, p ? displayName_(p) : r[2], r[3], r[4], r[5]]);
   });
-  const as = ss.getSheetByName(SH.ATT);
+  const as = sheet_(ss, SH.ATT);
   if (as.getLastRow() > 1) as.getRange(2, 1, as.getLastRow() - 1, ATT_HDR.length).clearContent();
   if (att.length) as.getRange(2, 1, att.length, ATT_HDR.length).setValues(att);
   ctx.attRows = att;

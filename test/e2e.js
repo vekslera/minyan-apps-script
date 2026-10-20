@@ -17,9 +17,9 @@ console.log('sheets:', env.ss.getSheets().map(s => s.name).join(', '));
 const key = env.props.KIOSK_KEY, tok = env.props.ADMIN_TOKEN;
 // Settings: open all day for the test, period started 10 days ago.
 const st = sheet('הגדרות');
-st.getRange('B6').setValue(0); st.getRange('B7').setValue(24);
+env.userEdit('הגדרות', 'B6', 0); env.userEdit('הגדרות', 'B7', 24);
 const today = G.todayKey_('Asia/Jerusalem');
-st.getRange('B3').setValue(G.keyToDate_(G.addDays_(today, -9), 'Asia/Jerusalem'));
+env.userEdit('הגדרות', 'B3', G.keyToDate_(G.addDays_(today, -9), 'Asia/Jerusalem'));
 const pin = String(st.getRange('B8').getValue());
 
 // doGet
@@ -135,7 +135,7 @@ console.log(env.log.filter(l => l[0] === 'alert').slice(-1)[0]);
 G.menuFindDuplicates();
 console.log('dups:', JSON.stringify(rows('כפילויות')));
 G.menuKioskLink(); console.log(env.log.slice(-1)[0]);
-st.getRange('B9').setValue('https://script.google.com/macros/s/ABC/exec');
+env.userEdit('הגדרות', 'B9', 'https://script.google.com/macros/s/ABC/exec');
 G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console.log('link dialog ok');
 console.log('\nALL OK');
 
@@ -196,4 +196,24 @@ console.log('\nALL OK');
   assert(/משתתפים בהגרלה \(\d+\)|עדיין אין/.test(text));
   assert.equal(env.log.filter(l => l[0] === 'dialog').slice(-1)[0][1], 'סיכום התקופה — טקסט להדבקה בוואטסאפ');
   console.log('final text OK');
+}
+
+// ---------- Cache safety ----------
+{
+  const init = web('kioskInit', key);
+  assert(init.roster.length > 3 && init.roster.every(p => !('phone' in p)), 'roster must not contain phones');
+  // A person row deleted by hand (fires no onEdit) must not come back on the next write.
+  const ps = env.ss.getSheetByName('אנשים');
+  const before = ps.getRange(2, 1, ps.getLastRow() - 1, 7).getValues();
+  const victim = before[before.length - 1][0];
+  ps.data.splice(before.length, 1);                       // delete the last person's row directly
+  sub({ phone: '0581234567', first: 'בדיקה', last: 'מטמון' });
+  const after = ps.getRange(2, 1, ps.getLastRow() - 1, 7).getValues().map(r => r[0]);
+  assert(!after.includes(victim), 'deleted row resurrected by a stale cache');
+  assert(after.length === before.length, 'one deleted, one added');
+  // A manual edit of a name is seen by the next lookup.
+  const rowIdx = after.indexOf('P001') + 2;
+  env.userEdit('אנשים', 'C' + rowIdx, 'כהנא');
+  assert(web('kioskInit', key).roster.find(p => p.id === 'P001').last === 'כהנא');
+  console.log('cache safety OK');
 }

@@ -18,6 +18,7 @@ class Range {
     return out;
   }
   getValue() { return this.getValues()[0][0]; }
+  getSheet() { return this.sh; }
   setValues(vals) {
     if (vals.length !== this.nr || vals[0].length !== this.nc) throw new Error(`setValues size mismatch: range ${this.nr}x${this.nc}, data ${vals.length}x${vals[0].length}`);
     vals.forEach((row, i) => row.forEach((v, j) => this.sh.set(this.r + i, this.c + j, v)));
@@ -29,7 +30,7 @@ class Range {
   insertCheckboxes() { for (let i = 0; i < this.nr; i++) this.sh.set(this.r + i, this.c, false); return this; }
 }
 ['setNumberFormat', 'setFontWeight', 'setBackground', 'setFontColor', 'setFontSize', 'setHorizontalAlignment',
- 'setNote', 'setDataValidation', 'setWrap'].forEach(m => { Range.prototype[m] = function () { return this; }; });
+ 'setNote', 'setDataValidation', 'setWrap', 'setBackgrounds'].forEach(m => { Range.prototype[m] = function () { return this; }; });
 
 class Sheet {
   constructor(ss, name) { this.ss = ss; this.name = name; this.data = []; }
@@ -54,7 +55,7 @@ class Sheet {
   clear() { this.data = []; return this; }
   activate() { return this; }
 }
-['setFrozenRows', 'setFrozenColumns', 'setColumnWidth', 'setRightToLeft'].forEach(m => { Sheet.prototype[m] = function () { return this; }; });
+['setFrozenRows', 'setFrozenColumns', 'setColumnWidth', 'setColumnWidths', 'setRightToLeft'].forEach(m => { Sheet.prototype[m] = function () { return this; }; });
 
 function makeEnv(opts) {
   opts = opts || {};
@@ -71,6 +72,7 @@ function makeEnv(opts) {
   };
   ss.insertSheet('Sheet1');
   const props = {};
+  const cacheStore = new Map();
   const ui = {
     ButtonSet: { OK: 'OK', OK_CANCEL: 'OK_CANCEL', YES_NO: 'YES_NO' }, Button: { OK: 'OK', YES: 'YES', CANCEL: 'CANCEL' },
     alert(...a) { log.push(['alert', a.slice(0, 2).join(' | ')]); return ui.nextAlert || 'OK'; },
@@ -105,6 +107,9 @@ function makeEnv(opts) {
     ScriptApp: { getService: () => ({ getUrl: () => '' }) },
     Logger: { log: m => log.push(['log', m]) },
     Session: { getEffectiveUser: () => ({ getEmail: () => 'test@example.com' }) },
+    CacheService: { getScriptCache: () => ({
+      get: k => (cacheStore.has(k) ? cacheStore.get(k) : null), put: (k, v) => { cacheStore.set(k, String(v)); },
+      remove: k => { cacheStore.delete(k); }, removeAll: ks => ks.forEach(k => cacheStore.delete(k)) }) },
   };
   vm.createContext(ctx);
   // Load the split project like Apps Script does: every .gs file into one global scope.
@@ -120,7 +125,13 @@ function makeEnv(opts) {
   // Tests never read your real Secrets.gs; a test may pass its own values instead.
   for (const f of files) if (f !== 'Secrets.gs') vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), ctx, { filename: f });
   if (opts.secrets) vm.runInContext('const SECRETS = ' + JSON.stringify(opts.secrets) + ';', ctx);
-  return { ctx, ss, ui, log, props, now };
+  // A change typed by a person in the Sheet: write it, then fire the onEdit simple trigger like Google does.
+  const userEdit = (sheetName, a1, value) => {
+    const r = ss.getSheetByName(sheetName).getRange(a1);
+    r.setValue(value);
+    if (typeof ctx.onEdit === 'function') ctx.onEdit({ range: r, value });
+  };
+  return { ctx, ss, ui, log, props, now, cacheStore, userEdit };
 }
 
 module.exports = { makeEnv };

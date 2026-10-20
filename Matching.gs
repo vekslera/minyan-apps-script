@@ -133,17 +133,27 @@ function nameScore_(p, variants) {
 function sim_(a, b) {
   if (!a || !b) return 0;
   if (a === b) return 1;
+  const memo = sim_.memo || (sim_.memo = new Map());
+  const key = a < b ? a + '\u0001' + b : b + '\u0001' + a;
+  const hit = memo.get(key);
+  if (hit !== undefined) return hit;
   let s = levRatio_(a, b);
   const sa = skel_(a), sb = skel_(b);
   if (sa && sb) {
     const L = Math.min(sa.length, sb.length);
     s = Math.max(s, (L >= 3 ? 0.92 : L === 2 ? 0.88 : 0.7) * levRatio_(sa, sb));
   }
+  if (memo.size > 50000) memo.clear();
+  memo.set(key, s);
   return s;
 }
 
 function norm_(s) {
-  return String(s == null ? '' : s).toLowerCase()
+  const key = String(s == null ? '' : s);
+  const memo = norm_.memo || (norm_.memo = new Map());
+  let v = memo.get(key);
+  if (v !== undefined) return v;
+  v = key.toLowerCase()
     .replace(/־/g, ' ')
     .normalize('NFKD')
     .replace(/[̀-֑ͯ-ׇ]/g, '')
@@ -151,6 +161,9 @@ function norm_(s) {
     .replace(/['"`׳״]/g, '')
     .replace(/[.\-_,()\/]/g, ' ')
     .replace(/\s+/g, ' ').trim();
+  if (memo.size > 20000) memo.clear();
+  memo.set(key, v);
+  return v;
 }
 
 function skel_(s) {

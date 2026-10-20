@@ -16,8 +16,11 @@ function kioskInit(key) {
   const ss = SpreadsheetApp.getActive(), tz = ss.getSpreadsheetTimeZone();
   const s = readSettings_(ss, tz);
   const today = todayKey_(tz);
+  // The names (never the phone numbers) go to the page, which then suggests names without calling the server.
+  const roster = peopleForReading_(ss).map(p => ({ id: p.id, first: p.first, last: p.last, aliases: p.aliases,
+                                                    hint: p.phone ? p.phone.slice(-3) : '' }));
   return { name: s.name, today: today, dow: dow_(today), open: isOpenHour_(s, tz),
-           from: s.from, to: s.to, noMinyan: s.excluded.has(today) };
+           from: s.from, to: s.to, noMinyan: s.excluded.has(today), roster: roster };
 }
 
 function kioskCheckPin(key, pin) {
@@ -31,13 +34,13 @@ function kioskCheckPin(key, pin) {
 function kioskLookup(key, q) {
   checkKey_(key);
   q = q || {};
-  const ctx = loadCtx_(SpreadsheetApp.getActive());
+  const people = peopleForReading_(SpreadsheetApp.getActive());
   const phone = normPhone_(q.phone);
-  const owner = validPhone_(phone) ? ctx.people.find(p => p.phone === phone) : null;
+  const owner = validPhone_(phone) ? people.find(p => p.phone === phone) : null;
   const first = clean_(q.first), last = clean_(q.last);
   let cands = [];
-  if (!owner && (norm_(last).length >= 2 || norm_(first).length >= 2)) {
-    cands = suggest_(ctx.people, first, last).slice(0, 6).map(c => pub_(c.person));
+  if (!owner && (norm_(last).length >= 2 || norm_(first).length >= 2)) {       // pages from before the roster
+    cands = suggest_(people, first, last).slice(0, 6).map(c => pub_(c.person));
   }
   return { byPhone: owner ? pub_(owner) : null, phoneKnown: !!owner, cands: cands };
 }
@@ -76,6 +79,7 @@ function kioskSubmit(key, d) {
     const res = submitEntry_(ctx, e);
     flushCtx_(ctx);
     return { ok: true, status: res.status, date: date,
+             person: res.person ? Object.assign(pub_(res.person), { aliases: res.person.aliases }) : null,
              name: res.person ? displayName_(res.person) : [e.first, e.last].filter(Boolean).join(' '),
              stats: res.person ? personStats_(ctx, res.person.id) : null };
   } finally {

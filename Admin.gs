@@ -139,7 +139,7 @@ function adminResolve(token, decisions) {
   try {
     const ss = SpreadsheetApp.getActive();
     const ctx = loadCtx_(ss);
-    const psh = ss.getSheetByName(SH.PENDING);
+    const psh = sheet_(ss, SH.PENDING);
     const n = psh.getLastRow() - 1;
     const vals = n > 0 ? psh.getRange(2, 1, n, PEND_HDR.length).getValues() : [];
     const idx = {};

@@ -43,6 +43,14 @@ function onOpen() {
     .addToUi();
 }
 
+/** Simple trigger: a manual edit of the people or settings sheet clears the cached copy. */
+function onEdit(e) {
+  try {
+    const name = e && e.range ? e.range.getSheet().getName() : '';
+    if (name === SH.PEOPLE || name === SH.SETTINGS) cacheClear_();
+  } catch (err) {}
+}
+
 function setup() {
   const ui = SpreadsheetApp.getUi();
   const ss = SpreadsheetApp.getActive();
@@ -99,6 +107,7 @@ function setup() {
   ensureSheet_(ss, SH.DUPS, DUPS_HDR);
 
   kioskKey_(); adminToken_();
+  cacheClear_();
 
   // Remove the empty default sheet ("Sheet1" / "גיליון1").
   const ours = new Set(Object.values(SH));

@@ -3,9 +3,9 @@ const { makeEnv } = require('./mock');
 const env = makeEnv(); const G = env.ctx;
 G.setup();
 const st = env.ss.getSheetByName('הגדרות');
-st.getRange('B6').setValue(0); st.getRange('B7').setValue(24);
+env.userEdit('הגדרות', 'B6', 0); env.userEdit('הגדרות', 'B7', 24);
 const today = G.todayKey_('Asia/Jerusalem');
-st.getRange('B3').setValue(G.keyToDate_(G.addDays_(today, -9), 'Asia/Jerusalem'));
+env.userEdit('הגדרות', 'B3', G.keyToDate_(G.addDays_(today, -9), 'Asia/Jerusalem'));
 const key = env.props.KIOSK_KEY, tok = env.props.ADMIN_TOKEN, pin = String(st.getRange('B8').getValue());
 const sub = d => G.kioskSubmit(key, d);
 sub({ phone: '0521111111', first: 'משה', last: 'כהן' });
@@ -91,12 +91,12 @@ const shim = `
   console.log('horizontal overflow on phone:', overflow);
   await k.close();
   // closed state (Shabbat simulated by hours)
-  st.getRange('B6').setValue(5); st.getRange('B7').setValue(5);
+  env.userEdit('הגדרות', 'B6', 5); env.userEdit('הגדרות', 'B7', 5);
   k = await page(kioskHtml, { width: 800, height: 700 }, true);
   console.log('closed:', (await k.textContent('#closed')).trim());
   await k.screenshot({ path: 'shots/k8-closed.png' });
   await k.close();
-  st.getRange('B6').setValue(0); st.getRange('B7').setValue(24);
+  env.userEdit('הגדרות', 'B6', 0); env.userEdit('הגדרות', 'B7', 24);
 
   // ---------- Admin: import ----------
   const adminHtml = G.ADMIN_HTML_FOR_TEST || null;
@@ -135,7 +135,7 @@ const shim = `
   await a.close();
 
   // ---------- Other dialogs ----------
-  st.getRange('B9').setValue('https://script.google.com/macros/s/AKfyc_EXAMPLE/exec');
+  env.userEdit('הגדרות', 'B9', 'https://script.google.com/macros/s/AKfyc_EXAMPLE/exec');
   G.menuKioskLink();
   a = await page(env.ui.lastDialog, { width: 560, height: 470 }, false); await a.screenshot({ path: 'shots/d1-link.png' }); await a.close();
   env.ui.nextPrompt = ''; G.menuWeekly();

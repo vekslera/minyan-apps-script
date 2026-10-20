@@ -3,41 +3,93 @@
 //  Sheets are read once into memory (a "ctx"), changed, and written back in one go.
 // ======================================================================================
 
-function loadCtx_(ss) {
-  const tz = ss.getSpreadsheetTimeZone();
-  const ps = ss.getSheetByName(SH.PEOPLE);
-  if (!ps) throw new Error('המערכת עדיין לא הוגדרה — הריצו את "הגדרה ראשונית"');
-  const pv = ps.getLastRow() > 1 ? ps.getRange(2, 1, ps.getLastRow() - 1, PEOPLE_HDR.length).getValues() : [];
-  const people = pv.filter(r => String(r[0]).trim()).map(r => ({
+/** Sheet handles, looked up once per execution (each lookup is a call to Google's servers). */
+function sheet_(ss, name) {
+  const memo = sheet_.memo || (sheet_.memo = {});
+  if (!memo[name]) memo[name] = ss.getSheetByName(name);
+  return memo[name];
+}
+
+function peopleFromRows_(pv) {
+  return pv.filter(r => String(r[0]).trim()).map(r => ({
     id: String(r[0]).trim(), first: String(r[1]).trim(), last: String(r[2]).trim(), phone: normPhone_(r[3]),
     aliases: String(r[4] || '').split(';').map(x => x.trim()).filter(Boolean), added: r[5], notes: String(r[6] || ''),
   }));
+}
+
+/** Reads the People sheet (always fresh — used before writing). Also refreshes the read-only cache. */
+function readPeople_(ss) {
+  const ps = sheet_(ss, SH.PEOPLE);
+  if (!ps) throw new Error('המערכת עדיין לא הוגדרה — הריצו את "הגדרה ראשונית"');
+  const n = ps.getLastRow() - 1;
+  const people = peopleFromRows_(n > 0 ? ps.getRange(2, 1, n, PEOPLE_HDR.length).getValues() : []);
+  people.rowsOnSheet = Math.max(n, 0);
+  cachePeople_(people);
+  return people;
+}
+
+/**
+ * People for read-only use (registration-page lookups): from the cache when possible, else the sheet.
+ * The cache is cleared on every write by this script and on any manual edit of the אנשים sheet (onEdit).
+ */
+function peopleForReading_(ss) {
+  const c = cacheGetJson_(CACHE_KEYS.PEOPLE);
+  if (c) return c.map(p => Object.assign(p, { added: p.added ? new Date(p.added) : '' }));
+  return readPeople_(ss);
+}
+function cachePeople_(people) {
+  cachePutJson_(CACHE_KEYS.PEOPLE, people.map(p => ({ id: p.id, first: p.first, last: p.last, phone: p.phone,
+    aliases: p.aliases, added: p.added instanceof Date ? p.added.getTime() : '', notes: p.notes })));
+}
+
+/**
+ * Everything one action needs, in memory. People and settings are read up front; the attendance history
+ * and the review sheet are read only if the action touches them (they are the large ones).
+ */
+function loadCtx_(ss) {
+  const tz = ss.getSpreadsheetTimeZone();
+  const people = readPeople_(ss);
   const byId = {};
   people.forEach(p => { byId[p.id] = p; });
-
-  const as = ss.getSheetByName(SH.ATT);
-  const av = as.getLastRow() > 1 ? as.getRange(2, 1, as.getLastRow() - 1, ATT_HDR.length).getValues() : [];
-  const attKeys = new Set(av.filter(r => r[0] && r[1]).map(r => toKey_(r[0], tz) + '|' + String(r[1]).trim()));
-
   const settings = readSettings_(ss, tz);
-  return { ss: ss, tz: tz, people: people, byId: byId, attRows: av, attKeys: attKeys, settings: settings,
-           excluded: settings.excluded, pendingBase: Math.max(ss.getSheetByName(SH.PENDING).getLastRow(), 1),
-           newAtt: [], newPending: [], peopleDirty: false };
+  const ctx = { ss: ss, tz: tz, people: people, byId: byId, settings: settings, excluded: settings.excluded,
+                newAtt: [], newPending: [], peopleDirty: false, peopleRowsOnSheet: people.rowsOnSheet };
+  let att = null, pendingBase = null;
+  const loadAtt = () => {
+    if (!att) {
+      const as = sheet_(ss, SH.ATT), n = as.getLastRow() - 1;
+      const rows = n > 0 ? as.getRange(2, 1, n, ATT_HDR.length).getValues() : [];
+      att = { rows: rows, keys: new Set(rows.filter(r => r[0] && r[1]).map(r => toKey_(r[0], tz) + '|' + String(r[1]).trim())) };
+    }
+    return att;
+  };
+  Object.defineProperty(ctx, 'attRows', { get: () => loadAtt().rows, set: v => { loadAtt().rows = v; } });
+  Object.defineProperty(ctx, 'attKeys', { get: () => loadAtt().keys });
+  Object.defineProperty(ctx, 'pendingBase', {
+    get: () => (pendingBase === null ? (pendingBase = Math.max(sheet_(ss, SH.PENDING).getLastRow(), 1)) : pendingBase),
+    set: v => { pendingBase = v; },
+  });
+  return ctx;
 }
 
 function flushCtx_(ctx) {
   const ss = ctx.ss;
   if (ctx.peopleDirty) {
-    const sh = ss.getSheetByName(SH.PEOPLE);
-    if (sh.getLastRow() > 1) sh.getRange(2, 1, sh.getLastRow() - 1, PEOPLE_HDR.length).clearContent();
+    const sh = sheet_(ss, SH.PEOPLE);
     if (ctx.people.length) {
       sh.getRange(2, 1, ctx.people.length, PEOPLE_HDR.length).setValues(ctx.people.map(p =>
         [p.id, p.first, p.last, p.phone, p.aliases.join('; '), p.added || new Date(), p.notes || '']));
     }
+    const extra = ctx.peopleRowsOnSheet - ctx.people.length;                // rows left over after a merge
+    if (extra > 0) sh.getRange(2 + ctx.people.length, 1, extra, PEOPLE_HDR.length).clearContent();
+    ctx.peopleRowsOnSheet = ctx.people.length;
+    cachePeople_(ctx.people);
   }
-  appendRows_(ss.getSheetByName(SH.ATT), ctx.newAtt);
-  appendRows_(ss.getSheetByName(SH.PENDING), ctx.newPending);
-  ctx.pendingBase += ctx.newPending.length;
+  if (ctx.newAtt.length) appendRows_(sheet_(ss, SH.ATT), ctx.newAtt);
+  if (ctx.newPending.length) {
+    appendRows_(sheet_(ss, SH.PENDING), ctx.newPending);
+    ctx.pendingBase += ctx.newPending.length;
+  }
   ctx.newAtt = []; ctx.newPending = []; ctx.peopleDirty = false;
 }
 
@@ -53,8 +105,12 @@ function record_(ctx, p, e) {
 }
 
 function createPerson_(ctx, e) {
+  // IDs are never reused, even after a row is deleted by hand: old attendance rows keep pointing at the old ID.
+  const props = PropertiesService.getDocumentProperties();
   const max = ctx.people.reduce((m, p) => Math.max(m, Number(String(p.id).replace(/\D/g, '')) || 0), 0);
-  const p = { id: 'P' + String(max + 1).padStart(3, '0'), first: e.first || '', last: e.last || '',
+  const next = Math.max(max + 1, Number(props.getProperty('NEXT_PERSON') || 0));
+  props.setProperty('NEXT_PERSON', String(next + 1));
+  const p = { id: 'P' + String(next).padStart(3, '0'), first: e.first || '', last: e.last || '',
               phone: e.phone || '', aliases: [], added: new Date(), notes: '' };
   ctx.people.push(p);
   ctx.byId[p.id] = p;
@@ -87,7 +143,7 @@ function queuePending_(ctx, e, note) {
 }
 
 function readPending_(ss) {
-  const sh = ss.getSheetByName(SH.PENDING);
+  const sh = sheet_(ss, SH.PENDING);
   const n = sh.getLastRow() - 1;
   return n > 0 ? sh.getRange(2, 1, n, PEND_HDR.length).getValues() : [];
 }
