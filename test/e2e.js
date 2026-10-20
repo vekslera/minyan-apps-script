@@ -153,3 +153,35 @@ console.log('\nALL OK');
   assert(G2.doGet({ parameter: { k: 'fixedkey123' } }).html.includes("var KEY = 'fixedkey123'"));
   console.log('secrets override OK');
 }
+
+// ---------- Phone numbers ----------
+{
+  const P = G.normPhone_, V = G.validPhone_, F = G.fmtPhone_;
+  const cases = [
+    ['052-111-1111', '0521111111', true], ['521111111', '0521111111', true], ['+972 52 111 1111', '0521111111', true],
+    ['+972-052-1111111', '0521111111', true], ['00972521111111', '0521111111', true], ['972521111111', '0521111111', true],
+    ['03-6123456', '036123456', true], ['36123456', '036123456', true], ['02 6234567', '026234567', true],
+    ['+972 3 612 3456', '036123456', true], ['077-4123456', '0774123456', true], ['774123456', '0774123456', true],
+    ['(212) 555-1234', '+12125551234', true], ['212.555.1234', '+12125551234', true], ['1-212-555-1234', '+12125551234', true],
+    ['+1 646 555 0199', '+16465550199', true], ['001 646 555 0199', '+16465550199', true], ['12125551234', '+12125551234', true],
+    ['123', '123', false], ['0501234', '0501234', false], ['+44 20 7946 0958', '+442079460958', false],
+    ['(012) 555-1234', '0125551234', false], ['212-155-1234', '+12121551234', false], ['', '', false],
+  ];
+  for (const [inp, want, ok] of cases) {
+    assert.equal(P(inp), want, 'normPhone ' + inp);
+    assert.equal(V(P(inp)), ok, 'validPhone ' + inp);
+  }
+  assert.equal(F('+12125551234'), '+1-212-555-1234'); assert.equal(F('036123456'), '03-6123456'); assert.equal(F('0774123456'), '077-4123456');
+  // end to end through the registration page
+  const r1 = sub({ phone: '(646) 555-0199', first: 'Yossi', last: 'Klein' });
+  assert.equal(r1.status, 'created');
+  const r2 = sub({ phone: '+1 646 555 0199' }); assert.equal(r2.status, 'already'); assert.equal(r2.name, 'Yossi Klein');
+  const r3 = sub({ phone: '03-6123456', first: 'שלום', last: 'ביטון' }); assert.equal(r3.status, 'created');
+  assert.equal(web('kioskLookup', key, { phone: '36123456' }).byPhone.name, 'שלום ביטון');
+  assert.equal(sub({ phone: '+44 20 7946 0958', last: 'Smith' }).ok, false);
+  const ppl = rows('אנשים').map(r => r[3]);
+  assert(ppl.includes('+16465550199') && ppl.includes('036123456'));
+  // the pages receive the same functions
+  assert(G.doGet({ parameter: { k: key } }).html.includes('function normPhone_('));
+  console.log('phones OK');
+}

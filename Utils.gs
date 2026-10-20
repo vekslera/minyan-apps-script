@@ -108,5 +108,15 @@ function dmyToKey_(d, m, y, todayKey) {
   return +k.slice(8, 10) === d ? k : '';
 }
 
-/** The HTML of one of the page files (KioskPage.html, AdminPage.html …). */
-function page_(name) { return HtmlService.createHtmlOutputFromFile(name).getContent(); }
+/** The HTML of one of the page files (KioskPage.html, AdminPage.html …), with shared code filled in. */
+function page_(name) {
+  return HtmlService.createHtmlOutputFromFile(name).getContent().replace('/*__SHARED_JS__*/', () => sharedJs_());
+}
+
+/**
+ * Server functions the pages use too (phone rules …), sent as source text so there is one copy of the
+ * logic. Only self-contained functions belong here.
+ */
+function sharedJs_() {
+  return [normPhone_, validPhone_, fmtPhone_].map(f => f.toString()).join('\n');
+}

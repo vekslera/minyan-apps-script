@@ -87,7 +87,7 @@ footer{text-align:center;margin-top:20px}
 
     <form id="form" autocomplete="off" novalidate hidden>
       <label class="field"><span>טלפון נייד <small>(מספיק בפעמים הבאות)</small></span>
-        <input id="phone" class="tel" type="tel" inputmode="tel" maxlength="16" placeholder="05X-XXXXXXX"></label>
+        <input id="phone" class="tel" type="tel" inputmode="tel" maxlength="20" placeholder="05X-XXXXXXX"></label>
       <div id="phoneHit" class="hit" hidden></div>
 
       <div id="names">
@@ -129,6 +129,9 @@ footer{text-align:center;margin-top:20px}
 </div>
 
 <script>
+/*__SHARED_JS__*/
+</script>
+<script>
 var KEY = '__KEY__';
 var S = { info: null, pin: '', selectedId: '', phoneId: '', seq: 0, lookupTimer: null, resetTimer: null, busy: false };
 
@@ -140,12 +143,7 @@ function call(fn, args, ok, fail) {
 }
 function errText(e) { return (e && e.message) ? e.message : 'אירעה תקלה, נסו שוב'; }
 function digits(s) { return String(s || '').replace(/\D/g, ''); }
-function normPhone(v) {
-  var s = digits(v);
-  if (s.indexOf('972') === 0) s = '0' + s.slice(3);
-  if (s.length === 9 && s[0] === '5') s = '0' + s;
-  return s;
-}
+function normPhone(v) { return normPhone_(v); }   // shared with the server (Matching.gs)
 function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 function keyDate(k) { return new Date(Date.UTC(+k.slice(0, 4), +k.slice(5, 7) - 1, +k.slice(8, 10), 12)); }
 function shortDate(k) { return k.slice(8, 10) + '/' + k.slice(5, 7); }
@@ -212,7 +210,7 @@ function refreshClosed() {
 function onPhone() {
   S.phoneId = '';
   var p = normPhone($('phone').value);
-  if (p.length >= 9) scheduleLookup(0);
+  if (validPhone_(p)) scheduleLookup(0);
   else { show('phoneHit', false); show('names', true); scheduleLookup(); }
 }
 function onName() { S.selectedId = ''; scheduleLookup(); }
@@ -223,7 +221,7 @@ function scheduleLookup(delay) {
 function lookup() {
   var q = { phone: $('phone').value, first: $('first').value, last: $('last').value };
   var phone = normPhone(q.phone);
-  if (phone.length < 9 && q.last.trim().length < 2 && q.first.trim().length < 2) { renderChips([]); return; }
+  if (!validPhone_(phone) && q.last.trim().length < 2 && q.first.trim().length < 2) { renderChips([]); return; }
   var my = ++S.seq;
   call('kioskLookup', [KEY, q], function (res) {
     if (my !== S.seq) return;
@@ -238,7 +236,7 @@ function lookup() {
       return;
     }
     show('names', true);
-    if (phone.length >= 9) {
+    if (validPhone_(phone)) {
       hit.className = 'hit new';
       hit.textContent = 'מספר חדש — נא למלא שם משפחה ושם פרטי';
       show(hit, true);
@@ -275,7 +273,7 @@ function submit(ev) {
   showMsg('');
   var phone = normPhone($('phone').value), last = $('last').value.trim(), first = $('first').value.trim();
   var pid = S.selectedId || S.phoneId;
-  if ($('phone').value.trim() && !/^0\d{8,9}$/.test(phone)) return showMsg('מספר הטלפון אינו תקין');
+  if ($('phone').value.trim() && !validPhone_(phone)) return showMsg('מספר הטלפון אינו תקין');
   if (!pid && !last) { $('last').focus(); return showMsg('נא למלא שם משפחה'); }
   setBusy(true);
   call('kioskSubmit', [KEY, { phone: phone, first: first, last: last, personId: pid,

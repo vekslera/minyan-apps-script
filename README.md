@@ -186,7 +186,7 @@ Then upload it with `clasp push` (route B: just save the file).
 
 The **הוראות** tab in the Sheet explains it in Hebrew. In short:
 
-- **Tablet.** A person types a phone number and taps "רישום נוכחות". The first time, they also type their name. The page suggests known names while typing.
+- **Tablet.** A person types a phone number and taps "רישום נוכחות". Israeli mobile, 07X and landline numbers and US/Canadian numbers (`+1`) are accepted, typed with or without dashes, spaces or a country code. The first time, they also type their name. The page suggests known names while typing.
 - **Gabbai mode** ("מצב גבאי" at the bottom of the page, plus the code): register others, choose an earlier date, and register outside the self-registration hours.
 - **מניין → ייבוא רשימה מוואטסאפ.** Paste the lists from WhatsApp; a date line such as `19/10` or `ח׳ חשוון` starts each day. Check the dates, then confirm the names in the review screen.
 - **מניין → רישומים לבדיקה.** Entries the system wasn't sure about. Pick the right person, confirm or add the phone, and save.

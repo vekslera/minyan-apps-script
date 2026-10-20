@@ -197,16 +197,42 @@ function splitFull_(full) {
   return { first: t.slice(0, -1).join(' '), last: t[t.length - 1] };
 }
 
+/**
+ * Phone numbers are stored in one canonical form:
+ *   Israel  — local form with the leading 0:  0521234567 (mobile), 0721234567 (07X), 031234567 (landline)
+ *   USA/Canada (NANP) — E.164:                 +12125551234 (mobile and landline look the same)
+ * Accepts what people type: dashes, spaces, (brackets), +972 / 00972 / 972, +1 / 001 / 1, and numbers whose
+ * leading 0 was dropped by a spreadsheet. Israeli numbers always start with 0 and US ones never do, so a bare
+ * 10-digit number starting with 2–9 is American.
+ * (This function is also sent to the web pages, so keep it self-contained.)
+ */
 function normPhone_(v) {
-  let s = String(v == null ? '' : v).replace(/\D/g, '');
+  const raw = String(v == null ? '' : v).trim();
+  let s = raw.replace(/\D/g, '');
   if (!s) return '';
-  if (s.startsWith('972')) s = '0' + s.slice(3);
-  if (s.length === 9 && s[0] === '5') s = '0' + s;          // a mobile number that lost its leading zero
+  let intl = /^\+/.test(raw);
+  if (!intl && s.indexOf('00') === 0) { s = s.slice(2); intl = true; }       // 00 = international prefix from Israel
+  if (s.indexOf('972') === 0 && (intl || s.length === 11 || s.length === 12 || s.length === 13)) {
+    s = s.slice(3);
+    if (s.charAt(0) === '0') s = s.slice(1);                                   // "+972 052…"
+    return '0' + s;
+  }
+  if (s.charAt(0) === '1' && s.length === 11) return '+' + s;                  // 1-212-555-1234 / +1 …
+  if (intl) return '+' + s;                                                    // another country — kept, but not valid
+  if (s.length === 10 && /^[2-9]/.test(s)) return '+1' + s;                   // (212) 555-1234
+  if (s.length === 9 && /^[57]/.test(s)) return '0' + s;                      // 05X / 07X without the 0
+  if (s.length === 8 && /^[23489]/.test(s)) return '0' + s;                   // 02/03/04/08/09 without the 0
   return s;
 }
-function validPhone_(p) { return /^0\d{8,9}$/.test(p); }
+/** A complete Israeli (mobile, 07X, landline) or North-American number, in canonical form. */
+function validPhone_(p) {
+  return /^0(?:5\d|7[2-9])\d{7}$/.test(p) ||       // 05X-XXXXXXX, 07X-XXXXXXX
+         /^0[23489]\d{7}$/.test(p) ||                // 0X-XXXXXXX
+         /^\+1[2-9]\d{2}[2-9]\d{6}$/.test(p);         // +1 NXX NXX XXXX
+}
 function fmtPhone_(p) {
   if (!p) return '';
+  if (/^\+1\d{10}$/.test(p)) return '+1-' + p.slice(2, 5) + '-' + p.slice(5, 8) + '-' + p.slice(8);
   if (p.length === 10) return p.slice(0, 3) + '-' + p.slice(3);
   if (p.length === 9) return p.slice(0, 2) + '-' + p.slice(2);
   return p;

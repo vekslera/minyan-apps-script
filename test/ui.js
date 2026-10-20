@@ -12,6 +12,7 @@ sub({ phone: '0521111111', first: 'משה', last: 'כהן' });
 sub({ phone: '0544444444', first: 'יצחק', last: 'כהן' });
 sub({ first: 'דוד', last: 'לוי' });
 sub({ phone: '0533333333', first: 'יוסף', last: 'פרידמן' });
+sub({ phone: '+1 646 555 0199', first: 'יוסי', last: 'קליין' });
 const past = [1,2,3,4,5,6,7,8].map(n => G.addDays_(today, -n)).filter(d => G.dow_(d) !== 6);
 past.slice(0, 6).forEach(d => sub({ phone: '0521111111', pin, date: d }));
 
@@ -53,6 +54,11 @@ const shim = `
   await k.fill('#phone', '052-111-1111'); await k.waitForTimeout(500);
   console.log('phone hit:', await k.textContent('#phoneHit'));
   await k.screenshot({ path: 'shots/k2-phone.png' });
+  await k.fill('#phone', '(646) 555-0199'); await k.waitForTimeout(500);
+  console.log('US phone hit:', await k.textContent('#phoneHit'));
+  await k.fill('#phone', '03-612'); await k.waitForTimeout(500);
+  console.log('partial landline, hit hidden:', await k.isHidden('#phoneHit'));
+  await k.fill('#phone', '052-111-1111'); await k.waitForTimeout(500);
   await k.click('#submit'); await k.waitForTimeout(400);
   console.log('done:', (await k.textContent('#done')).replace(/\s+/g, ' ').trim());
   await k.screenshot({ path: 'shots/k3-done.png' });
