@@ -3,7 +3,8 @@
 
 // ---------- Startup & state ----------
 function init() {
-  call('kioskInit', [KEY], function (info) {
+  var saved = load('minyanSession');
+  call('kioskInit', [KEY, saved || ''], function (info) {
     S.info = info;
     S.roster = info.roster || S.roster;
     $('title').textContent = info.name || 'רישום נוכחות';
@@ -12,14 +13,14 @@ function init() {
     show('sep', !!h);
     $('gregDate').textContent = gregDate(info.today);
     show('loading', false);
-    var pin = load('minyanPin');
-    if (pin && !S.pin) { S.pin = pin; gabbaiUi(true); reset(); }   // back in gabbai mode: no personal number
+    if (saved && info.session && !S.session) { S.session = saved; gabbaiActive(); gabbaiUi(true); reset(); }   // back in gabbai mode
+    else if (saved && !info.session) store('minyanSession', null);
     refreshClosed();
   }, function (e) { $('loading').textContent = errText(e); });
 }
 function refreshClosed() {
   var i = S.info, why = '';
-  if (!S.pin) {
+  if (!S.session) {
     if (i.dow === 6) why = 'שבת שלום<small>אין רישום בשבת</small>';
     else if (i.noMinyan) why = 'היום אין רישום';
     else if (!i.open) why = 'הרישום סגור כעת<small>הרישום פתוח בין השעות ' + i.from + ':00 ל-' + i.to + ':00</small>';
@@ -54,9 +55,10 @@ function resubmit(outsideOk) {
 }
 function send(outsideOk) {
   setBusy(true);
+  if (S.session) gabbaiActive();
   var f = S.form;
-  call('kioskSubmit', [KEY, { phone: f.phone, first: f.first, last: f.last, personId: f.personId, device: S.pin ? '' : DEVICE,
-                              pin: S.pin, date: S.pin ? $('date').value : '', loc: S.pin ? null : S.loc,
+  call('kioskSubmit', [KEY, { phone: f.phone, first: f.first, last: f.last, personId: f.personId, device: S.session ? '' : DEVICE,
+                              session: S.session, date: S.session ? $('date').value : '', loc: S.session ? null : S.loc,
                               outsideOk: !!outsideOk }], done);
 }
 function done(res) {
@@ -65,7 +67,7 @@ function done(res) {
   if (!res.ok) return showMsg(res.message);
   if (onPersonalPhone() && validPhone_(S.lastPhone)) rememberPhone(S.lastPhone);
   if (res.person && !S.roster.some(function (p) { return p.id === res.person.id; })) S.roster.push(res.person);
-  var g = !!S.pin, other = res.date !== S.info.today;
+  var g = !!S.session, other = res.date !== S.info.today;
   var mark = $('mark'), title = '', text = '';
   if (res.status === 'pending') {
     mark.className = 'mark wait'; mark.textContent = '…';
@@ -98,6 +100,6 @@ function reset() {
   show('done', false);
   show('where', false);
   refreshClosed();
-  if (S.pin) $('phone').focus();
+  if (S.session) $('phone').focus();
   prefillPhone();
 }

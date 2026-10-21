@@ -5,7 +5,7 @@
 
 var LOC_TIMEOUT = 15000;
 
-function needsLocation() { return !!(S.info && S.info.locationCheck) && !S.pin && DEVICE !== 'kiosk'; }
+function needsLocation() { return !!(S.info && S.info.locationCheck) && !S.session && DEVICE !== 'kiosk'; }
 
 /**
  * Calls back once with {lat, lng, acc} or {error: 'denied' | 'unavailable' | 'timeout' | 'unsupported'}.
@@ -44,9 +44,10 @@ function cancelWhere() { hideWhere(); reset(); }
 
 /** Gabbai mode: how far is this device from the shul right now? Helps to check the radius. Nothing is stored. */
 function testLocation() {
+  gabbaiActive();
   showInfo('בודק מיקום…');
   getLocation(function (loc) {
-    call('kioskCheckLocation', [KEY, S.pin, loc], function (r) {
+    call('kioskCheckLocation', [KEY, S.session, loc], function (r) {
       if (!r.configured) return showInfo('בדיקת מיקום לא מוגדרת (shulLat/shulLng ב-Secrets.gs).');
       if (r.reason) return showInfo('לא התקבל מיקום: ' + r.reason + '.');
       showInfo('מרחק מבית הכנסת: ' + r.distance + ' מ׳ · דיוק: ±' + r.accuracy + ' מ׳ · רדיוס: ' + r.radius + ' מ׳ — ' +

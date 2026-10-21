@@ -17,13 +17,14 @@ env.userEdit('הגדרות', 'B6', 0); env.userEdit('הגדרות', 'B7', 24);
 const today = G.todayKey_('Asia/Jerusalem');
 env.userEdit('הגדרות', 'B3', G.keyToDate_(G.addDays_(today, -30), 'Asia/Jerusalem'));
 const key = env.props.KIOSK_KEY, tok = env.props.ADMIN_TOKEN, pin = String(st.getRange('B8').getValue());
+const sess = G.kioskLogin(key, pin).token;
 const LAST = ['כהן','לוי','פרידמן','גולדשטיין','רבינוביץ','שניאורסון','מזרחי','ביטון','אברגל','קאופמן','מרגולין','הניג','ברנדלר','אנגלמן','טלוצינסקי','ריבקין','חימי','מנדלסון','קוביטשעק','ציקושווילי','בקשי','קטאשווילי','מיכלשווילי','בן דוד','שוורץ','וייס','קליין','רוזנברג','גרינברג','הורוביץ'];
 const FIRST = ['משה','יוסף','דוד','אברהם','יצחק','יעקב','מנחם','שמואל','חיים','לוי'];
 const people = [];
 for (let i = 0; i < 60; i++) people.push({ first: FIRST[i % 10], last: LAST[(i * 7) % 30], phone: '05' + String(20000000 + i * 1234567).slice(0, 8) });
 const days = []; for (let n = 1; n <= 30; n++) { const d = G.addDays_(today, -n); if (G.dow_(d) !== 6) days.push(d); }
-people.forEach((p, i) => G.kioskSubmit(key, { phone: p.phone, first: p.first, last: p.last, pin, date: days[0] }));
-days.slice(1).forEach((d, j) => people.forEach((p, i) => { if ((i + j) % 4) G.kioskSubmit(key, { phone: p.phone, pin, date: d }); }));
+people.forEach((p, i) => G.kioskSubmit(key, { phone: p.phone, first: p.first, last: p.last, session: sess, date: days[0] }));
+days.slice(1).forEach((d, j) => people.forEach((p, i) => { if ((i + j) % 4) G.kioskSubmit(key, { phone: p.phone, session: sess, date: d }); }));
 const wa = days.slice(0, 5).map(d => d.slice(8, 10) + '/' + d.slice(5, 7) + '\n' + people.slice(0, 25).map(p => p.last).join('\n')).join('\n') + '\nרבינוביץ חדש\nשמעון חדשי';
 G.adminQueueImport(tok, G.adminParseImport(tok, wa, '').rows);
 console.log('data: people', ss.getSheetByName('אנשים').getLastRow() - 1, '| attendance rows', ss.getSheetByName('נוכחות').getLastRow() - 1,

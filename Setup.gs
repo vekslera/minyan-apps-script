@@ -6,6 +6,7 @@
  *   Config.gs          sheet names, column layouts, settings labels, matching thresholds
  *   Kiosk.gs           the registration web page's server side (doGet + kiosk* functions)
  *   Admin.gs           WhatsApp import and review dialogs (admin* functions), registration-link dialog
+ *   Auth.gs            gabbai code, login sessions, lockout after wrong codes, changing the code
  *   Location.gs        location check for self-registration (coordinates are never stored)
  *   Matching.gs        who-is-this logic: phone first, then fuzzy Hebrew name matching
  *   Names.gs           first-name list and nicknames (מנדי = מנחם מענדל …)
@@ -40,6 +41,7 @@ function onOpen() {
     .addItem('איתור כפילויות', 'menuFindDuplicates')
     .addItem('מיזוג הכפילויות המסומנות', 'menuMerge')
     .addSeparator()
+    .addItem('שינוי קוד גבאי', 'menuChangePin')
     .addItem('הגדרה ראשונית', 'setup')
     .addToUi();
 }
@@ -140,7 +142,8 @@ function writeHelp_(sh) {
     ['אפשר טלפון נייד או קווי ישראלי (05X, 07X, 02/03/04/08/09) ומספר אמריקאי (‎+1‎). אפשר להקליד עם מקפים, רווחים או קידומת בינלאומית.'],
     [''],
     ['מצב גבאי'],
-    ['בתחתית דף הרישום: "מצב גבאי" + קוד הגבאי (בגיליון הגדרות, או בקובץ Secrets.gs אם הוגדר שם). מאפשר לרשום אחרים, גם לתאריכים קודמים ומחוץ לשעות הרישום.'],
+    ['בתחתית דף הרישום: "מצב גבאי" + קוד הגבאי. מאפשר לרשום אחרים, גם לתאריכים קודמים ומחוץ לשעות הרישום.'],
+    ['הקוד: לפחות 6 תווים. אפשר להחליף אותו (בכלי הגבאי, או כאן: מניין ← שינוי קוד גבאי). 3 קודים שגויים נועלים את הכניסה לדקה. "יציאה" מנתקת; אחרי 30 דקות ללא פעילות הניתוק אוטומטי.'],
     ['במצב גבאי יש כפתור "בדיקת מיקום": מראה את המרחק מבית הכנסת ואת דיוק המיקום. שימושי כדי לבדוק שהרדיוס מתאים.'],
     [''],
     ['רישומים לבדיקה'],

@@ -61,7 +61,7 @@ footer{text-align:center;margin-top:20px}
 .modal{position:fixed;inset:0;background:rgba(20,20,30,.45);display:grid;place-items:center;padding:16px}
 .modal .box{background:var(--card);border-radius:18px;padding:20px;width:100%;max-width:340px;text-align:center}
 .modal h3{margin:0 0 12px;font-size:22px}
-.modal input{text-align:center;letter-spacing:6px;direction:ltr}
+.modal input{text-align:center;letter-spacing:2px;direction:ltr}
 .modal .row{display:flex;gap:10px;margin-top:12px}
 .modal .row button{flex:1;margin:0}
 .loading{text-align:center;color:var(--muted);padding:30px}
@@ -137,7 +137,7 @@ footer{text-align:center;margin-top:20px}
 <div class="modal" id="pinDlg" hidden>
   <div class="box">
     <h3>כניסה למצב גבאי</h3>
-    <input id="pin" type="password" inputmode="numeric" maxlength="8" placeholder="קוד">
+    <input id="pin" type="password" maxlength="32" placeholder="קוד גבאי" autocomplete="off" autocapitalize="off" spellcheck="false">
     <div class="msg err" id="pinMsg" hidden style="margin-top:10px"></div>
     <div class="row">
       <button class="primary" id="pinOk" type="button">כניסה</button>

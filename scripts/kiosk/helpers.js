@@ -3,7 +3,11 @@
 // Declarations only — nothing runs when the file loads; the page calls the start function.
 
 function call(fn, args, ok, fail) {
-  var r = google.script.run.withSuccessHandler(ok).withFailureHandler(fail || function (e) { setBusy(false); showMsg(errText(e)); });
+  var r = google.script.run.withSuccessHandler(ok).withFailureHandler(fail || function (e) {
+    setBusy(false);
+    if (typeof sessionEnded === 'function' && sessionEnded(e)) return;
+    showMsg(errText(e));
+  });
   r[fn].apply(r, args);
 }
 function errText(e) { return (e && e.message) ? e.message : 'אירעה תקלה, נסו שוב'; }

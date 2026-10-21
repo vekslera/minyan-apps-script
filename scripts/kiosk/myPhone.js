@@ -7,7 +7,7 @@
 
 var MY_PHONE_KEY = 'minyanMyPhone';
 
-function onPersonalPhone() { return DEVICE === 'mobile' && !S.pin; }
+function onPersonalPhone() { return DEVICE === 'mobile' && !S.session; }
 function savedPhone() { try { return localStorage.getItem(MY_PHONE_KEY) || ''; } catch (e) { return ''; } }
 function rememberPhone(p) { try { localStorage.setItem(MY_PHONE_KEY, p); } catch (e) {} }
 function forgetPhone() { try { localStorage.removeItem(MY_PHONE_KEY); } catch (e) {} }

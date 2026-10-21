@@ -73,11 +73,8 @@ function logLocationCheck_(info) {
 }
 
 /** Gabbai tool on the registration page: how far is this device from the shul right now? Nothing is stored. */
-function kioskCheckLocation(key, pin, loc) {
-  checkKey_(key);
-  const ss = SpreadsheetApp.getActive();
-  const s = readSettings_(ss, ss.getSpreadsheetTimeZone());
-  if (!s.pin || String(pin).trim() !== s.pin) throw new Error('קוד הגבאי שגוי');
+function kioskCheckLocation(key, session, loc) {
+  checkSession_(key, session);
   const area = shulArea_();
   if (!area) return { configured: false };
   const chk = checkLocation_(loc);

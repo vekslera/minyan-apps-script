@@ -7,6 +7,7 @@ env.userEdit('הגדרות', 'B6', 0); env.userEdit('הגדרות', 'B7', 24);
 const today = G.todayKey_('Asia/Jerusalem');
 env.userEdit('הגדרות', 'B3', G.keyToDate_(G.addDays_(today, -9), 'Asia/Jerusalem'));
 const key = env.props.KIOSK_KEY, tok = env.props.ADMIN_TOKEN, pin = String(st.getRange('B8').getValue());
+const sess = G.kioskLogin(key, pin).token;
 const sub = d => G.kioskSubmit(key, Object.assign({ device: 'tablet' }, d));
 sub({ phone: '0521111111', first: 'משה', last: 'כהן' });
 sub({ phone: '0544444444', first: 'יצחק', last: 'כהן' });
@@ -14,7 +15,7 @@ sub({ first: 'דוד', last: 'לוי' });
 sub({ phone: '0533333333', first: 'יוסף', last: 'פרידמן' });
 sub({ phone: '+1 646 555 0199', first: 'יוסי', last: 'קליין' });
 const past = [1,2,3,4,5,6,7,8].map(n => G.addDays_(today, -n)).filter(d => G.dow_(d) !== 6);
-past.slice(0, 6).forEach(d => sub({ phone: '0521111111', pin, date: d }));
+past.slice(0, 6).forEach(d => sub({ phone: '0521111111', session: sess, date: d }));
 
 const shim = `
   (function(){

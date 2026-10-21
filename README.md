@@ -94,7 +94,7 @@ clasp login                # opens a browser: choose the minyan account and allo
 **Push:**
 
 ```bash
-clasp status      # lists what will be uploaded: 13 .gs files + Secrets.gs, 5 .html files, 17 scripts/…/*.js files, appsscript.json
+clasp status      # lists what will be uploaded: 14 .gs files + Secrets.gs, 5 .html files, 17 scripts/…/*.js files, appsscript.json
 clasp push -f     # -f overwrites the project's manifest without asking
 ```
 
@@ -106,7 +106,7 @@ clasp push -f     # -f overwrites the project's manifest without asking
 In the script editor:
 
 1. Click the default file **`Code.gs`** → ⋮ → **Rename / שינוי שם** → `Setup`. Replace its content with the content of `Setup.gs`.
-2. For each of the other `.gs` files (`Admin`, `Config`, `Data`, `Duplicates`, `HebrewCalendar`, `Kiosk`, `Location`, `Matching`, `Names`, `Reports`, `Utils`, `WhatsApp`): **Files / קבצים → + → Script / סקריפט**. Type the name **without `.gs`** and paste the content.
+2. For each of the other `.gs` files (`Admin`, `Auth`, `Config`, `Data`, `Duplicates`, `HebrewCalendar`, `Kiosk`, `Location`, `Matching`, `Names`, `Reports`, `Utils`, `WhatsApp`): **Files / קבצים → + → Script / סקריפט**. Type the name **without `.gs`** and paste the content.
 3. For each `.html` file: **+ → HTML**. Type the name **exactly**, without `.html`: `KioskPage`, `AdminPage`, `LinkDialog`, `ReportTextDialog`, `BadLinkPage`, then paste.
 4. For each file in the `scripts` folder: also **+ → HTML** (not Script). Type its path **without `.js`**, slashes included, e.g. `scripts/kiosk/main`. Paste the file's content as it is. All 17 files:
    `scripts/common/dom`, `scripts/common/clipboard`,
@@ -161,7 +161,7 @@ Route A alternative: `clasp create-deployment -d "registration page"` prints the
 const SECRETS = {
   ownerAccount: 'minyan.yourshul@gmail.com',
   deploymentId: 'AKfycb…',         // from step 5
-  gabbaiPin: '2468',               // your choice; empty = use the code in the הגדרות sheet
+  gabbaiPin: '',                   // initial gabbai code, 6+ characters; the gabbai can change it later
   lotteryThreshold: 75,            // % of minyan days needed for the lottery; empty = use the הגדרות sheet
   shulLat: 31.9857703,             // the shul's point (Google Maps → right-click → coordinates);
   shulLng: 34.8582831,             //   empty = no location check
@@ -182,7 +182,7 @@ Then upload it with `clasp push` (route B: just save the file).
 | 4 | סוף התקופה | Last day of the period |
 | 5 | אחוז נוכחות מינימלי להגרלה | `75` means 75% or more — ignored when `lotteryThreshold` is set in `Secrets.gs` |
 | 6–7 | רישום עצמי פתוח משעה / עד שעה | Self-registration hours, e.g. `5` and `11`. The gabbai can register at any time |
-| 8 | קוד גבאי | The gabbai code, if not set in `Secrets.gs` |
+| 8 | קוד גבאי | The initial gabbai code, if not set in `Secrets.gs`. Once the gabbai changes the code, this cell is no longer used (column C then says so) |
 | 9 | כתובת דף הרישום (Web app) | The web-app URL from step 5, if `deploymentId` is not set in `Secrets.gs` |
 
 - **Values go in column B.** Column C is only an explanation, and a value typed there is ignored.
@@ -249,7 +249,7 @@ The **הוראות** tab in the Sheet explains it in Hebrew. In short:
   - **Phone numbers.** Israeli mobile, 07X and landline numbers and US/Canadian numbers (`+1`) are accepted, typed with or without dashes, spaces or a country code. The number is optional; the first time, people also type their name.
   - **On a phone, the number is remembered** for next time.
   - **Location.** The phone asks for location permission the first time. Someone reported as outside the shul can retry, or send the registration for the gabbai's approval (it then appears in **רישומים לבדיקה**).
-- **Gabbai mode** ("מצב גבאי" at the bottom of the page, plus the code): register others, choose an earlier date, and register outside the self-registration hours.
+- **Gabbai mode** ("מצב גבאי" at the bottom of the page, plus the code): register others, choose an earlier date, and register outside the self-registration hours. See [Gabbai code and login](#gabbai-code-and-login).
 - **מניין → ייבוא רשימה מוואטסאפ.** Paste the lists from WhatsApp; a date line such as `19/10` or `ח׳ חשוון` starts each day. Check the dates, then confirm the names in the review screen.
 - **מניין → רישומים לבדיקה.** Entries the system wasn't sure about. Pick the right person, confirm or add the phone, and save.
 - **מניין → דוח שבועי / דוח סופי לתקופה.** Each report opens as a new tab, together with a short text to paste into WhatsApp.
@@ -257,6 +257,18 @@ The **הוראות** tab in the Sheet explains it in Hebrew. In short:
 - **מניין → איתור כפילויות** finds people entered twice. Tick "למזג?" next to the real duplicates, then use **מיזוג הכפילויות המסומנות**.
 
 ---
+
+### Gabbai code and login
+
+- **One code for everything in gabbai mode.** Use at least 6 characters. Letters and digits are fine; spaces are not.
+- **Where the code comes from**, first match wins:
+  1. the code the gabbai changed;
+  2. `gabbaiPin` in `Secrets.gs`;
+  3. row 8 of the הגדרות sheet.
+- **Changing it.** The gabbai can change it from the gabbai menu, which asks for the current code again, or the owner via **מניין → שינוי קוד גבאי** in the Sheet. A change logs everyone out of gabbai mode.
+- **Logging in and out.** Logging in gives the browser a session for 30 minutes after the last activity; the code itself is never kept in the browser. **"יציאה"** logs out at once. After 30 minutes without activity the page leaves gabbai mode by itself.
+- **Wrong codes.** 3 wrong codes in a row lock gabbai login for **60 seconds**, for every device. This is a brake on guessing, since anyone with the page link could try.
+- **Weak code warning.** A code shorter than 6 characters still works, but after logging in the page suggests changing it.
 
 ## 9. Updating the code later
 
@@ -294,6 +306,8 @@ Don't create a new deployment for an update: it gets a new address.
 | Page says "הקישור אינו תקין" | You opened the bare `/exec` address. Use the full link from **מניין → קישור לדף הרישום**. |
 | Google page: "Sorry, unable to open the file at this time / מצטערים, לא ניתן לפתוח את הקובץ כרגע" | The address doesn't belong to an *active* deployment (an old or archived one, or a typo), or several Google accounts are signed in. Check **Deploy → Manage deployments** and compare the deployment ID with yours. Try a private window. In the editor, **Executions / ביצועים** shows a `doGet` row for every request that actually reached the script. |
 | A registration shows "הרישום התקבל ויאושר על ידי הגבאי" | The system wasn't sure who it was, or the person sent it for approval from outside the shul. The entry waits in **מניין → רישומים לבדיקה**; its note says why. |
+| "קוד שגוי 3 פעמים — הכניסה נעולה ל-60 שניות" | Wait a minute and type the code carefully; it is case-sensitive. If the code is lost, the Sheet's owner can set a new one: **מניין → שינוי קוד גבאי**. |
+| "ההתחברות למצב גבאי הסתיימה" | The session ended: 30 minutes without activity, or the code was changed. Log in again. |
 | A computer shows "רישום עצמי — מטלפון נייד או מטאבלט" | By design: self-registration is for phones and tablets. On a computer use **מצב גבאי**. |
 | Someone standing in the shul gets "נראה שאתה מחוץ לבית הכנסת" | Indoor GPS can be poor. They can press "נסה שוב" after a few seconds, or "שלח לאישור הגבאי". If it happens often, check with **בדיקת מיקום** (gabbai mode) and raise `shulRadius`, or correct `shulLat`/`shulLng`, in `Secrets.gs`. |
 | Every phone gets "לא התקבל מיקום", even after allowing location | Location permission: phone settings → the browser → Location → allow, and in the browser the site's permission. If it still fails for everyone, the browser may not allow location inside Google's page frame; meanwhile clear `shulLat`/`shulLng` in `Secrets.gs` to turn the check off, and redeploy. |
@@ -310,6 +324,7 @@ Don't create a new deployment for an update: it gets a new address.
 | `Config.gs` | Sheet names, column layouts, settings labels, matching thresholds |
 | `Kiosk.gs` | Server side of the registration page (`doGet`, `kiosk*`) |
 | `Admin.gs` | WhatsApp import and review dialogs (`admin*`), registration-link dialog |
+| `Auth.gs` | Gabbai code, login sessions, lockout after 3 wrong codes, changing the code |
 | `Location.gs` | Location check for self-registration: distance to the shul, never storing coordinates |
 | `Matching.gs` | Who-is-this logic: phone first, then fuzzy Hebrew name matching |
 | `Names.gs` | First-name list and nicknames (מנדי = מנחם מענדל …) |

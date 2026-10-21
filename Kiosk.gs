@@ -14,7 +14,7 @@ function doGet(e) {
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
-function kioskInit(key) {
+function kioskInit(key, session) {
   checkKey_(key);
   const ss = SpreadsheetApp.getActive(), tz = ss.getSpreadsheetTimeZone();
   const s = readSettings_(ss, tz);
@@ -23,15 +23,10 @@ function kioskInit(key) {
   const roster = peopleForReading_(ss).map(p => ({ id: p.id, first: p.first, last: p.last, aliases: p.aliases,
                                                     hint: p.phone ? p.phone.slice(-3) : '' }));
   return { name: s.name, today: today, dow: dow_(today), open: isOpenHour_(s, tz),
-           from: s.from, to: s.to, noMinyan: s.excluded.has(today), roster: roster, locationCheck: !!shulArea_() };
+           from: s.from, to: s.to, noMinyan: s.excluded.has(today), roster: roster, locationCheck: !!shulArea_(),
+           session: session ? sessionValid_(key, session) : false };
 }
 
-function kioskCheckPin(key, pin) {
-  checkKey_(key);
-  const ss = SpreadsheetApp.getActive();
-  const s = readSettings_(ss, ss.getSpreadsheetTimeZone());
-  return !!s.pin && String(pin).trim() === s.pin;
-}
 
 /** Live lookup while typing: who owns this phone, and which names look like what was typed. */
 function kioskLookup(key, q) {
@@ -60,8 +55,8 @@ function kioskSubmit(key, d) {
     const today = todayKey_(ctx.tz);
     const fail = msg => ({ ok: false, message: msg });
 
-    const gabbai = !!d.pin;
-    if (gabbai && String(d.pin).trim() !== s.pin) return fail('קוד הגבאי שגוי');
+    const gabbai = !!d.session;
+    if (gabbai) checkSession_(key, d.session);                // throws SESSION_EXPIRED
     let date = today;
     if (gabbai && d.date) {
       date = toKey_(d.date, ctx.tz);

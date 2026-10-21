@@ -50,25 +50,26 @@ console.log('lookup "פרידמ":', JSON.stringify(web('kioskLookup', key, { las
 console.log('lookup "לויי":', JSON.stringify(web('kioskLookup', key, { last: 'לויי' }).cands.map(c => c.name)));
 
 // gabbai, past dates
-assert.equal(web('kioskCheckPin', key, pin), true);
-assert.equal(web('kioskCheckPin', key, '0000'), false);
+const sess = web('kioskLogin', key, pin).token;
+assert(sess && sess.length > 10);
+assert.throws(() => web('kioskLogin', key, '0000'), /שגוי/);
 const past = [1,2,3,4].map(n => G.addDays_(today, -n)).filter(d => G.dow_(d) !== 6).slice(0, 3);
 const d1 = past[0], d2 = past[1];
-past.forEach(d => { r = sub({ phone: '0521111111', pin, date: d }); assert.equal(r.status, 'recorded', JSON.stringify(r)); });
-r = sub({ personId: 'P002', pin, date: past[0] }); assert.equal(r.status, 'recorded');
-r = sub({ phone: '0521111111', pin: '9999', date: d1 }); assert.equal(r.ok, false);
+past.forEach(d => { r = sub({ phone: '0521111111', session: sess, date: d }); assert.equal(r.status, 'recorded', JSON.stringify(r)); });
+r = sub({ personId: 'P002', session: sess, date: past[0] }); assert.equal(r.status, 'recorded');
+assert.throws(() => sub({ phone: '0521111111', session: 'not-a-session', date: d1 }), /כניסה מחדש/);
 // a Shabbat date
 let sat = today; while (G.dow_(sat) !== 6) sat = G.addDays_(sat, -1);
-r = sub({ phone: '0521111111', pin, date: sat }); assert.equal(r.ok, false); console.log('shabbat:', r.message);
-r = sub({ phone: '0521111111', pin, date: G.addDays_(today, 1) }); assert.equal(r.ok, false);
+r = sub({ phone: '0521111111', session: sess, date: sat }); assert.equal(r.ok, false); console.log('shabbat:', r.message);
+r = sub({ phone: '0521111111', session: sess, date: G.addDays_(today, 1) }); assert.equal(r.ok, false);
 // ambiguous: surname only, two Cohens → pending
 r = sub({ last: 'כהן' }); console.log('ambiguous כהן:', r.status); assert.equal(r.status, 'pending');
 // typo with known first name → auto
-r = sub({ last: 'פרידמאן', first: 'יוסף', pin, date: d1 }); console.log('typo פרידמאן:', r.status, r.name);
+r = sub({ last: 'פרידמאן', first: 'יוסף', session: sess, date: d1 }); console.log('typo פרידמאן:', r.status, r.name);
 // phone of Moshe but other first name and other surname → pending
-r = sub({ phone: '0521111111', last: 'גולד', first: 'אברהם', pin, date: d2 }); console.log('phone conflict:', r.status);
+r = sub({ phone: '0521111111', last: 'גולד', first: 'אברהם', session: sess, date: d2 }); console.log('phone conflict:', r.status);
 // chosen person with a different phone already on file → pending
-r = sub({ personId: 'P003', phone: '0509999999', pin, date: d2 }); console.log('chip+other phone:', r.status);
+r = sub({ personId: 'P003', phone: '0509999999', session: sess, date: d2 }); console.log('chip+other phone:', r.status);
 
 // ---------- WhatsApp import ----------
 const wa = [
@@ -230,7 +231,7 @@ console.log('\nALL OK');
   const r = sub({ phone: '0599999999', first: 'נייד', last: 'בודק', device: 'mobile' });
   assert.equal(r.status, 'created');
   const att = rows('נוכחות'); assert.equal(att[att.length - 1][3], 'דף רישום · נייד');
-  sub({ phone: '0599999998', first: 'גבאי', last: 'בודק', device: 'mobile', pin, date: past[0] });
+  sub({ phone: '0599999998', first: 'גבאי', last: 'בודק', device: 'mobile', session: sess, date: past[0] });
   const att2 = rows('נוכחות'); assert.equal(att2[att2.length - 1][3], 'גבאי');
   console.log('device OK');
 }
@@ -267,6 +268,7 @@ console.log('\nALL OK');
   const L = envL.ctx; L.setup();
   envL.userEdit('הגדרות', 'B6', 0); envL.userEdit('הגדרות', 'B7', 24);
   const k = envL.props.KIOSK_KEY, lpin = String(envL.ss.getSheetByName('הגדרות').getRange('B8').getValue());
+  const lsess = L.kioskLogin(k, lpin).token;
   const wsub = d => { L.__webContext = true; try { return L.kioskSubmit(k, d); } finally { L.__webContext = false; } };
   const north = m => ({ lat: SHUL.lat + m / 111320, lng: SHUL.lng });           // m metres north of the shul
   assert.equal(L.kioskInit(k).locationCheck, true);
@@ -299,15 +301,47 @@ console.log('\nALL OK');
   assert(g.some(x => x.bestId === 'P001'));
   // the shul tablet and gabbai mode are not checked
   assert.equal(wsub({ phone: '0524444444', first: 'א', last: 'טאבלט', device: 'kiosk' }).status, 'created');
-  assert.equal(wsub({ phone: '0525555555', first: 'ב', last: 'גבאי', pin: lpin, device: '' }).status, 'created');
+  assert.equal(wsub({ phone: '0525555555', first: 'ב', last: 'גבאי', session: lsess, device: '' }).status, 'created');
   // nothing anywhere in the spreadsheet looks like a coordinate
   const all = JSON.stringify(envL.ss.getSheets().map(s => s.data));
   assert(!/31\.98|34\.85/.test(all), 'coordinates must never be stored');
   // gabbai location test
-  const t = L.kioskCheckLocation(k, lpin, Object.assign(north(60), { acc: 12 }));
+  const t = L.kioskCheckLocation(k, lsess, Object.assign(north(60), { acc: 12 }));
   assert.equal(t.inside, true); assert.equal(t.distance, 60); assert.equal(t.radius, 150);
-  assert.throws(() => L.kioskCheckLocation(k, '0000', north(0)));
+  assert.throws(() => L.kioskCheckLocation(k, 'bad-session', north(0)), /כניסה מחדש/);
   // without Secrets.gs coordinates the check is off
   assert.equal(G.kioskInit(key).locationCheck, false);
   console.log('location OK');
+}
+
+// ---------- Gabbai access: lockout, sessions, changing the code ----------
+{
+  const envA = makeEnv(); const A = envA.ctx; A.setup();
+  const k = envA.props.KIOSK_KEY, code = String(envA.ss.getSheetByName('הגדרות').getRange('B8').getValue());
+  const w = (fn, ...a) => { A.__webContext = true; try { return A[fn](...a); } finally { A.__webContext = false; } };
+  assert.throws(() => w('kioskLogin', k, 'wrong1'), /שגוי/);
+  assert.throws(() => w('kioskLogin', k, 'wrong2'), /שגוי/);
+  assert.throws(() => w('kioskLogin', k, 'wrong3'), /נעולה ל-60/);
+  assert.throws(() => w('kioskLogin', k, code), /בעוד \d+ שניות/, 'even the right code waits during the lockout');
+  envA.now.offsetMs += 61 * 1000;                                   // a minute later
+  const s1 = w('kioskLogin', k, code);
+  assert.equal(s1.weakCode, true, 'the 4-digit setup code is reported as weak');
+  // the session works, logout ends it
+  assert.equal(w('kioskInit', k, s1.token).session, true);
+  w('kioskLogout', k, s1.token);
+  assert.equal(w('kioskInit', k, s1.token).session, false);
+  // changing the code: the current one is required, rules apply, everyone is logged out
+  const s2 = w('kioskLogin', k, code).token, s3 = w('kioskLogin', k, code).token;
+  assert.throws(() => w('gabbaiChangePin', k, s2, code, '12 34'), /רווחים/);
+  assert.throws(() => w('gabbaiChangePin', k, s2, code, 'abc'), /לפחות 6/);
+  assert.throws(() => w('gabbaiChangePin', k, s2, 'nope', 'testcode9'), /שגוי/);
+  w('gabbaiChangePin', k, s2, code, 'testcode9');
+  assert.equal(w('kioskInit', k, s3).session, false, 'other sessions end when the code changes');
+  assert.throws(() => w('kioskLogin', k, code), /שגוי/);
+  const s4 = w('kioskLogin', k, 'testcode9'); assert.equal(s4.weakCode, false);
+  assert.match(String(envA.ss.getSheetByName('הגדרות').getRange('C8').getValue()), /שונה על ידי הגבאי/);
+  assert.equal(A.readSettings_(envA.ss, 'Asia/Jerusalem').pin, 'testcode9', 'the changed code wins over Secrets.gs and the sheet');
+  // an expired session (30 minutes without use)
+  envA.now.offsetMs += 31 * 60 * 1000;
+  console.log('gabbai access OK');
 }

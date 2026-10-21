@@ -31,7 +31,7 @@ function readSettings_(ss, tz) {
   return { name: String(map[SET.NAME] || 'מניין שחרית').trim(), start: toKey_(map[SET.START], tz), end: toKey_(map[SET.END], tz),
            threshold: secretPercent_('lotteryThreshold') || num(map[SET.PCT], 75), from: num(map[SET.FROM], 5), to: num(map[SET.TO], 11),
            // Values in Secrets.gs (not in git) win over the sheet.
-           pin: secret_('gabbaiPin') || String(map[SET.PIN] == null ? '' : map[SET.PIN]).trim(),
+           pin: changedPin_() || secret_('gabbaiPin') || String(map[SET.PIN] == null ? '' : map[SET.PIN]).trim(),
            url: webAppUrlFromSecrets_() || String(map[SET.URL] || '').trim(),
            excluded: excluded };
 }
