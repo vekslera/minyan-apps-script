@@ -1,7 +1,14 @@
 // ======================================================================================
 //  ADMIN DIALOGS
 //  WhatsApp import and review screens inside the Sheet. Every call checks the admin token.
+//  The same screens run on the gabbai tools page (Gabbai.gs, gabbai* functions with a session);
+//  both call the shared parts below (parseImport_, queueImport_, pendingGroups_, resolvePending_).
 // ======================================================================================
+
+function adminParseImport(token, text, defaultDate) { checkAdmin_(token); return parseImport_(text, defaultDate); }
+function adminQueueImport(token, rows) { checkAdmin_(token); return queueImport_(rows); }
+function adminGetPending(token) { checkAdmin_(token); return pendingGroups_(); }
+function adminResolve(token, decisions) { checkAdmin_(token); return resolvePending_(decisions); }
 
 function menuImport() { openAdmin_('import'); }
 function menuReview() { openAdmin_('review'); }
@@ -14,8 +21,7 @@ function openAdmin_(view) {
 }
 
 /** Step 1 of the import: parse pasted text into (date, name) rows. Nothing is saved yet. */
-function adminParseImport(token, text, defaultDate) {
-  checkAdmin_(token);
+function parseImport_(text, defaultDate) {
   const ss = SpreadsheetApp.getActive(), tz = ss.getSpreadsheetTimeZone();
   const today = todayKey_(tz);
   const def = toKey_(defaultDate, tz);
@@ -33,8 +39,7 @@ function adminParseImport(token, text, defaultDate) {
 }
 
 /** Step 2 of the import: put the checked rows into the review queue. */
-function adminQueueImport(token, rows) {
-  checkAdmin_(token);
+function queueImport_(rows) {
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -62,8 +67,7 @@ function adminQueueImport(token, rows) {
 }
 
 /** Everything waiting for a decision, grouped by "same name + same phone", with suggestions. */
-function adminGetPending(token) {
-  checkAdmin_(token);
+function pendingGroups_() {
   const ss = SpreadsheetApp.getActive();
   const ctx = loadCtx_(ss);
   const groups = new Map();
@@ -132,8 +136,7 @@ function adminGetPending(token) {
  * d = {gid, ids:[...], action:'person'|'new'|'ignore', personId, first, last, phone}
  * The phone number is the final identifier: a phone that belongs to someone else is never re-assigned.
  */
-function adminResolve(token, decisions) {
-  checkAdmin_(token);
+function resolvePending_(decisions) {
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -191,21 +194,26 @@ function adminResolve(token, decisions) {
   }
 }
 
+/** The registration link with its key, or '' while the web app is not deployed yet. */
+function kioskLink_(settings) {
+  let url = settings.url;
+  if (!url) { try { url = ScriptApp.getService().getUrl() || ''; } catch (e) { url = ''; } }
+  return /^https:\/\/script\.google\.com\/.+\/exec/.test(url) ? url.split('?')[0] + '?k=' + kioskKey_() : '';
+}
+
 function menuKioskLink() {
   const ui = SpreadsheetApp.getUi();
   const ss = SpreadsheetApp.getActive();
   const s = readSettings_(ss, ss.getSpreadsheetTimeZone());
-  let url = s.url;
-  if (!url) { try { url = ScriptApp.getService().getUrl() || ''; } catch (e) { url = ''; } }
-  if (!/^https:\/\/script\.google\.com\/.+\/exec/.test(url)) {
+  const link = kioskLink_(s);
+  if (!link) {
     ui.alert('דף הרישום עדיין לא פורסם',
       'בעורך הסקריפט: פריסה (Deploy) ← פריסה חדשה ← אפליקציית אינטרנט (Web app), הפעלה בתור "אני", גישה "כל אחד".\n' +
       'אחר כך הדביקו את הכתובת (שמסתיימת ב-exec/) בגיליון "הגדרות", בשורה "' + SET.URL + '".',
       ui.ButtonSet.OK);
     return;
   }
-  const link = url.split('?')[0] + '?k=' + kioskKey_();
-  const html = HtmlService.createHtmlOutput(page_('LinkDialog').replace(/__LINK__/g, () => escHtml_(link)).replace('__PIN__', () => escHtml_(s.pin)))
-    .setWidth(560).setHeight(470);
+  const html = HtmlService.createHtmlOutput(page_('LinkDialog').replace(/__LINK__/g, () => escHtml_(link)).replace(/__TOOLS__/g, () => escHtml_(link + '&view=gabbai')).replace('__PIN__', () => escHtml_(s.pin)))
+    .setWidth(560).setHeight(500);
   ui.showModalDialog(html, 'קישור לדף הרישום');
 }

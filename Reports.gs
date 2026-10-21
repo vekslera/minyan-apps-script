@@ -12,12 +12,18 @@ function menuWeekly() {
   const typed = resp.getResponseText().trim();
   const end = typed ? toKey_(typed, tz) : todayKey_(tz);
   if (!end) { ui.alert('התאריך אינו תקין'); return; }
-  const start = addDays_(end, -6);
   const ctx = loadCtx_(ss);
-  const stats = computeStats_(ctx, start, end);
-  writeReport_(ctx, 'שבוע עד ' + end.slice(8, 10) + '.' + end.slice(5, 7),
-               'נוכחות שבועית — ' + fmtKey_(start) + ' עד ' + fmtKey_(stats.end), stats, false);
-  showReportText_(ctx, weeklyText_(ctx, stats), 'דוח שבועי — טקסט להדבקה בוואטסאפ');
+  const r = weeklyReport_(ctx, end);
+  showReportText_(ctx, r.text, 'דוח שבועי — טקסט להדבקה בוואטסאפ');
+}
+
+/** Writes the weekly sheet (7 days ending on endKey) and returns the WhatsApp text. Shared with the web tools. */
+function weeklyReport_(ctx, endKey, fromWeb) {
+  const stats = computeStats_(ctx, addDays_(endKey, -6), endKey);
+  const sheetName = 'שבוע עד ' + endKey.slice(8, 10) + '.' + endKey.slice(5, 7);
+  writeReport_(ctx, sheetName, 'נוכחות שבועית — ' + fmtKey_(stats.start) + ' עד ' + fmtKey_(stats.end), stats, false, fromWeb);
+  return { text: weeklyText_(ctx, stats), sheet: sheetName, days: stats.days.length, people: stats.rows.length,
+           missing: stats.missing.map(fmtShort_), pending: countPending_(ctx.ss) };
 }
 
 /** The dialog with a ready-to-paste text; warns when entries are still waiting for review. */
@@ -39,12 +45,22 @@ function weeklyText_(ctx, stats) {
 function menuFinal() {
   SpreadsheetApp.getUi();
   const ctx = loadCtx_(SpreadsheetApp.getActive());
+  if (!ctx.settings.start || !ctx.settings.end) { SpreadsheetApp.getUi().alert(NO_PERIOD); return; }
+  showReportText_(ctx, finalReport_(ctx).text, 'סיכום התקופה — טקסט להדבקה בוואטסאפ');
+}
+
+const NO_PERIOD = 'נא למלא תחילת וסוף התקופה בגיליון הגדרות';
+
+/** Writes the final-summary sheet and returns the WhatsApp text. Shared with the web tools. */
+function finalReport_(ctx, fromWeb) {
   const s = ctx.settings;
-  if (!s.start || !s.end) { SpreadsheetApp.getUi().alert('נא למלא תחילת וסוף התקופה בגיליון הגדרות'); return; }
+  if (!s.start || !s.end) throw new Error(NO_PERIOD);
   const stats = computeStats_(ctx, s.start, s.end);
   const soFar = s.end > todayKey_(ctx.tz) ? ' (עד היום)' : '';
-  writeReport_(ctx, SH.FINAL, 'נוכחות לתקופה' + soFar, stats, true);
-  showReportText_(ctx, finalText_(ctx, stats, !!soFar), 'סיכום התקופה — טקסט להדבקה בוואטסאפ');
+  writeReport_(ctx, SH.FINAL, 'נוכחות לתקופה' + soFar, stats, true, fromWeb);
+  return { text: finalText_(ctx, stats, !!soFar), sheet: SH.FINAL, days: stats.days.length, people: stats.rows.length,
+           eligible: stats.rows.filter(r => r.eligible).length, missing: stats.missing.map(fmtShort_),
+           pending: countPending_(ctx.ss) };
 }
 
 /** Short summary for WhatsApp: who is in the lottery, and how many came but did not reach the threshold. */
@@ -97,7 +113,7 @@ function computeStats_(ctx, startKey, endKey) {
            missing: days.filter(d => !recorded.has(d)), threshold: thr };
 }
 
-function writeReport_(ctx, sheetName, title, stats, withEligibility) {
+function writeReport_(ctx, sheetName, title, stats, withEligibility, fromWeb) {
   const ss = ctx.ss;
   let sh = ss.getSheetByName(sheetName);
   if (sh) sh.clear(); else { sh = ss.insertSheet(sheetName); sh.setRightToLeft(true); }
@@ -136,27 +152,53 @@ function writeReport_(ctx, sheetName, title, stats, withEligibility) {
   sh.setFrozenColumns(1);
   sh.setColumnWidth(1, 170);
   if (dayHdr.length) sh.setColumnWidths(fixed.length + 1, dayHdr.length, 58);
-  sh.activate();
+  if (!fromWeb) sh.activate();                 // from the web page nobody is looking at the Sheet
 }
 
 function menuDraw() {
   const ui = SpreadsheetApp.getUi();
-  const ss = SpreadsheetApp.getActive();
-  const ctx = loadCtx_(ss);
+  const ctx = loadCtx_(SpreadsheetApp.getActive());
   const s = ctx.settings;
-  if (!s.start || !s.end) { ui.alert('נא למלא תחילת וסוף התקופה בגיליון הגדרות'); return; }
-  const stats = computeStats_(ctx, s.start, s.end);
-  const eligible = stats.rows.filter(r => r.eligible);
-  if (!eligible.length) { ui.alert('עדיין אין מי שהגיע ל-' + s.threshold + '% מימי המניין'); return; }
-  const pending = countPending_(ss);
+  if (!s.start || !s.end) { ui.alert(NO_PERIOD); return; }
+  const info = drawInfo_(ctx);
+  if (!info.eligible.length) { ui.alert('עדיין אין מי שהגיע ל-' + info.threshold + '% מימי המניין'); return; }
   const ok = ui.alert('הגרלה',
-    eligible.length + ' משתתפים (' + s.threshold + '% ומעלה מתוך ' + stats.days.length + ' ימי מניין).' +
-    (pending ? '\n\nשימו לב: ' + pending + ' רישומים ממתינים בבדיקה ועדיין לא נספרו.' : '') + '\n\nלהגריל עכשיו?',
+    info.eligible.length + ' משתתפים (' + info.threshold + '% ומעלה מתוך ' + info.days + ' ימי מניין).' +
+    (info.pending ? '\n\nשימו לב: ' + info.pending + ' רישומים ממתינים בבדיקה ועדיין לא נספרו.' : '') + '\n\nלהגריל עכשיו?',
     ui.ButtonSet.YES_NO);
   if (ok !== ui.Button.YES) return;
+  const w = draw_(ctx);
+  ui.alert('הזוכה', w.name + '  (' + w.pct + '% נוכחות)\n\nההגרלה נשמרה בגיליון "' + SH.DRAWS + '".', ui.ButtonSet.OK);
+}
+
+/** Who takes part in the lottery for the period in הגדרות. */
+function drawInfo_(ctx) {
+  const s = ctx.settings;
+  if (!s.start || !s.end) throw new Error(NO_PERIOD);
+  const stats = computeStats_(ctx, s.start, s.end);
+  return { start: fmtKey_(stats.start), end: fmtKey_(stats.end), days: stats.days.length, threshold: stats.threshold,
+           eligible: stats.rows.filter(r => r.eligible).map(r => ({ name: displayName_(r.person), pct: Math.round(r.pct * 100) })),
+           pending: countPending_(ctx.ss), last: lastDraw_(ctx.ss) };
+}
+
+/** Draws one winner among the eligible, logs the draw in the הגרלות sheet and returns the winner. */
+function draw_(ctx) {
+  const stats = computeStats_(ctx, ctx.settings.start, ctx.settings.end);
+  const eligible = stats.rows.filter(r => r.eligible);
+  if (!eligible.length) throw new Error('עדיין אין מי שהגיע ל-' + stats.threshold + '% מימי המניין');
   const w = eligible[Math.floor(Math.random() * eligible.length)];
-  const log = ensureSheet_(ss, SH.DRAWS, DRAWS_HDR);
+  const log = ensureSheet_(ctx.ss, SH.DRAWS, DRAWS_HDR);
   appendRows_(log, [[new Date(), displayName_(w.person), w.person.id, Math.round(w.pct * 100) + '%',
                      eligible.length, eligible.map(r => displayName_(r.person)).join(', ')]]);
-  ui.alert('הזוכה', displayName_(w.person) + '  (' + Math.round(w.pct * 100) + '% נוכחות)\n\nההגרלה נשמרה בגיליון "' + SH.DRAWS + '".', ui.ButtonSet.OK);
+  return { name: displayName_(w.person), id: w.person.id, pct: Math.round(w.pct * 100), among: eligible.length };
+}
+
+/** The most recent draw in the log, so a second draw is a conscious decision. */
+function lastDraw_(ss) {
+  const sh = ss.getSheetByName(SH.DRAWS);
+  const n = sh ? sh.getLastRow() : 0;
+  if (n < 2) return null;
+  const r = sh.getRange(n, 1, 1, 2).getValues()[0];
+  const tz = ss.getSpreadsheetTimeZone();
+  return { when: r[0] instanceof Date ? fmtKey_(toKey_(r[0], tz)) : String(r[0]), name: String(r[1]) };
 }

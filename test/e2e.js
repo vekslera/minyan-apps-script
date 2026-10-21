@@ -139,7 +139,6 @@ console.log('dups:', JSON.stringify(rows('כפילויות')));
 G.menuKioskLink(); console.log(env.log.slice(-1)[0]);
 env.userEdit('הגדרות', 'B9', 'https://script.google.com/macros/s/ABC/exec');
 G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console.log('link dialog ok');
-console.log('\nALL OK');
 
 // ---------- Secrets.gs overrides ----------
 {
@@ -245,7 +244,7 @@ console.log('\nALL OK');
   const files = walk(path2.join(__dirname, '..', 'scripts')).filter(f => f.endsWith('.js'));
   files.forEach(f => vm2.runInContext(fs2.readFileSync(f, 'utf8'), box, { filename: f }));
   // and every include in the pages resolves
-  for (const page of ['KioskPage', 'AdminPage', 'LinkDialog', 'ReportTextDialog']) {
+  for (const page of ['KioskPage', 'AdminPage', 'GabbaiPage', 'LinkDialog', 'ReportTextDialog']) {
     const html = G.page_(page);
     assert(!/data-include=/.test(html), page + ' has an unresolved include');
   }
@@ -345,3 +344,85 @@ console.log('\nALL OK');
   envA.now.offsetMs += 31 * 60 * 1000;
   console.log('gabbai access OK');
 }
+
+// ---------- Gabbai tools page: every Sheet tool through the web, with a session ----------
+{
+  const envT = makeEnv(); const T = envT.ctx; T.setup();
+  const k = envT.props.KIOSK_KEY, code = String(envT.ss.getSheetByName('הגדרות').getRange('B8').getValue());
+  const W = (fn, ...a) => { T.__webContext = true; try { return noDates(T[fn](...a)); } finally { T.__webContext = false; } };
+  const day = T.todayKey_('Asia/Jerusalem');
+  envT.userEdit('הגדרות', 'B6', 0); envT.userEdit('הגדרות', 'B7', 24);
+  envT.userEdit('הגדרות', 'B3', T.keyToDate_(T.addDays_(day, -9), 'Asia/Jerusalem'));
+  envT.userEdit('הגדרות', 'B9', 'https://script.google.com/macros/s/AKfyc_EXAMPLE/exec');
+  // pages: the tools page is complete; the registration page links to it
+  const page = W('doGet', { parameter: { k: k, view: 'gabbai' } }).html;
+  assert(page.includes("var KEY = '" + k + "'") && page.includes('function startGabbai') && page.includes('function loadReview'));
+  assert(!/__[A-Z]+__|data-include/.test(page.replace('/*__SHARED_JS__*/', '')), 'no placeholders left in the tools page');
+  assert(/TOOLS_URL = 'https:\/\/script\.google\.com\/macros\/s\/AKfyc_EXAMPLE\/exec\?k=\w+&view=gabbai'/.test(W('doGet', { parameter: { k: k } }).html));
+  assert(W('doGet', { parameter: { k: 'bad', view: 'gabbai' } }).html.includes('הקישור אינו תקין'));
+  // without a session nothing works
+  assert.equal(W('gabbaiInit', k, '').session, false);
+  ['gabbaiGetPending', 'gabbaiDrawInfo', 'gabbaiFindDuplicates', 'gabbaiLink'].forEach(fn => assert.throws(() => W(fn, k, 'nope'), /כניסה מחדש/, fn));
+  assert.throws(() => W('gabbaiWeekly', k, 'nope', ''), /כניסה מחדש/);
+  const s = W('kioskLogin', k, code).token;
+  const home = W('gabbaiInit', k, s);
+  assert.equal(home.session, true); assert.equal(home.pending, 0); assert(home.period && home.period.start);
+  // data: three regulars
+  const sub = d => T.kioskSubmit(k, Object.assign({ device: 'tablet' }, d));
+  const days = [1, 2, 3, 4, 5, 6, 7, 8].map(n => T.addDays_(day, -n)).filter(d => T.dow_(d) !== 6);
+  sub({ phone: '0521111111', first: 'משה', last: 'כהן' });
+  sub({ phone: '0522222222', first: 'דוד', last: 'לוי' });
+  days.forEach(d => sub({ phone: '0521111111', session: s, date: d }));
+  // import → review → resolve, all through the web functions
+  const parsed = W('gabbaiParseImport', k, s, 'כהן משה\nשניאורסון', days[0]);
+  assert.equal(parsed.rows.length, 2);
+  assert.equal(W('gabbaiQueueImport', k, s, parsed.rows).added, 2);
+  assert.equal(W('gabbaiInit', k, s).pending, 2);
+  const pend = W('gabbaiGetPending', k, s);
+  const cohen = pend.groups.find(g => g.raw === 'כהן משה'), sch = pend.groups.find(g => g.raw === 'שניאורסון');
+  assert.equal(cohen.bestId, 'P001');
+  const res = W('gabbaiResolve', k, s, [{ gid: cohen.gid, ids: cohen.ids, action: 'person', personId: 'P001' },
+                                       { gid: sch.gid, ids: sch.ids, action: 'new', first: '', last: 'שניאורסון', phone: '' }]);
+  assert.equal(res.saved, 2);
+  // reports: written to the sheet, WhatsApp text returned; no Sheet UI is touched from the web
+  const wk = W('gabbaiWeekly', k, s, '');
+  assert(wk.text.includes('משה כהן') && envT.ss.getSheetByName(wk.sheet));
+  assert.throws(() => W('gabbaiWeekly', k, s, 'not a date'), /אינו תקין/);
+  envT.userEdit('הגדרות', 'B4', '');
+  assert.throws(() => W('gabbaiFinal', k, s), /תחילת וסוף התקופה/);
+  assert.throws(() => W('gabbaiDrawInfo', k, s), /תחילת וסוף התקופה/);
+  envT.userEdit('הגדרות', 'B4', T.keyToDate_(T.addDays_(day, 30), 'Asia/Jerusalem'));
+  const fin = W('gabbaiFinal', k, s);
+  assert(fin.text.includes('(עד היום)') && fin.eligible === 1, JSON.stringify(fin));
+  assert.equal(W('gabbaiInit', k, s).period.threshold, 75);
+  // lottery
+  const info = W('gabbaiDrawInfo', k, s);
+  assert.equal(info.eligible.length, 1); assert.equal(info.eligible[0].name, 'משה כהן'); assert.equal(info.last, null);
+  const win = W('gabbaiDraw', k, s);
+  assert.equal(win.name, 'משה כהן'); assert.equal(win.among, 1);
+  assert.equal(W('gabbaiDrawInfo', k, s).last.name, 'משה כהן');
+  // duplicates: "דוד לוי" entered again without a phone
+  const ctx = T.loadCtx_(envT.ss);
+  const dup = T.createPerson_(ctx, { first: 'דוד', last: 'לוי', phone: '' });
+  T.record_(ctx, dup, { date: days[1], source: 'דף רישום', raw: 'דוד לוי', loggedAt: new Date() });
+  T.flushCtx_(ctx); T.cacheClear_();
+  const pairs = W('gabbaiFindDuplicates', k, s);
+  const pair = pairs.find(p => [p.a.id, p.b.id].includes(dup.id));
+  assert(pair, JSON.stringify(pairs));
+  const mr = W('gabbaiMerge', k, s, [{ keep: 'P002', drop: dup.id }]);
+  assert.equal(mr.merged, 1);
+  assert(!T.loadCtx_(envT.ss).byId[dup.id], 'the duplicate is gone');
+  assert.equal(W('gabbaiFindDuplicates', k, s).filter(p => [p.a.id, p.b.id].includes(dup.id)).length, 0);
+  // link
+  const ln = W('gabbaiLink', k, s);
+  assert.equal(ln.link, 'https://script.google.com/macros/s/AKfyc_EXAMPLE/exec?k=' + k);
+  assert.equal(ln.tools, ln.link + '&view=gabbai');
+  // changing the code keeps this gabbai logged in with a fresh session
+  const other = W('kioskLogin', k, code).token;
+  const ch = W('gabbaiChangePin', k, s, code, 'testcode9');
+  assert.equal(W('gabbaiInit', k, ch.token).session, true);
+  assert.equal(W('gabbaiInit', k, other).session, false);
+  console.log('gabbai tools OK');
+}
+
+console.log('\nALL OK');

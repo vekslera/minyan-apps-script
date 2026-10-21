@@ -1,11 +1,11 @@
-// Import/review dialog — review screen: one card per name, decisions, saving.
+// Import and review screens (Sheet dialog and gabbai tools page) — review screen: one card per name, decisions, saving.
 // Declarations only — nothing runs when the file loads; the page calls the start function.
 
 // =================== REVIEW ===================
 function loadReview() {
   show('bar', false);
   $('groups').innerHTML = '<div class="empty">טוען…</div>';
-  call('adminGetPending', [TOKEN], function (res) {
+  call('GetPending', [], function (res) {
     S.groups = res.groups; S.people = res.people; S.byId = {};
     res.people.forEach(function (p) { S.byId[p.id] = p; });
     var keep = S.dec; S.dec = {};
@@ -148,7 +148,7 @@ function saveReview() {
   });
   if (!list.length) return;
   busy(true);
-  call('adminResolve', [TOKEN, list], function (res) {
+  call('Resolve', [list], function (res) {
     busy(false);
     S.errors = {};
     res.errors.forEach(function (e) { S.errors[e.gid] = e.msg; });

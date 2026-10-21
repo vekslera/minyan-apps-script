@@ -88,14 +88,19 @@ function setPin_(next) {
   } catch (e) {}
 }
 
-/** Gabbai tools page: change the code (the current code is asked again). */
+/**
+ * Gabbai tools page: change the code (the current code is asked again). Everyone else is logged out;
+ * the gabbai who changed it gets a fresh session and stays in.
+ */
 function gabbaiChangePin(key, token, current, next) {
   checkSession_(key, token);
   verifyPin_(current);
   const problem = pinProblem_(next);
   if (problem) throw new Error(problem);
   setPin_(String(next));
-  return { ok: true };
+  const fresh = Utilities.getUuid().replace(/-/g, '');
+  cache_().put('gs:' + fresh, sessionGen_(), AUTH.SESSION_SECONDS);
+  return { ok: true, token: fresh };
 }
 
 /** Sheet menu: change the gabbai code. */

@@ -3,62 +3,9 @@
 <head>
 <base target="_top">
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
-<style>
-:root{
-  --ink:#1c2230; --muted:#626a7a; --line:#dcd6ca; --soft:#f6f3ec; --accent:#1f4e79; --accent-soft:#e6eef6;
-  --ok:#17734a; --ok-bg:#e9f6ef; --warn:#8a5300; --warn-bg:#fff3de; --err:#b42318; --err-bg:#fdeceb;
-}
-*{box-sizing:border-box}
-body{margin:0;font-family:'Assistant',system-ui,Arial,sans-serif;font-size:15px;color:var(--ink);background:#fff}
-.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 14px;position:sticky;top:0;background:#fff;z-index:5}
-.tab{padding:10px 14px;border:0;background:none;font:inherit;font-weight:700;font-size:16px;color:var(--muted);border-bottom:3px solid transparent;cursor:pointer}
-.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
-.count{display:inline-block;min-width:22px;padding:0 6px;border-radius:999px;background:var(--warn-bg);color:var(--warn);font-size:13px;text-align:center}
-.view{padding:14px 18px 90px}
-p.lead{margin:0 0 10px;color:var(--muted)}
-textarea{width:100%;min-height:210px;font:inherit;font-size:15px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;resize:vertical}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:10px 0}
-.btn{font:inherit;font-weight:700;padding:8px 16px;border-radius:9px;border:1px solid var(--line);background:#fff;color:var(--ink);cursor:pointer}
-.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
-.btn:disabled{opacity:.5;cursor:default}
-input[type=date],input[type=text],input[type=tel],select{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:#fff;color:var(--ink)}
-input.tel{direction:ltr;text-align:right;width:140px}
-table{width:100%;border-collapse:collapse;margin-top:8px}
-th,td{border-bottom:1px solid var(--line);padding:8px 6px;text-align:right;vertical-align:top}
-th{font-size:13px;color:var(--muted);font-weight:700}
-tr.off td{opacity:.45}
-.nm{display:inline-flex;align-items:center;gap:4px;background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:1px 4px 1px 9px;margin:2px;font-size:14px}
-.nm button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:14px;padding:0 3px}
-.w{color:var(--warn);font-weight:700}
-.e{color:var(--err);font-weight:700}
-.group{border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-bottom:10px;background:#fff}
-.group.ready{border-color:#a8d8bf;background:#fbfefc}
-.g-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
-.g-raw{font-size:19px;font-weight:800}
-.g-meta{color:var(--muted);font-size:13px;margin-top:1px}
-.g-note{color:var(--warn);font-size:13px;margin-top:3px;font-weight:600}
-.g-err{color:var(--err);font-size:14px;margin-top:4px;font-weight:700}
-.badge{font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap}
-.badge.ok{background:var(--ok-bg);color:var(--ok)}
-.badge.wait{background:var(--warn-bg);color:var(--warn)}
-.opts{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 6px}
-.opt{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 12px 4px 10px;cursor:pointer;background:#fafafa;font-size:14px}
-.opt.sel{background:var(--accent-soft);border-color:var(--accent)}
-.opt input{margin:0}
-.opt select{padding:2px 4px;font-size:13px;max-width:220px}
-.ph{direction:ltr;unicode-bidi:isolate;color:var(--muted);font-size:13px}
-.detail{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:14px;padding:6px 10px;border-radius:8px;background:var(--soft)}
-.detail label{display:inline-flex;gap:6px;align-items:center}
-.detail .need{color:var(--warn);font-weight:700}
-.detail .good{color:var(--ok);font-weight:700}
-.bar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);padding:10px 18px;display:flex;gap:12px;align-items:center;justify-content:space-between;z-index:5}
-.note{padding:10px 12px;border-radius:9px;margin-bottom:10px;font-weight:600}
-.note.ok{background:var(--ok-bg);color:var(--ok)}
-.note.err{background:var(--err-bg);color:var(--err)}
-.empty{text-align:center;color:var(--muted);padding:50px 0;font-size:17px}
-[hidden]{display:none!important}
-</style>
+<link data-include="styles/tools.html">
 </head>
 <body>
 <div class="tabs">
@@ -96,6 +43,7 @@ tr.off td{opacity:.45}
 </script>
 <script>
 var TOKEN = '__TOKEN__', START = '__VIEW__';
+var API = { prefix: 'admin', auth: function () { return [TOKEN]; } };
 </script>
 <script data-include="scripts/common/dom.js"></script>
 <script data-include="scripts/admin/helpers.js"></script>

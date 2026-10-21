@@ -5,6 +5,7 @@
  *   Setup.gs           menu, first-time setup, the הוראות (help) sheet
  *   Config.gs          sheet names, column layouts, settings labels, matching thresholds
  *   Kiosk.gs           the registration web page's server side (doGet + kiosk* functions)
+ *   Gabbai.gs          the gabbai tools web page's server side (gabbai* functions, need a gabbai session)
  *   Admin.gs           WhatsApp import and review dialogs (admin* functions), registration-link dialog
  *   Auth.gs            gabbai code, login sessions, lockout after wrong codes, changing the code
  *   Location.gs        location check for self-registration (coordinates are never stored)
@@ -17,7 +18,8 @@
  *   Duplicates.gs      finding and merging duplicate people
  *   Utils.gs           dates, settings, keys, small helpers
  *   Secrets.gs         YOUR private values (deployment ID, gabbai code …). Not in git — copy Secrets.gs.example.
- *   KioskPage.html, AdminPage.html, LinkDialog.html, ReportTextDialog.html, BadLinkPage.html   the pages
+ *   KioskPage.html, GabbaiPage.html, AdminPage.html, LinkDialog.html, ReportTextDialog.html, BadLinkPage.html   the pages
+ *   styles/tools.html  styles shared by the import/review screens; the scripts folder  the browser code
  *   (Apps Script needs every file name unique across .gs and .html, hence the suffixes.)
  *
  * INSTALL — see README.md (manual copy into the editor, or `clasp push`).
@@ -144,6 +146,7 @@ function writeHelp_(sh) {
     ['מצב גבאי'],
     ['בתחתית דף הרישום: "מצב גבאי" + קוד הגבאי. מאפשר לרשום אחרים, גם לתאריכים קודמים ומחוץ לשעות הרישום.'],
     ['הקוד: לפחות 6 תווים. אפשר להחליף אותו (בכלי הגבאי, או כאן: מניין ← שינוי קוד גבאי). 3 קודים שגויים נועלים את הכניסה לדקה. "יציאה" מנתקת; אחרי 30 דקות ללא פעילות הניתוק אוטומטי.'],
+    ['כלי גבאי בדפדפן ובטלפון: במצב גבאי לוחצים "כלי גבאי". שם: רישומים לבדיקה, ייבוא מוואטסאפ, דוחות עם טקסט לוואטסאפ, הגרלה, כפילויות, קישור ו-QR, שינוי קוד. אותם כלים גם בתפריט "מניין" כאן.'],
     ['במצב גבאי יש כפתור "בדיקת מיקום": מראה את המרחק מבית הכנסת ואת דיוק המיקום. שימושי כדי לבדוק שהרדיוס מתאים.'],
     [''],
     ['רישומים לבדיקה'],

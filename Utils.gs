@@ -152,6 +152,7 @@ function dmyToKey_(d, m, y, todayKey) {
 function page_(name) {
   return HtmlService.createHtmlOutputFromFile(name).getContent()
     .replace(/<script data-include="([^"]+)"><\/script>/g, (m, file) => '<script>\n' + clientScript_(file) + '\n</script>')
+    .replace(/<link data-include="([^"]+)\.html">/g, (m, file) => HtmlService.createHtmlOutputFromFile(file).getContent())
     .replace('/*__SHARED_JS__*/', () => sharedJs_());
 }
 

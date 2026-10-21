@@ -8,9 +8,16 @@ function doGet(e) {
   const ok = e && e.parameter && e.parameter.k === key;
   // "&device=kiosk" on the link marks the shul's own tablet, whatever the browser reports (see README).
   const forced = ok && DEVICES.indexOf(String(e.parameter.device || '')) >= 0 ? e.parameter.device : '';
-  return HtmlService.createHtmlOutput(ok ? page_('KioskPage').replace('__KEY__', () => key).replace('__DEVICE__', () => forced)
-                                         : page_('BadLinkPage'))
-    .setTitle('רישום נוכחות במניין')
+  // "&view=gabbai" opens the gabbai tools page (Gabbai.gs); it asks for the gabbai code itself.
+  const tools = ok && e.parameter.view === 'gabbai';
+  let link = '';
+  if (ok) { const ss = SpreadsheetApp.getActive(); link = kioskLink_(readSettings_(ss, ss.getSpreadsheetTimeZone())); }
+  const html = !ok ? page_('BadLinkPage')
+    : tools ? page_('GabbaiPage').replace('__KEY__', () => key).replace(/__HOME__/g, () => link)
+    : page_('KioskPage').replace('__KEY__', () => key).replace('__DEVICE__', () => forced)
+                        .replace('__TOOLS__', () => link ? link + '&view=gabbai' : '');
+  return HtmlService.createHtmlOutput(html)
+    .setTitle(tools ? 'כלי גבאי — מניין' : 'רישום נוכחות במניין')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 

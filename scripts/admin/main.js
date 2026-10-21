@@ -10,6 +10,8 @@ function go(v) {
   if (v === 'review') loadReview(); else renderImportBar();
 }
 
+function callFailed(e) { flash(S.view === 'import' ? 'importNote' : 'revNote', 'err', errText(e)); }
+
 function startAdmin() {
   Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) { t.onclick = function () { go(t.getAttribute('data-v')); }; });
   $('parseBtn').onclick = parseImport;

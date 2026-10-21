@@ -94,7 +94,7 @@ clasp login                # opens a browser: choose the minyan account and allo
 **Push:**
 
 ```bash
-clasp status      # lists what will be uploaded: 14 .gs files + Secrets.gs, 5 .html files, 17 scripts/…/*.js files, appsscript.json
+clasp status      # lists what will be uploaded: 15 .gs files + Secrets.gs, 7 .html files (one in styles/), 23 scripts/…/*.js files, appsscript.json
 clasp push -f     # -f overwrites the project's manifest without asking
 ```
 
@@ -106,12 +106,13 @@ clasp push -f     # -f overwrites the project's manifest without asking
 In the script editor:
 
 1. Click the default file **`Code.gs`** → ⋮ → **Rename / שינוי שם** → `Setup`. Replace its content with the content of `Setup.gs`.
-2. For each of the other `.gs` files (`Admin`, `Auth`, `Config`, `Data`, `Duplicates`, `HebrewCalendar`, `Kiosk`, `Location`, `Matching`, `Names`, `Reports`, `Utils`, `WhatsApp`): **Files / קבצים → + → Script / סקריפט**. Type the name **without `.gs`** and paste the content.
-3. For each `.html` file: **+ → HTML**. Type the name **exactly**, without `.html`: `KioskPage`, `AdminPage`, `LinkDialog`, `ReportTextDialog`, `BadLinkPage`, then paste.
-4. For each file in the `scripts` folder: also **+ → HTML** (not Script). Type its path **without `.js`**, slashes included, e.g. `scripts/kiosk/main`. Paste the file's content as it is. All 17 files:
+2. For each of the other `.gs` files (`Admin`, `Auth`, `Config`, `Data`, `Duplicates`, `Gabbai`, `HebrewCalendar`, `Kiosk`, `Location`, `Matching`, `Names`, `Reports`, `Utils`, `WhatsApp`): **Files / קבצים → + → Script / סקריפט**. Type the name **without `.gs`** and paste the content.
+3. For each `.html` file: **+ → HTML**. Type the name **exactly**, without `.html`: `KioskPage`, `GabbaiPage`, `AdminPage`, `LinkDialog`, `ReportTextDialog`, `BadLinkPage`, then paste. Also `styles/tools` (from `styles/tools.html`, slash included).
+4. For each file in the `scripts` folder: also **+ → HTML** (not Script). Type its path **without `.js`**, slashes included, e.g. `scripts/kiosk/main`. Paste the file's content as it is. All 23 files:
    `scripts/common/dom`, `scripts/common/clipboard`,
    `scripts/kiosk/helpers`, `scripts/kiosk/deviceDetection`, `scripts/kiosk/hebrewDate`, `scripts/kiosk/lookup`, `scripts/kiosk/registration`, `scripts/kiosk/gabbaiMode`, `scripts/kiosk/myPhone`, `scripts/kiosk/location`, `scripts/kiosk/main`,
    `scripts/admin/helpers`, `scripts/admin/import`, `scripts/admin/review`, `scripts/admin/main`,
+   `scripts/gabbai/main`, `scripts/gabbai/reports`, `scripts/gabbai/draw`, `scripts/gabbai/duplicates`, `scripts/gabbai/link`, `scripts/gabbai/pin`,
    `scripts/dialogs/linkDialog`, `scripts/dialogs/reportText`.
 5. **Optional:** create `Secrets` (+ → Script) from `Secrets.gs.example`. Without it, everything is configured in the הגדרות sheet.
 6. Save (Ctrl+S).
@@ -250,11 +251,32 @@ The **הוראות** tab in the Sheet explains it in Hebrew. In short:
   - **On a phone, the number is remembered** for next time.
   - **Location.** The phone asks for location permission the first time. Someone reported as outside the shul can retry, or send the registration for the gabbai's approval (it then appears in **רישומים לבדיקה**).
 - **Gabbai mode** ("מצב גבאי" at the bottom of the page, plus the code): register others, choose an earlier date, and register outside the self-registration hours. See [Gabbai code and login](#gabbai-code-and-login).
+- **Gabbai tools** (**"כלי גבאי"** in the gabbai bar, or the registration link with `&view=gabbai` added): the Sheet's tools in the browser, on a computer or a phone. See [Gabbai tools page](#gabbai-tools-page).
+
+The same tools are in the Sheet's **מניין** menu:
+
 - **מניין → ייבוא רשימה מוואטסאפ.** Paste the lists from WhatsApp; a date line such as `19/10` or `ח׳ חשוון` starts each day. Check the dates, then confirm the names in the review screen.
 - **מניין → רישומים לבדיקה.** Entries the system wasn't sure about. Pick the right person, confirm or add the phone, and save.
 - **מניין → דוח שבועי / דוח סופי לתקופה.** Each report opens as a new tab, together with a short text to paste into WhatsApp.
 - **מניין → הגרלה.** Draws one winner among those at or above the threshold, and logs the draw in the **הגרלות** tab.
 - **מניין → איתור כפילויות** finds people entered twice. Tick "למזג?" next to the real duplicates, then use **מיזוג הכפילויות המסומנות**.
+
+### Gabbai tools page
+
+A web page with the gabbai's work, for when the Sheet isn't at hand. It needs the gabbai code, like gabbai mode.
+
+- **How to open it.**
+  - From the registration page: log in to gabbai mode, then tap **"כלי גבאי"** in the gabbai bar. The login carries over in the same browser tab.
+  - Directly: the registration link with `&view=gabbai` at the end. **מניין → קישור לדף הרישום** and the page's own "קישור ו-QR" screen show it; bookmark it on your phone.
+- **What's on it:**
+  - **רישומים לבדיקה** and **ייבוא מוואטסאפ** — the same screens as in the Sheet. On a phone the import works too; a long list is easier on a computer.
+  - **דוח שבועי** (choose the last day) and **סיכום התקופה** — the report tab is written in the Sheet, and the page shows the WhatsApp text with **העתקה** and **שליחה בוואטסאפ**.
+  - **הגרלה** — shows who takes part, warns about entries still waiting for review and about an earlier draw, and asks for a second tap before drawing. The draw is logged in **הגרלות**.
+  - **כפילויות** — pairs that look like one person. Tick "למזג" and choose which record to keep (the one with more days is preselected); attendance moves to it.
+  - **קישור ו-QR** — the registration link with a QR code, copy and share.
+  - **שינוי קוד גבאי** — asks for the current code; everyone else is logged out of gabbai mode, you stay in.
+  - **יציאה** — logs out. After 30 minutes without activity the page logs out by itself.
+- **What stays in the Sheet only:** the settings (הגדרות) and editing the tabs by hand.
 
 ---
 
@@ -265,7 +287,7 @@ The **הוראות** tab in the Sheet explains it in Hebrew. In short:
   1. the code the gabbai changed;
   2. `gabbaiPin` in `Secrets.gs`;
   3. row 8 of the הגדרות sheet.
-- **Changing it.** The gabbai can change it from the gabbai menu, which asks for the current code again, or the owner via **מניין → שינוי קוד גבאי** in the Sheet. A change logs everyone out of gabbai mode.
+- **Changing it.** The gabbai can change it on the gabbai tools page (**שינוי קוד גבאי**), which asks for the current code again, or the owner via **מניין → שינוי קוד גבאי** in the Sheet. A change logs everyone out of gabbai mode.
 - **Logging in and out.** Logging in gives the browser a session for 30 minutes after the last activity; the code itself is never kept in the browser. **"יציאה"** logs out at once. After 30 minutes without activity the page leaves gabbai mode by itself.
 - **Wrong codes.** 3 wrong codes in a row lock gabbai login for **60 seconds**, for every device. This is a brake on guessing, since anyone with the page link could try.
 - **Weak code warning.** A code shorter than 6 characters still works, but after logging in the page suggests changing it.
@@ -322,8 +344,9 @@ Don't create a new deployment for an update: it gets a new address.
 |---|---|
 | `Setup.gs` | The מניין menu, first-time `setup()`, the הוראות (help) sheet |
 | `Config.gs` | Sheet names, column layouts, settings labels, matching thresholds |
-| `Kiosk.gs` | Server side of the registration page (`doGet`, `kiosk*`) |
-| `Admin.gs` | WhatsApp import and review dialogs (`admin*`), registration-link dialog |
+| `Kiosk.gs` | Server side of the registration page (`doGet`, `kiosk*`); `doGet` also serves the gabbai tools page |
+| `Gabbai.gs` | Server side of the gabbai tools page (`gabbai*`, each needs a gabbai session) |
+| `Admin.gs` | WhatsApp import and review (shared by the Sheet dialog and the tools page), registration-link dialog |
 | `Auth.gs` | Gabbai code, login sessions, lockout after 3 wrong codes, changing the code |
 | `Location.gs` | Location check for self-registration: distance to the shul, never storing coordinates |
 | `Matching.gs` | Who-is-this logic: phone first, then fuzzy Hebrew name matching |
@@ -331,15 +354,18 @@ Don't create a new deployment for an update: it gets a new address.
 | `Data.gs` | Reading/writing the People, Attendance and Review sheets |
 | `WhatsApp.gs` | Parser for pasted WhatsApp lists |
 | `HebrewCalendar.gs` | Hebrew calendar arithmetic, gematria, Hebrew-date parsing |
-| `Reports.gs` | Weekly and final reports, lottery draw |
-| `Duplicates.gs` | Finding and merging duplicate people |
+| `Reports.gs` | Weekly and final reports, lottery draw (shared by the Sheet menu and the tools page) |
+| `Duplicates.gs` | Finding and merging duplicate people (shared by the Sheet menu and the tools page) |
 | `Utils.gs` | Dates, settings, keys, private-settings loader, small helpers |
 | `KioskPage.html` | The registration page: markup and styles |
-| `AdminPage.html` | Import + review dialog: markup and styles |
+| `GabbaiPage.html` | The gabbai tools page: markup and styles |
+| `AdminPage.html` | Import + review dialog in the Sheet: markup |
+| `styles/tools.html` | Styles of the import and review screens, shared by `AdminPage` and `GabbaiPage` |
 | `LinkDialog.html`, `ReportTextDialog.html`, `BadLinkPage.html` | Small dialogs/pages |
 | `scripts/common/dom.js`, `clipboard.js` | Browser helpers shared by the pages |
 | `scripts/kiosk/*.js` | Registration page: `helpers`, `deviceDetection`, `hebrewDate`, `lookup` (live suggestions), `registration` (submit/confirmation), `gabbaiMode`, `myPhone` (remembered number on a phone), `location` (location check, "outside the shul" panel, gabbai test), `main` (state + `startKiosk()`) |
-| `scripts/admin/*.js` | Import/review dialog: `helpers`, `import`, `review`, `main` (tabs + `startAdmin()`) |
+| `scripts/admin/*.js` | Import and review screens: `helpers`, `import`, `review` (used by both pages), `main` (the Sheet dialog's tabs + `startAdmin()`) |
+| `scripts/gabbai/*.js` | Gabbai tools page: `main` (login, navigation + `startGabbai()`), `reports`, `draw`, `duplicates`, `link`, `pin` |
 | `scripts/dialogs/*.js` | `linkDialog` (QR + copy), `reportText` (copy) |
 | `appsscript.json` | Manifest (time zone, V8, web-app access) |
 | `Secrets.gs.example` | Template for your private `Secrets.gs` |
@@ -354,7 +380,9 @@ All `.gs` files share one global scope, and nothing runs at load time across fil
 Apps Script cannot serve a `.js` file to the browser: a page is one HTML document. So:
 
 - **Where it lives.** The browser code is in `scripts/**/*.js`, plain JavaScript that your editor understands. `.clasp.json` (`"htmlExtensions": [".html", ".js"]`) uploads each one as an HTML-type file named by its path, e.g. `scripts/kiosk/main`.
-- **How it gets into the page.** A page refers to it with `<script data-include="scripts/kiosk/main.js"></script>`. When the server builds the page (`page_()` in `Utils.gs`), it replaces that tag with the file's code. The page's small first `<script>` holds the values the server fills in (`KEY`, `TOKEN` …), and its last one calls the start function (`startKiosk()`, `startAdmin()` …).
+- **How it gets into the page.** A page refers to it with `<script data-include="scripts/kiosk/main.js"></script>`. When the server builds the page (`page_()` in `Utils.gs`), it replaces that tag with the file's code. The page's small first `<script>` holds the values the server fills in (`KEY`, `TOKEN` …), and its last one calls the start function (`startKiosk()`, `startAdmin()`, `startGabbai()` …).
+- **Shared styles.** `<link data-include="styles/tools.html">` is replaced the same way with that file's `<style>` block.
+- **One screen, two pages.** The import and review scripts call the server through `call('GetPending', …)`. Each page sets `API`: the Sheet dialog sends it to `adminGetPending(TOKEN)`, the tools page to `gabbaiGetPending(KEY, session)`.
 - **Declarations only.** The files only declare functions and variables; nothing runs until the page calls its start function. Order between files therefore doesn't matter, and a file uploaded by mistake as server code can't break the project (a test checks this).
 - **Code shared with the server.** Phone rules and name matching are not copied into `scripts/`. They are the server's own functions, sent into the page as text by `sharedJs_()` (the `/*__SHARED_JS__*/` marker in the page).
 
@@ -377,6 +405,7 @@ node test/ui.js            # renders the pages in Chromium; needs:  npm install 
 node test/device.js        # device detection with emulated iPhone/Android/iPad/desktop browsers (Playwright)
 node test/mobile.js        # personal-phone flow: optional, remembered, "זה לא אני", gabbai mode, shul tablet (Playwright)
 node test/location.js      # location check with emulated GPS: inside, outside + retry, send for approval, no permission, computer (Playwright)
+node test/gabbai.js        # gabbai tools page: login, every tool, logout; computer and phone width (Playwright)
 node test/profile.js       # counts Google-service calls per action on a month of sample data
 ```
 

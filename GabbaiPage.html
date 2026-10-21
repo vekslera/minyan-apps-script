@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<link data-include="styles/tools.html">
+<style>
+body{background:var(--soft)}
+.top{position:sticky;top:0;z-index:6;display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--accent);color:#fff}
+.top .title{flex:1;min-width:0}
+.top .title b{display:block;font-size:18px}
+.top .title small{display:block;font-size:13px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top button{font:inherit;font-weight:700;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35);border-radius:8px;padding:6px 12px;cursor:pointer}
+main{max-width:980px;margin:0 auto}
+.view{background:transparent}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.tile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:right;font:inherit;font-weight:800;font-size:17px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;cursor:pointer;min-height:84px}
+.tile:hover{border-color:var(--accent)}
+.tile small{font-weight:600;font-size:13px;color:var(--muted)}
+.tile .count{font-size:14px}
+.foot{color:var(--muted);font-size:14px;margin:16px 2px}
+.foot a{color:var(--accent);font-weight:700}
+.field{display:block;margin:0 0 12px}
+.field span{display:block;font-weight:700;margin-bottom:4px}
+.field input{width:100%;font:inherit;font-size:17px;padding:10px 12px;border:1px solid var(--line);border-radius:9px}
+.login{max-width:380px;margin:40px auto}
+.login h2{margin:0 0 6px}
+textarea.out{min-height:260px;background:#fff}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+a.btn{text-decoration:none;display:inline-block}
+.warn{color:var(--warn);background:var(--warn-bg);border-radius:9px;padding:8px 12px;font-weight:700;margin:8px 0}
+.list{margin:8px 0 0;padding:0 18px 0 0}
+.list li{margin:2px 0}
+.winner{text-align:center;padding:22px 10px}
+.winner .who{display:block;font-size:30px;font-weight:800;margin:6px 0}
+.pair{display:flex;flex-direction:column;gap:6px}
+.pair .opt{border-radius:10px}
+.url{direction:ltr;text-align:left;word-break:break-all;background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:8px;font-size:13px;margin:8px 0}
+#qr{width:200px;height:200px;margin:4px auto 10px}
+#qr img,#qr canvas{margin:0 auto}
+.mobile-only{display:none}
+@media (max-width:640px){
+  .mobile-only{display:block}
+  .tiles{grid-template-columns:1fr 1fr}
+  .tile{min-height:76px;font-size:16px;padding:12px}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <button id="back" type="button" hidden>→ חזרה</button>
+  <div class="title"><b id="title">כלי גבאי</b><small id="sub"></small></div>
+  <button id="logout" type="button" hidden>יציאה</button>
+</header>
+
+<main>
+<section class="view" id="v-login" hidden>
+  <div class="card login">
+    <h2>כניסה לכלי הגבאי</h2>
+    <p class="lead">אותו קוד גבאי של דף הרישום.</p>
+    <div id="loginNote"></div>
+    <label class="field"><span>קוד גבאי</span>
+      <input id="pin" type="password" maxlength="32" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+    <button class="btn primary" id="loginBtn" type="button" style="width:100%;padding:11px">כניסה</button>
+    <p class="foot"><a class="toKiosk" href="__HOME__" target="_top">לדף הרישום</a></p>
+  </div>
+</section>
+
+<section class="view" id="v-home" hidden>
+  <div id="homeNote"></div>
+  <div class="tiles">
+    <button class="tile" type="button" data-go="review">רישומים לבדיקה <span class="count" id="cnt" hidden></span><small>שמות מוואטסאפ ורישומים שממתינים לאישור</small></button>
+    <button class="tile" type="button" data-go="import">ייבוא מוואטסאפ<small>הדבקת רשימות הנוכחים</small></button>
+    <button class="tile" type="button" data-go="weekly">דוח שבועי<small>טבלה בגיליון + טקסט לוואטסאפ</small></button>
+    <button class="tile" type="button" data-go="final">סיכום התקופה<small>מי משתתף בהגרלה</small></button>
+    <button class="tile" type="button" data-go="draw">הגרלה<small>הגרלת זוכה בין המשתתפים</small></button>
+    <button class="tile" type="button" data-go="dups">כפילויות<small>אנשים שנרשמו פעמיים</small></button>
+    <button class="tile" type="button" data-go="link">קישור ו-QR<small>הקישור לדף הרישום</small></button>
+    <button class="tile" type="button" data-go="pin">שינוי קוד גבאי<small>ויציאה מכל המכשירים</small></button>
+  </div>
+  <p class="foot"><a class="toKiosk" href="__HOME__" target="_top">לדף הרישום</a> <span id="period"></span></p>
+</section>
+
+<section class="view" id="v-import" hidden>
+  <p class="warn mobile-only">רשימה ארוכה נוחה יותר במחשב, אבל אפשר גם כאן.</p>
+  <p class="lead">העתיקו מהוואטסאפ את ההודעות עם רשימות הנוכחים והדביקו כאן. שורה עם תאריך (למשל 19/10) קובעת את התאריך לשמות שאחריה.</p>
+  <textarea id="waText" placeholder="19/10&#10;כהן&#10;משה לוי&#10;פרידמן&#10;&#10;20/10&#10;..."></textarea>
+  <div class="row">
+    <label>תאריך לשמות שאין לפניהם תאריך: <input type="date" id="defDate"></label>
+    <button class="btn primary" id="parseBtn" type="button">ניתוח הטקסט</button>
+  </div>
+  <div id="importNote"></div>
+  <div id="preview"></div>
+</section>
+
+<section class="view" id="v-review" hidden>
+  <div id="revNote"></div>
+  <div class="row" id="revTools" hidden>
+    <span id="revSummary" class="g-meta" style="font-size:14px"></span>
+    <button class="btn" id="confirmAll" type="button">אישור כל ההתאמות הוודאיות</button>
+  </div>
+  <div id="groups"></div>
+</section>
+
+<section class="view" id="v-weekly" hidden>
+  <div id="weeklyNote"></div>
+  <div class="card">
+    <div class="row">
+      <label>7 ימים שמסתיימים בתאריך <input type="date" id="weekEnd"></label>
+      <button class="btn primary" id="weeklyBtn" type="button">הפקת הדוח</button>
+    </div>
+    <div id="weeklyOut"></div>
+  </div>
+</section>
+
+<section class="view" id="v-final" hidden>
+  <div id="finalNote"></div>
+  <div class="card">
+    <p class="lead" id="finalLead"></p>
+    <button class="btn primary" id="finalBtn" type="button">הפקת הסיכום</button>
+    <div id="finalOut"></div>
+  </div>
+</section>
+
+<section class="view" id="v-draw" hidden>
+  <div id="drawNote"></div>
+  <div class="card" id="drawBox"><div class="empty">טוען…</div></div>
+</section>
+
+<section class="view" id="v-dups" hidden>
+  <div id="dupsNote"></div>
+  <p class="lead">זוגות שנראים כמו אותו אדם. סמנו "למזג" ליד הנכונים ובחרו איזה רישום להשאיר — הנוכחות של שניהם תעבור אליו.</p>
+  <div id="dupsList"><div class="empty">טוען…</div></div>
+</section>
+
+<section class="view" id="v-link" hidden>
+  <div id="linkNote"></div>
+  <div class="card" id="linkBox"><div class="empty">טוען…</div></div>
+</section>
+
+<section class="view" id="v-pin" hidden>
+  <div id="pinNote"></div>
+  <div class="card" style="max-width:420px">
+    <label class="field"><span>הקוד הנוכחי</span><input id="pinCur" type="password" maxlength="32" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+    <label class="field"><span>קוד חדש (לפחות 6 תווים)</span><input id="pinNew" type="password" maxlength="32" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+    <label class="field"><span>הקוד החדש שוב</span><input id="pinNew2" type="password" maxlength="32" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+    <button class="btn primary" id="pinSave" type="button">שינוי הקוד</button>
+    <p class="g-meta" style="margin-top:10px">אחרי השינוי כל מי שנמצא במצב גבאי (בכל מכשיר) ינותק; אתם נשארים מחוברים כאן.</p>
+  </div>
+</section>
+</main>
+
+<div class="bar" id="bar" hidden>
+  <span id="barMsg"></span>
+  <button class="btn primary" id="barBtn" type="button"></button>
+</div>
+
+<script>
+/*__SHARED_JS__*/
+</script>
+<script>
+var KEY = '__KEY__', HOME_URL = '__HOME__';
+var API = { prefix: 'gabbai', auth: function () { return [KEY, S.session]; } };
+</script>
+<script data-include="scripts/common/dom.js"></script>
+<script data-include="scripts/common/clipboard.js"></script>
+<script data-include="scripts/admin/helpers.js"></script>
+<script data-include="scripts/admin/import.js"></script>
+<script data-include="scripts/admin/review.js"></script>
+<script data-include="scripts/gabbai/reports.js"></script>
+<script data-include="scripts/gabbai/draw.js"></script>
+<script data-include="scripts/gabbai/duplicates.js"></script>
+<script data-include="scripts/gabbai/link.js"></script>
+<script data-include="scripts/gabbai/pin.js"></script>
+<script data-include="scripts/gabbai/main.js"></script>
+<script>startGabbai();</script>
+</body>
+</html>

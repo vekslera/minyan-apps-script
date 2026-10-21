@@ -11,6 +11,9 @@ function gabbaiUi(on) {
   $('deviceLabel').textContent = on ? '' : (DEVICE_NAMES[DEVICE] || '');
   setupPersonalPhone();
   show('locTest', on && !!(S.info && S.info.locationCheck));
+  // The gabbai tools page (same session in this browser tab). Empty while the web app address is unknown.
+  show('toolsLink', on && !!TOOLS_URL);
+  if (TOOLS_URL) $('toolsLink').href = TOOLS_URL;
   if (on) { $('date').value = S.info.today; $('date').max = S.info.today; }
 }
 function openPin() { $('pin').value = ''; show('pinMsg', false); show('pinDlg', true); $('pin').focus(); }
