@@ -76,16 +76,22 @@ clasp login                # opens a browser: choose the minyan account and allo
    cp .clasp.json.example .clasp.json          # Windows: copy .clasp.json.example .clasp.json
    cp Secrets.gs.example Secrets.gs            # Windows: copy Secrets.gs.example Secrets.gs
    ```
-   Paste the Script ID into `.clasp.json`:
+   Paste the Script ID into `.clasp.json`. Keep the two extension lines as they are:
    ```json
-   { "scriptId": "1AbC…your-script-id…", "rootDir": "." }
+   {
+     "scriptId": "1AbC…your-script-id…",
+     "rootDir": ".",
+     "scriptExtensions": [".gs"],
+     "htmlExtensions": [".html", ".js"]
+   }
    ```
+   **The extension lines are required.** By default clasp uploads `.js` files as *server* code. These two lines make it upload the browser scripts in `scripts/` as HTML-type files instead ([§11](#11-files)). `deploy.ps1` / `deploy.sh` refuse to run without them.
    Both files are git-ignored. You will fill `Secrets.gs` in [step 6](#6-fill-in-the-settings).
 
 **Push:**
 
 ```bash
-clasp status      # lists what will be uploaded: 12 .gs files + Secrets.gs, 5 .html files, appsscript.json
+clasp status      # lists what will be uploaded: 12 .gs files + Secrets.gs, 5 .html files, 15 scripts/…/*.js files, appsscript.json
 clasp push -f     # -f overwrites the project's manifest without asking
 ```
 
@@ -99,8 +105,13 @@ In the script editor:
 1. Click the default file **`Code.gs`** → ⋮ → **Rename / שינוי שם** → `Setup`. Replace its content with the content of `Setup.gs`.
 2. For each of the other `.gs` files (`Admin`, `Config`, `Data`, `Duplicates`, `HebrewCalendar`, `Kiosk`, `Matching`, `Names`, `Reports`, `Utils`, `WhatsApp`): **Files / קבצים → + → Script / סקריפט**. Type the name **without `.gs`** and paste the content.
 3. For each `.html` file: **+ → HTML**. Type the name **exactly**, without `.html`: `KioskPage`, `AdminPage`, `LinkDialog`, `ReportTextDialog`, `BadLinkPage`, then paste.
-4. **Optional:** create `Secrets` (+ → Script) from `Secrets.gs.example`. Without it, everything is configured in the הגדרות sheet.
-5. Save (Ctrl+S).
+4. For each file in the `scripts` folder: also **+ → HTML** (not Script). Type its path **without `.js`**, slashes included, e.g. `scripts/kiosk/main`. Paste the file's content as it is. All 15 files:
+   `scripts/common/dom`, `scripts/common/clipboard`,
+   `scripts/kiosk/helpers`, `scripts/kiosk/deviceDetection`, `scripts/kiosk/hebrewDate`, `scripts/kiosk/lookup`, `scripts/kiosk/registration`, `scripts/kiosk/gabbaiMode`, `scripts/kiosk/main`,
+   `scripts/admin/helpers`, `scripts/admin/import`, `scripts/admin/review`, `scripts/admin/main`,
+   `scripts/dialogs/linkDialog`, `scripts/dialogs/reportText`.
+5. **Optional:** create `Secrets` (+ → Script) from `Secrets.gs.example`. Without it, everything is configured in the הגדרות sheet.
+6. Save (Ctrl+S).
 
 **File names must be unique, ignoring the extension.** Apps Script treats `Admin.gs` and `Admin.html` as the same name, so the HTML files carry `Page`/`Dialog` suffixes.
 
@@ -232,6 +243,7 @@ Don't create a new deployment for an update: it gets a new address.
 
 | Symptom | Cause and fix |
 |---|---|
+| Pages break with `ReferenceError: document is not defined` in **Executions**, or functions "not found" | `scripts/*.js` were uploaded as server code because `.clasp.json` lacks `"scriptExtensions": [".gs"]` and `"htmlExtensions": [".html", ".js"]`. Add them (see `.clasp.json.example`) and push again. |
 | `clasp push`: "A file with this name already exists … Admin" | Two files with the same name ignoring extension (e.g. an old `Admin.html` next to `Admin.gs`). Delete the old file and push again. |
 | `clasp push`: "User has not enabled the Apps Script API" | Turn it on at <https://script.google.com/home/usersettings>, wait a minute, retry. |
 | setup() "Exceeded maximum execution time" | The "ההגדרה הושלמה" popup in the Sheet tab wasn't clicked. Run it again and click OK in the Sheet. |
@@ -260,9 +272,13 @@ Don't create a new deployment for an update: it gets a new address.
 | `Reports.gs` | Weekly and final reports, lottery draw |
 | `Duplicates.gs` | Finding and merging duplicate people |
 | `Utils.gs` | Dates, settings, keys, private-settings loader, small helpers |
-| `KioskPage.html` | The registration page (tablet) |
-| `AdminPage.html` | Import + review dialog |
+| `KioskPage.html` | The registration page: markup and styles |
+| `AdminPage.html` | Import + review dialog: markup and styles |
 | `LinkDialog.html`, `ReportTextDialog.html`, `BadLinkPage.html` | Small dialogs/pages |
+| `scripts/common/dom.js`, `clipboard.js` | Browser helpers shared by the pages |
+| `scripts/kiosk/*.js` | Registration page: `helpers`, `deviceDetection`, `hebrewDate`, `lookup` (live suggestions), `registration` (submit/confirmation), `gabbaiMode`, `main` (state + `startKiosk()`) |
+| `scripts/admin/*.js` | Import/review dialog: `helpers`, `import`, `review`, `main` (tabs + `startAdmin()`) |
+| `scripts/dialogs/*.js` | `linkDialog` (QR + copy), `reportText` (copy) |
 | `appsscript.json` | Manifest (time zone, V8, web-app access) |
 | `Secrets.gs.example` | Template for your private `Secrets.gs` |
 | `deploy.ps1`, `deploy.sh` | Push + update the existing web-app deployment |
@@ -270,6 +286,15 @@ Don't create a new deployment for an update: it gets a new address.
 | `test/` | Local tests against a simulated Sheet (not uploaded) |
 
 All `.gs` files share one global scope, and nothing runs at load time across files, so the order of files in the editor doesn't matter.
+
+### How the browser code is organized
+
+Apps Script cannot serve a `.js` file to the browser: a page is one HTML document. So:
+
+- **Where it lives.** The browser code is in `scripts/**/*.js`, plain JavaScript that your editor understands. `.clasp.json` (`"htmlExtensions": [".html", ".js"]`) uploads each one as an HTML-type file named by its path, e.g. `scripts/kiosk/main`.
+- **How it gets into the page.** A page refers to it with `<script data-include="scripts/kiosk/main.js"></script>`. When the server builds the page (`page_()` in `Utils.gs`), it replaces that tag with the file's code. The page's small first `<script>` holds the values the server fills in (`KEY`, `TOKEN` …), and its last one calls the start function (`startKiosk()`, `startAdmin()` …).
+- **Declarations only.** The files only declare functions and variables; nothing runs until the page calls its start function. Order between files therefore doesn't matter, and a file uploaded by mistake as server code can't break the project (a test checks this).
+- **Code shared with the server.** Phone rules and name matching are not copied into `scripts/`. They are the server's own functions, sent into the page as text by `sharedJs_()` (the `/*__SHARED_JS__*/` marker in the page).
 
 ## 12. Private settings (`Secrets.gs`)
 

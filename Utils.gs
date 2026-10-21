@@ -142,9 +142,24 @@ function dmyToKey_(d, m, y, todayKey) {
   return +k.slice(8, 10) === d ? k : '';
 }
 
-/** The HTML of one of the page files (KioskPage.html, AdminPage.html …), with shared code filled in. */
+/**
+ * The HTML of one of the page files (KioskPage.html, AdminPage.html …), ready to serve:
+ *  - <script data-include="scripts/kiosk/main.js"></script> is replaced by that file's code. Apps Script
+ *    can't serve .js files to the browser, so the browser code lives in scripts/*.js, is uploaded by clasp
+ *    as HTML-type files (see "htmlExtensions" in .clasp.json), and is inlined here;
+ *  - the __SHARED_JS__ marker gets the server functions the pages share (sharedJs_).
+ */
 function page_(name) {
-  return HtmlService.createHtmlOutputFromFile(name).getContent().replace('/*__SHARED_JS__*/', () => sharedJs_());
+  return HtmlService.createHtmlOutputFromFile(name).getContent()
+    .replace(/<script data-include="([^"]+)"><\/script>/g, (m, file) => '<script>\n' + clientScript_(file) + '\n</script>')
+    .replace('/*__SHARED_JS__*/', () => sharedJs_());
+}
+
+/** The code of one browser script, e.g. "scripts/kiosk/main.js" (stored in Apps Script as "scripts/kiosk/main"). */
+function clientScript_(file) {
+  const code = HtmlService.createHtmlOutputFromFile(file.replace(/\.js$/, '')).getContent();
+  if (/<\/script/i.test(code)) throw new Error(file + ' must not contain "</script"');
+  return code;
 }
 
 /**

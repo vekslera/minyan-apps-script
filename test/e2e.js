@@ -233,3 +233,19 @@ console.log('\nALL OK');
   const att2 = rows('נוכחות'); assert.equal(att2[att2.length - 1][3], 'גבאי');
   console.log('device OK');
 }
+
+// ---------- Browser scripts are declarations only ----------
+{
+  // If scripts/*.js were ever uploaded as server code (wrong .clasp.json), loading them must not throw.
+  const vm2 = require('vm'), fs2 = require('fs'), path2 = require('path');
+  const box = vm2.createContext({});
+  const walk = d => fs2.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path2.join(d, e.name)) : [path2.join(d, e.name)]);
+  const files = walk(path2.join(__dirname, '..', 'scripts')).filter(f => f.endsWith('.js'));
+  files.forEach(f => vm2.runInContext(fs2.readFileSync(f, 'utf8'), box, { filename: f }));
+  // and every include in the pages resolves
+  for (const page of ['KioskPage', 'AdminPage', 'LinkDialog', 'ReportTextDialog']) {
+    const html = G.page_(page);
+    assert(!/data-include=/.test(html), page + ' has an unresolved include');
+  }
+  console.log('client scripts OK (' + files.length + ' files)');
+}

@@ -1,0 +1,84 @@
+// Registration page — loading, opening hours, submitting and the confirmation screen.
+// Declarations only — nothing runs when the file loads; the page calls the start function.
+
+// ---------- Startup & state ----------
+function init() {
+  call('kioskInit', [KEY], function (info) {
+    S.info = info;
+    S.roster = info.roster || S.roster;
+    $('title').textContent = info.name || 'רישום נוכחות';
+    var h = hebDate(info.today);
+    $('hebDate').textContent = h;
+    show('sep', !!h);
+    $('gregDate').textContent = gregDate(info.today);
+    show('loading', false);
+    var pin = load('minyanPin');
+    if (pin && !S.pin) { S.pin = pin; gabbaiUi(true); }
+    refreshClosed();
+  }, function (e) { $('loading').textContent = errText(e); });
+}
+function refreshClosed() {
+  var i = S.info, why = '';
+  if (!S.pin) {
+    if (i.dow === 6) why = 'שבת שלום<small>אין רישום בשבת</small>';
+    else if (i.noMinyan) why = 'היום אין רישום';
+    else if (!i.open) why = 'הרישום סגור כעת<small>הרישום פתוח בין השעות ' + i.from + ':00 ל-' + i.to + ':00</small>';
+  }
+  $('closed').innerHTML = why;
+  show('closed', !!why);
+  if (!$('done').hidden) return;
+  show('form', !why);
+}
+// ---------- Submit ----------
+function showMsg(t) { $('msg').textContent = t; show('msg', !!t); }
+function setBusy(on) { S.busy = on; $('submit').disabled = on; $('submit').textContent = on ? 'רושם…' : 'רישום נוכחות'; }
+function submit(ev) {
+  ev.preventDefault();
+  if (S.busy) return;
+  showMsg('');
+  var phone = normPhone($('phone').value), last = $('last').value.trim(), first = $('first').value.trim();
+  var pid = S.selectedId || S.phoneId;
+  if ($('phone').value.trim() && !validPhone_(phone)) return showMsg('מספר הטלפון אינו תקין');
+  if (!pid && !last) { $('last').focus(); return showMsg('נא למלא שם משפחה'); }
+  setBusy(true);
+  call('kioskSubmit', [KEY, { phone: phone, first: first, last: last, personId: pid, device: S.pin ? '' : DEVICE,
+                              pin: S.pin, date: S.pin ? $('date').value : '' }], done);
+}
+function done(res) {
+  setBusy(false);
+  if (!res.ok) return showMsg(res.message);
+  if (res.person && !S.roster.some(function (p) { return p.id === res.person.id; })) S.roster.push(res.person);
+  var g = !!S.pin, other = res.date !== S.info.today;
+  var mark = $('mark'), title = '', text = '';
+  if (res.status === 'pending') {
+    mark.className = 'mark wait'; mark.textContent = '…';
+    title = 'הרישום התקבל';
+    text = 'הגבאי יאשר אותו בהמשך';
+  } else {
+    mark.className = 'mark ok'; mark.textContent = '✓';
+    title = g ? res.name : 'תודה, ' + res.name + '!';
+    if (res.status === 'already') text = other ? 'כבר רשום ל-' + shortDate(res.date) : 'כבר רשום להיום — אין צורך לרשום שוב';
+    else text = other ? 'נרשם ל-' + shortDate(res.date) : (g ? 'נרשם להיום' : 'הנוכחות נרשמה להיום');
+  }
+  $('doneTitle').textContent = title;
+  $('doneText').textContent = text;
+  var st = res.stats;
+  if (st) {
+    $('doneStats').innerHTML = 'נוכחות בתקופה: <b>' + st.count + '</b> מתוך ' + st.days + ' ימים (' + st.pct + '%)' +
+      (st.eligible ? '<br><span class="elig">✓ עומד בתנאי ההגרלה</span>' : '');
+  }
+  show('doneStats', !!st);
+  show('form', false);
+  show('done', true);
+  clearTimeout(S.resetTimer);
+  S.resetTimer = setTimeout(reset, g ? 2000 : 6000);
+}
+function reset() {
+  clearTimeout(S.resetTimer);
+  ['phone', 'last', 'first'].forEach(function (id) { $(id).value = ''; });
+  S.selectedId = ''; S.phoneId = ''; S.seq++;
+  show('phoneHit', false); show('names', true); renderChips([]); showMsg('');
+  show('done', false);
+  refreshClosed();
+  if (S.pin) $('phone').focus();
+}

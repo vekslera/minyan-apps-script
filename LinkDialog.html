@@ -24,13 +24,7 @@ body{margin:0;padding:14px 18px;font-family:'Assistant',Arial,sans-serif;font-si
     <p class="muted">שמרו את הקישור לעצמכם. מי שאין לו את הקישור לא יכול להירשם.</p>
   </div>
 </div>
-<script>
-try { new QRCode(document.getElementById('qr'), { text: '__LINK__', width: 180, height: 180 }); } catch (e) {}
-document.getElementById('copy').onclick = function () {
-  var t = document.getElementById('url').textContent, b = this;
-  function ok() { b.textContent = 'הועתק ✓'; }
-  if (navigator.clipboard) navigator.clipboard.writeText(t).then(ok, fallback); else fallback();
-  function fallback() { var r = document.createRange(); r.selectNodeContents(document.getElementById('url')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); try { document.execCommand('copy'); ok(); } catch (e) {} }
-};
-</script>
+<script data-include="scripts/common/clipboard.js"></script>
+<script data-include="scripts/dialogs/linkDialog.js"></script>
+<script>startLinkDialog();</script>
 </body></html>

@@ -117,10 +117,18 @@ function makeEnv(opts) {
   const dir = path.join(__dirname, '..');
   const files = fs.readdirSync(dir).filter(f => f.endsWith('.gs')).sort().reverse();
   // Apps Script ignores extensions: Admin.gs and Admin.html would clash on push.
-  const bases = fs.readdirSync(dir).filter(f => /\.(gs|html)$/.test(f)).map(f => f.replace(/\.[^.]+$/, '').toLowerCase());
+  const walk = d => fs.readdirSync(path.join(dir, d), { withFileTypes: true }).flatMap(e =>
+    e.isDirectory() ? (['test', 'node_modules', '.git'].includes(e.name) ? [] : walk(path.join(d, e.name))) : [path.join(d, e.name)]);
+  const bases = walk('').filter(f => /\.(gs|html|js)$/.test(f)).map(f => f.replace(/\.[^.]+$/, '').toLowerCase());
   const dup = bases.filter((b, i) => bases.indexOf(b) !== i);
   if (dup.length) throw new Error('Duplicate Apps Script file names: ' + dup.join(', '));
-  ctx.HtmlService.createHtmlOutputFromFile = name => htmlOut(fs.readFileSync(path.join(dir, name + '.html'), 'utf8'));
+  // Like Apps Script: an HTML-type file is found by its name without extension; scripts/*.js are HTML-type
+  // files too (see "htmlExtensions" in .clasp.json.example).
+  ctx.HtmlService.createHtmlOutputFromFile = name => {
+    const file = [name + '.html', name + '.js'].map(f => path.join(dir, f)).find(f => fs.existsSync(f));
+    if (!file) throw new Error('No HTML file named ' + name + ' was found.');
+    return htmlOut(fs.readFileSync(file, 'utf8'));
+  };
   ctx.HtmlService.createHtmlOutputFromFile.getContent = undefined;
   // Tests never read your real Secrets.gs; a test may pass its own values instead.
   for (const f of files) if (f !== 'Secrets.gs') vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), ctx, { filename: f });

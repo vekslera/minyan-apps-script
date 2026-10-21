@@ -14,13 +14,7 @@ textarea{width:100%;height:390px;box-sizing:border-box;font:inherit;padding:10px
 __NOTE__
 <textarea id="t">__TEXT__</textarea>
 <button class="btn" id="copy" type="button">העתקה</button>
-<script>
-document.getElementById('copy').onclick = function () {
-  var t = document.getElementById('t'), b = this;
-  function ok() { b.textContent = 'הועתק ✓'; }
-  t.select();
-  if (navigator.clipboard) navigator.clipboard.writeText(t.value).then(ok, function () { try { document.execCommand('copy'); ok(); } catch (e) {} });
-  else { try { document.execCommand('copy'); ok(); } catch (e) {} }
-};
-</script>
+<script data-include="scripts/common/clipboard.js"></script>
+<script data-include="scripts/dialogs/reportText.js"></script>
+<script>startReportText();</script>
 </body></html>
