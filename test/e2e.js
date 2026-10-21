@@ -428,4 +428,49 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   console.log('gabbai tools OK');
 }
 
+// ---------- Shul location set by the gabbai; radius; the accuracy allowance ----------
+{
+  const SH0 = { lat: 31.9857703, lng: 34.8582831 };
+  const at = (p, m) => ({ lat: p.lat + m / 111320, lng: p.lng });                 // m metres north of p
+  const envS = makeEnv({ secrets: { shulLat: String(SH0.lat), shulLng: String(SH0.lng), shulRadius: 150 } });
+  const S2 = envS.ctx; S2.setup();
+  const k = envS.props.KIOSK_KEY, code = String(envS.ss.getSheetByName('הגדרות').getRange('B8').getValue());
+  const W = (fn, ...a) => { S2.__webContext = true; try { return noDates(S2[fn](...a)); } finally { S2.__webContext = false; } };
+  const s = W('kioskLogin', k, code).token;
+  assert.throws(() => W('gabbaiShulInfo', k, 'nope'), /כניסה מחדש/);
+  let info = W('gabbaiShulInfo', k, s);
+  assert.equal(info.source, 'secrets'); assert.equal(info.radius, 150);
+  // a vague reading is refused; a precise one moves the centre and keeps the radius
+  assert.throws(() => W('gabbaiSetShulLocation', k, s, Object.assign(at(SH0, 300), { acc: 80 })), /לא מדויקת/);
+  const NEW = at(SH0, 300);
+  info = W('gabbaiSetShulLocation', k, s, Object.assign({}, NEW, { acc: 9 }));
+  assert.equal(info.source, 'gabbai'); assert.equal(info.radius, 150); assert.equal(info.acc, 9); assert(info.setAt);
+  assert.equal(W('gabbaiCheckLocation', k, s, Object.assign(at(NEW, 20), { acc: 10 })).inside, true);
+  assert.equal(W('gabbaiCheckLocation', k, s, Object.assign({}, SH0, { acc: 10 })).inside, false, 'the old point is now 300 m away');
+  // radius 40: a house 84 m away is outside even with ±30 m (allowance = at most half the radius)
+  assert.throws(() => W('gabbaiSetShulRadius', k, s, 10), /בין 20 ל-1000/);
+  info = W('gabbaiSetShulRadius', k, s, 40);
+  assert.equal(info.radius, 40); assert.equal(info.lat, NEW.lat);
+  let c = W('gabbaiCheckLocation', k, s, Object.assign(at(NEW, 84), { acc: 30 }));
+  assert.equal(c.inside, false); assert.equal(c.distance, 84);
+  assert.equal(W('gabbaiCheckLocation', k, s, Object.assign(at(NEW, 50), { acc: 15 })).inside, true, '50 m with ±15 m: within 40 + 15');
+  assert.equal(W('kioskInit', k).locationCheck, true);
+  // registrations follow the new area
+  envS.userEdit('הגדרות', 'B6', 0); envS.userEdit('הגדרות', 'B7', 24);
+  const r = S2.kioskSubmit(k, { phone: '0521111111', first: 'משה', last: 'כהן', device: 'mobile', loc: Object.assign(at(NEW, 84), { acc: 30 }) });
+  assert.equal(r.where, 'outside');
+  // back to Secrets.gs
+  info = W('gabbaiResetShulLocation', k, s);
+  assert.equal(info.source, 'secrets'); assert.equal(info.lat, SH0.lat); assert.equal(info.radius, 150);
+  // without Secrets.gs: no check until the gabbai sets a point; the first radius is 50 m
+  const envN = makeEnv(); const N = envN.ctx; N.setup();
+  const kn = envN.props.KIOSK_KEY, sn = N.kioskLogin(kn, String(envN.ss.getSheetByName('הגדרות').getRange('B8').getValue())).token;
+  assert.equal(N.gabbaiShulInfo(kn, sn).configured, false);
+  assert.throws(() => N.gabbaiSetShulRadius(kn, sn, 60), /קודם קובעים/);
+  assert.equal(N.gabbaiSetShulLocation(kn, sn, Object.assign({}, SH0, { acc: 12 })).radius, 50);
+  assert.equal(N.kioskInit(kn).locationCheck, true);
+  assert.equal(N.gabbaiResetShulLocation(kn, sn).configured, false);
+  console.log('shul location OK');
+}
+
 console.log('\nALL OK');

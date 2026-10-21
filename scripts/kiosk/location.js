@@ -48,10 +48,10 @@ function testLocation() {
   showInfo('בודק מיקום…');
   getLocation(function (loc) {
     call('kioskCheckLocation', [KEY, S.session, loc], function (r) {
-      if (!r.configured) return showInfo('בדיקת מיקום לא מוגדרת (shulLat/shulLng ב-Secrets.gs).');
+      if (!r.configured) return showInfo('מיקום בית הכנסת עדיין לא נקבע — כלי גבאי ← מיקום בית הכנסת.');
       if (r.reason) return showInfo('לא התקבל מיקום: ' + r.reason + '.');
       showInfo('מרחק מבית הכנסת: ' + r.distance + ' מ׳ · דיוק: ±' + r.accuracy + ' מ׳ · רדיוס: ' + r.radius + ' מ׳ — ' +
-               (r.inside ? 'בתוך התחום ✓' : 'מחוץ לתחום'));
+               (r.inside ? 'בתוך התחום ✓' : 'מחוץ לתחום') + ' · לשינוי: כלי גבאי ← מיקום בית הכנסת');
     });
   });
 }

@@ -89,6 +89,7 @@ window.onerror = function (msg) {
     <button class="tile" type="button" data-go="draw">הגרלה<small>הגרלת זוכה בין המשתתפים</small></button>
     <button class="tile" type="button" data-go="dups">כפילויות<small>אנשים שנרשמו פעמיים</small></button>
     <button class="tile" type="button" data-go="link">קישור ו-QR<small>הקישור לדף הרישום</small></button>
+    <button class="tile" type="button" data-go="shul">מיקום בית הכנסת<small>מרכז, רדיוס ובדיקת מרחק</small></button>
     <button class="tile" type="button" data-go="pin">שינוי קוד גבאי<small>ויציאה מכל המכשירים</small></button>
   </div>
   <p class="foot"><a class="toKiosk" href="__HOME__" target="_top">לדף הרישום</a> <span id="period"></span></p>
@@ -151,6 +152,32 @@ window.onerror = function (msg) {
   <div class="card" id="linkBox"><div class="empty">טוען…</div></div>
 </section>
 
+<section class="view" id="v-shul" hidden>
+  <div id="shulNote"></div>
+  <div class="card" id="shulBox"><div class="empty">טוען…</div></div>
+  <div class="card">
+    <b>בדיקת המרחק שלי</b>
+    <p class="lead">כמה אתם רחוקים מבית הכנסת, ואם רישום מכאן ייחשב "בתוך בית הכנסת". שום דבר לא נשמר.</p>
+    <button class="btn" id="shulTest" type="button">בדיקה</button>
+    <div id="shulTestOut" class="g-meta" style="margin-top:8px;font-size:15px"></div>
+  </div>
+  <div class="card" id="shulRadiusCard" hidden>
+    <b>רדיוס</b>
+    <div class="row"><label><input type="number" id="shulRadius" min="20" max="1000" step="5" style="width:100px"> מטרים</label>
+      <button class="btn" id="shulRadiusSave" type="button">שמירה</button></div>
+    <p class="g-meta">מומלץ 40–60 מ׳: מספיק לאולם ולחצר. מעבר לרדיוס נסלחת גם סטיית ה-GPS, עד חצי רדיוס.</p>
+  </div>
+  <div class="card">
+    <b>קביעת מיקום בית הכנסת</b>
+    <p class="lead">עמדו בבית הכנסת, רצוי באמצע האולם, עם טלפון (במחשב המיקום בדרך כלל לא מדויק), ולחצו "מדידה". המדידה נמשכת עד 20 שניות; נשמרת הקריאה המדויקת ביותר.</p>
+    <div class="actions">
+      <button class="btn" id="shulMeasure" type="button">מדידה</button>
+      <button class="btn primary" id="shulSet" type="button" hidden>קביעה כמיקום בית הכנסת</button>
+    </div>
+    <div id="shulMeasureOut" class="g-meta" style="margin-top:8px;font-size:15px"></div>
+  </div>
+</section>
+
 <section class="view" id="v-pin" hidden>
   <div id="pinNote"></div>
   <div class="card" style="max-width:420px">
@@ -183,6 +210,7 @@ var API = { prefix: 'gabbai', auth: function () { return [KEY, S.session]; } };
 <script data-include="scripts/gabbai/duplicates.js"></script>
 <script data-include="scripts/gabbai/link.js"></script>
 <script data-include="scripts/gabbai/pin.js"></script>
+<script data-include="scripts/gabbai/shul.js"></script>
 <script data-include="scripts/gabbai/main.js"></script>
 <script>startGabbai();</script>
 </body>

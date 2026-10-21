@@ -133,6 +133,41 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
   console.log('ended session →', (await p.textContent('#loginNote')).trim());
   await p.close(); await desk.close();
 
+  // ---------- shul location, measured on a phone in the shul ----------
+  const SH = { latitude: 31.9857703, longitude: 34.8582831 };
+  const inShul = await browser.newContext({ userAgent: IPHONE, hasTouch: true, isMobile: true, viewport: { width: 390, height: 780 },
+                                            permissions: ['geolocation'], geolocation: Object.assign({ accuracy: 6 }, SH) });
+  await inShul.grantPermissions(['geolocation'], { origin: 'https://kiosk.test' });
+  p = await open(inShul);
+  await p.fill('#pin', 'testcode9'); await p.click('#loginBtn'); await p.waitForTimeout(400);
+  await tile(p, 'shul');
+  assert(/כבויה/.test(await p.textContent('#shulBox')), 'no location yet');
+  assert(await p.isHidden('#shulRadiusCard'));
+  await p.click('#shulMeasure'); await p.waitForSelector('#shulSet:not([hidden])', { timeout: 25000 });
+  console.log('measured:', (await p.textContent('#shulMeasureOut')).trim());
+  await p.click('#shulSet'); assert(/בטוח/.test(await p.textContent('#shulSet')));
+  await p.click('#shulSet'); await p.waitForTimeout(400);
+  console.log('set:', (await p.textContent('#shulNote')).trim(), '|', (await p.textContent('#shulBox')).replace(/\s+/g, ' ').trim());
+  assert(/רדיוס: 50 מ׳/.test(await p.textContent('#shulBox')));
+  await p.fill('#shulRadius', '40'); await p.click('#shulRadiusSave'); await p.waitForTimeout(300);
+  assert(/רדיוס: 40 מ׳/.test(await p.textContent('#shulBox')));
+  await inShul.setGeolocation({ latitude: SH.latitude + 20 / 111320, longitude: SH.longitude, accuracy: 10 });
+  await p.click('#shulTest'); await p.waitForTimeout(400);
+  console.log('20 m away:', (await p.textContent('#shulTestOut')).trim());
+  assert(/בתוך/.test(await p.textContent('#shulTestOut')));
+  await inShul.setGeolocation({ latitude: SH.latitude + 84 / 111320, longitude: SH.longitude, accuracy: 30 });
+  await p.click('#shulTest'); await p.waitForTimeout(400);
+  console.log('84 m away:', (await p.textContent('#shulTestOut')).trim());
+  assert(/מחוץ/.test(await p.textContent('#shulTestOut')));
+  // a vague reading (as on most computers) can't be set
+  await inShul.setGeolocation(Object.assign({ accuracy: 120 }, SH));
+  await p.click('#shulMeasure'); await p.waitForTimeout(21500);
+  console.log('vague:', (await p.textContent('#shulMeasureOut')).trim());
+  assert(/לא מדויקת/.test(await p.textContent('#shulMeasureOut'))); assert(await p.isHidden('#shulSet'));
+  assert(!(await overflow(p)), 'shul screen fits the phone');
+  await p.screenshot({ path: 'test/shots/g11-phone-shul.png', fullPage: true });
+  await p.close(); await inShul.close();
+
   // ---------- phone ----------
   const phone = await browser.newContext({ userAgent: IPHONE, hasTouch: true, isMobile: true, viewport: { width: 390, height: 780 } });
   p = await open(phone);
@@ -148,7 +183,7 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
   await p.click('#barBtn'); await p.waitForTimeout(500);
   assert(!(await overflow(p)), 'review fits the phone');
   await p.screenshot({ path: 'test/shots/g9-phone-review.png', fullPage: true });
-  for (const v of ['weekly', 'final', 'draw', 'dups', 'link', 'pin']) {
+  for (const v of ['weekly', 'final', 'draw', 'dups', 'link', 'shul', 'pin']) {
     await p.click('#back'); await p.waitForTimeout(200); await tile(p, v);
     if (v === 'weekly') { await p.click('#weeklyBtn'); await p.waitForTimeout(300); }
     assert(!(await overflow(p)), v + ' fits the phone');

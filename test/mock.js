@@ -105,7 +105,7 @@ function makeEnv(opts) {
       parseDate: (k, tz) => new FakeDate(k + 'T09:00:00Z'),
       getUuid: () => crypto.randomUUID(),
     },
-    PropertiesService: { getDocumentProperties: () => ({ getProperty: k => props[k] || null, setProperty: (k, v) => { props[k] = v; } }) },
+    PropertiesService: { getDocumentProperties: () => ({ getProperty: k => props[k] || null, setProperty: (k, v) => { props[k] = String(v); }, deleteProperty: k => { delete props[k]; } }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     HtmlService: { createHtmlOutput: htmlOut },
     ScriptApp: { getService: () => ({ getUrl: () => '' }) },
