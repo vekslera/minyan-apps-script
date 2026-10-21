@@ -65,6 +65,7 @@ footer{text-align:center;margin-top:20px}
 .modal .row{display:flex;gap:10px;margin-top:12px}
 .modal .row button{flex:1;margin:0}
 .loading{text-align:center;color:var(--muted);padding:30px}
+.notme{display:block;margin:-8px 0 12px;font-size:16px}
 .device{color:var(--muted);font-size:12px;opacity:.7;margin-top:2px}
 [hidden]{display:none!important}
 </style>
@@ -87,9 +88,10 @@ footer{text-align:center;margin-top:20px}
     <div class="closed" id="closed" hidden></div>
 
     <form id="form" autocomplete="off" novalidate hidden>
-      <label class="field"><span>טלפון נייד <small>(מספיק בפעמים הבאות)</small></span>
-        <input id="phone" class="tel" type="tel" inputmode="tel" maxlength="20" placeholder="05X-XXXXXXX"></label>
+      <label class="field"><span>טלפון נייד <b class="req" id="phoneReq" hidden>*</b> <small id="phoneNote">(מספיק בפעמים הבאות)</small></span>
+        <input id="phone" class="tel" type="tel" inputmode="tel" maxlength="20" placeholder="05X-XXXXXXX" autocomplete="off"></label>
       <div id="phoneHit" class="hit" hidden></div>
+      <button class="link notme" id="notMe" type="button" hidden>זה לא אני — להקליד מספר אחר</button>
 
       <div id="names">
         <label class="field"><span>שם משפחה <b class="req">*</b></span><input id="last" type="text"></label>
@@ -143,6 +145,7 @@ var FORCED_DEVICE = '__DEVICE__';
 <script data-include="scripts/kiosk/lookup.js"></script>
 <script data-include="scripts/kiosk/registration.js"></script>
 <script data-include="scripts/kiosk/gabbaiMode.js"></script>
+<script data-include="scripts/kiosk/myPhone.js"></script>
 <script data-include="scripts/kiosk/main.js"></script>
 <script>startKiosk();</script>
 </body>

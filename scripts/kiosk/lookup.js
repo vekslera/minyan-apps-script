@@ -7,6 +7,8 @@
 // looked up on the server, because the page never receives phone numbers.
 function onPhone() {
   S.phoneId = '';
+  S.fromSaved = false;
+  show('notMe', false);
   var p = normPhone($('phone').value);
   if (validPhone_(p)) phoneLookup(p);
   else { S.seq++; show('phoneHit', false); show('names', true); localSuggest(); }

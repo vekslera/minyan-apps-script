@@ -13,7 +13,7 @@ function init() {
     $('gregDate').textContent = gregDate(info.today);
     show('loading', false);
     var pin = load('minyanPin');
-    if (pin && !S.pin) { S.pin = pin; gabbaiUi(true); }
+    if (pin && !S.pin) { S.pin = pin; gabbaiUi(true); reset(); }   // back in gabbai mode: no personal number
     refreshClosed();
   }, function (e) { $('loading').textContent = errText(e); });
 }
@@ -38,7 +38,9 @@ function submit(ev) {
   showMsg('');
   var phone = normPhone($('phone').value), last = $('last').value.trim(), first = $('first').value.trim();
   var pid = S.selectedId || S.phoneId;
+  if (onPersonalPhone() && !$('phone').value.trim()) { $('phone').focus(); return showMsg('בטלפון נייד יש להקיש את מספר הטלפון שלך'); }
   if ($('phone').value.trim() && !validPhone_(phone)) return showMsg('מספר הטלפון אינו תקין');
+  S.lastPhone = phone;
   if (!pid && !last) { $('last').focus(); return showMsg('נא למלא שם משפחה'); }
   setBusy(true);
   call('kioskSubmit', [KEY, { phone: phone, first: first, last: last, personId: pid, device: S.pin ? '' : DEVICE,
@@ -47,6 +49,7 @@ function submit(ev) {
 function done(res) {
   setBusy(false);
   if (!res.ok) return showMsg(res.message);
+  if (onPersonalPhone() && validPhone_(S.lastPhone)) rememberPhone(S.lastPhone);
   if (res.person && !S.roster.some(function (p) { return p.id === res.person.id; })) S.roster.push(res.person);
   var g = !!S.pin, other = res.date !== S.info.today;
   var mark = $('mark'), title = '', text = '';
@@ -81,4 +84,5 @@ function reset() {
   show('done', false);
   refreshClosed();
   if (S.pin) $('phone').focus();
+  prefillPhone();
 }

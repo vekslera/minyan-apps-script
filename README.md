@@ -91,7 +91,7 @@ clasp login                # opens a browser: choose the minyan account and allo
 **Push:**
 
 ```bash
-clasp status      # lists what will be uploaded: 12 .gs files + Secrets.gs, 5 .html files, 15 scripts/…/*.js files, appsscript.json
+clasp status      # lists what will be uploaded: 12 .gs files + Secrets.gs, 5 .html files, 16 scripts/…/*.js files, appsscript.json
 clasp push -f     # -f overwrites the project's manifest without asking
 ```
 
@@ -105,9 +105,9 @@ In the script editor:
 1. Click the default file **`Code.gs`** → ⋮ → **Rename / שינוי שם** → `Setup`. Replace its content with the content of `Setup.gs`.
 2. For each of the other `.gs` files (`Admin`, `Config`, `Data`, `Duplicates`, `HebrewCalendar`, `Kiosk`, `Matching`, `Names`, `Reports`, `Utils`, `WhatsApp`): **Files / קבצים → + → Script / סקריפט**. Type the name **without `.gs`** and paste the content.
 3. For each `.html` file: **+ → HTML**. Type the name **exactly**, without `.html`: `KioskPage`, `AdminPage`, `LinkDialog`, `ReportTextDialog`, `BadLinkPage`, then paste.
-4. For each file in the `scripts` folder: also **+ → HTML** (not Script). Type its path **without `.js`**, slashes included, e.g. `scripts/kiosk/main`. Paste the file's content as it is. All 15 files:
+4. For each file in the `scripts` folder: also **+ → HTML** (not Script). Type its path **without `.js`**, slashes included, e.g. `scripts/kiosk/main`. Paste the file's content as it is. All 16 files:
    `scripts/common/dom`, `scripts/common/clipboard`,
-   `scripts/kiosk/helpers`, `scripts/kiosk/deviceDetection`, `scripts/kiosk/hebrewDate`, `scripts/kiosk/lookup`, `scripts/kiosk/registration`, `scripts/kiosk/gabbaiMode`, `scripts/kiosk/main`,
+   `scripts/kiosk/helpers`, `scripts/kiosk/deviceDetection`, `scripts/kiosk/hebrewDate`, `scripts/kiosk/lookup`, `scripts/kiosk/registration`, `scripts/kiosk/gabbaiMode`, `scripts/kiosk/myPhone`, `scripts/kiosk/main`,
    `scripts/admin/helpers`, `scripts/admin/import`, `scripts/admin/review`, `scripts/admin/main`,
    `scripts/dialogs/linkDialog`, `scripts/dialogs/reportText`.
 5. **Optional:** create `Secrets` (+ → Script) from `Secrets.gs.example`. Without it, everything is configured in the הגדרות sheet.
@@ -202,6 +202,17 @@ Outside gabbai mode, the page detects what it runs on: **טלפון נייד** (
 - **How it decides.** It uses the browser's own report (client hints, then the user-agent). An iPad that presents itself as a Mac is recognized by its touch screen.
 - **The shul's own tablet.** Add `&device=kiosk` to the end of its link, i.e. `…/exec?k=…&device=kiosk`. That marks it as **טאבלט בית הכנסת** whatever the browser reports, so it is never treated as a private phone. The printed QR code should stay *without* this ending.
 
+### On a personal phone
+
+When the page runs on a **phone** (not the shul's tablet, not gabbai mode):
+
+- **The phone number is required.** The page asks for it, and the server refuses a phone registration without one.
+- **The number is remembered on that phone** after the first registration. On the next visit it is already filled in and recognized ("שלום, …"), so one tap on "רישום נוכחות" is enough.
+- **"זה לא אני — להקליד מספר אחר"** clears the remembered number, for a phone shared within a family.
+- **First use.** The field is marked as a phone-number field, so the phone's keyboard or autofill may offer the owner's number.
+- **Why not detect the number automatically?** No web page can read the device's own phone number; browsers don't allow it.
+- **When the number is forgotten.** It is kept in the browser's storage for this page. Clearing the browser data, or a private/incognito tab, forgets it; the person then simply types it again.
+
 ## 8. Daily use
 
 The **הוראות** tab in the Sheet explains it in Hebrew. In short:
@@ -276,7 +287,7 @@ Don't create a new deployment for an update: it gets a new address.
 | `AdminPage.html` | Import + review dialog: markup and styles |
 | `LinkDialog.html`, `ReportTextDialog.html`, `BadLinkPage.html` | Small dialogs/pages |
 | `scripts/common/dom.js`, `clipboard.js` | Browser helpers shared by the pages |
-| `scripts/kiosk/*.js` | Registration page: `helpers`, `deviceDetection`, `hebrewDate`, `lookup` (live suggestions), `registration` (submit/confirmation), `gabbaiMode`, `main` (state + `startKiosk()`) |
+| `scripts/kiosk/*.js` | Registration page: `helpers`, `deviceDetection`, `hebrewDate`, `lookup` (live suggestions), `registration` (submit/confirmation), `gabbaiMode`, `myPhone` (required and remembered number on a phone), `main` (state + `startKiosk()`) |
 | `scripts/admin/*.js` | Import/review dialog: `helpers`, `import`, `review`, `main` (tabs + `startAdmin()`) |
 | `scripts/dialogs/*.js` | `linkDialog` (QR + copy), `reportText` (copy) |
 | `appsscript.json` | Manifest (time zone, V8, web-app access) |
@@ -313,6 +324,7 @@ node test/e2e.js           # end-to-end: registration, import, review, reports, 
 node test/hebcal_check.js  # Hebrew calendar vs. the ICU calendar, 2023–2028
 node test/ui.js            # renders the pages in Chromium; needs:  npm install playwright
 node test/device.js        # device detection with emulated iPhone/Android/iPad/desktop browsers (Playwright)
+node test/mobile.js        # personal-phone flow: required, remembered, "זה לא אני", gabbai mode, shul tablet (Playwright)
 node test/profile.js       # counts Google-service calls per action on a month of sample data
 ```
 
