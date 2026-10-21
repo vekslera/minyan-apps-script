@@ -141,13 +141,17 @@ console.log('\nALL OK');
 
 // ---------- Secrets.gs overrides ----------
 {
-  const env2 = makeEnv({ secrets: { gabbaiPin: '4321', deploymentId: 'AKfycbTEST', kioskKey: 'fixedkey123' } });
+  const env2 = makeEnv({ secrets: { gabbaiPin: '4321', deploymentId: 'AKfycbTEST', kioskKey: 'fixedkey123', lotteryThreshold: '60' } });
   const G2 = env2.ctx;
   G2.setup();
   const s2 = G2.readSettings_(env2.ss, 'Asia/Jerusalem');
   assert.equal(s2.pin, '4321');
   assert.equal(s2.url, 'https://script.google.com/macros/s/AKfycbTEST/exec');
   assert.equal(G2.kioskKey_(), 'fixedkey123');
+  assert.equal(s2.threshold, 60);
+  // an invalid value falls back to the sheet
+  const env3 = makeEnv({ secrets: { lotteryThreshold: 'abc' } }); env3.ctx.setup();
+  assert.equal(env3.ctx.readSettings_(env3.ss, 'Asia/Jerusalem').threshold, 75);
   G2.menuKioskLink();
   assert(env2.ui.lastDialog.includes('/AKfycbTEST/exec?k=fixedkey123'));
   assert(G2.doGet({ parameter: { k: 'fixedkey123' } }).html.includes("var KEY = 'fixedkey123'"));

@@ -29,7 +29,7 @@ function readSettings_(ss, tz) {
   const num = (x, d) => (x === '' || x == null || isNaN(Number(x))) ? d : Number(x);
   const excluded = new Set(raw.excluded);
   return { name: String(map[SET.NAME] || 'מניין שחרית').trim(), start: toKey_(map[SET.START], tz), end: toKey_(map[SET.END], tz),
-           threshold: num(map[SET.PCT], 75), from: num(map[SET.FROM], 5), to: num(map[SET.TO], 11),
+           threshold: secretPercent_('lotteryThreshold') || num(map[SET.PCT], 75), from: num(map[SET.FROM], 5), to: num(map[SET.TO], 11),
            // Values in Secrets.gs (not in git) win over the sheet.
            pin: secret_('gabbaiPin') || String(map[SET.PIN] == null ? '' : map[SET.PIN]).trim(),
            url: webAppUrlFromSecrets_() || String(map[SET.URL] || '').trim(),
@@ -95,6 +95,11 @@ function secret_(name) {
   // eslint-disable-next-line no-undef
   const s = typeof SECRETS !== 'undefined' && SECRETS ? SECRETS[name] : '';
   return s == null ? '' : String(s).trim();
+}
+/** A percentage (1–100) from Secrets.gs, or 0 when it is not set or not a valid number. */
+function secretPercent_(name) {
+  const v = Number(secret_(name).replace('%', ''));
+  return v > 0 && v <= 100 ? v : 0;
 }
 /** The registration page address, built from the deployment ID in Secrets.gs (or '' if not set). */
 function webAppUrlFromSecrets_() {

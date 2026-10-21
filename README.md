@@ -148,6 +148,7 @@ const SECRETS = {
   ownerAccount: 'minyan.yourshul@gmail.com',
   deploymentId: 'AKfycb…',         // from step 5
   gabbaiPin: '2468',               // your choice; empty = use the code in the הגדרות sheet
+  lotteryThreshold: 75,            // % of minyan days needed for the lottery; empty = use the הגדרות sheet
   kioskKey: '',                    // leave empty
 };
 ```
@@ -161,7 +162,7 @@ Then upload it with `clasp push` (route B: just save the file).
 | 2 | שם המניין | Shown at the top of the page, e.g. `מניין שחרית` |
 | 3 | תחילת התקופה | First day of the lottery period |
 | 4 | סוף התקופה | Last day of the period |
-| 5 | אחוז נוכחות מינימלי להגרלה | `75` means 75% or more |
+| 5 | אחוז נוכחות מינימלי להגרלה | `75` means 75% or more — ignored when `lotteryThreshold` is set in `Secrets.gs` |
 | 6–7 | רישום עצמי פתוח משעה / עד שעה | Self-registration hours, e.g. `5` and `11`. The gabbai can register at any time |
 | 8 | קוד גבאי | The gabbai code, if not set in `Secrets.gs` |
 | 9 | כתובת דף הרישום (Web app) | The web-app URL from step 5, if `deploymentId` is not set in `Secrets.gs` |
@@ -265,7 +266,7 @@ All `.gs` files share one global scope, and nothing runs at load time across fil
 ## 12. Private settings (`Secrets.gs`)
 
 - **Where they live.** Private values live in `Secrets.gs`. It is in `.gitignore`, so it never reaches git, but `clasp push` uploads it and the script reads it at run time.
-- **What it holds.** The owner account, the web-app deployment ID (the page address is built from it), the gabbai code and, optionally, a fixed link key.
+- **What it holds.** The owner account, the web-app deployment ID (the page address is built from it), the gabbai code, the lottery threshold and, optionally, a fixed link key.
 - **Every value is optional.** An empty value falls back to the הגדרות sheet or to an automatically generated key.
 - **Other private files.** `.clasp.json` (your Script ID) is also git-ignored.
 - **No passwords.** None are stored anywhere in the project. `clasp login` keeps its token in your user folder (`~/.clasprc.json`), outside the repo.
