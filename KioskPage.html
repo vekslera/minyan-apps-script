@@ -65,6 +65,7 @@ footer{text-align:center;margin-top:20px}
 .modal .row{display:flex;gap:10px;margin-top:12px}
 .modal .row button{flex:1;margin:0}
 .loading{text-align:center;color:var(--muted);padding:30px}
+.device{color:var(--muted);font-size:12px;opacity:.7;margin-top:2px}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -113,7 +114,7 @@ footer{text-align:center;margin-top:20px}
     </div>
   </div>
 
-  <footer><button class="link" id="gabbaiOn" type="button">מצב גבאי</button></footer>
+  <footer><button class="link" id="gabbaiOn" type="button">מצב גבאי</button><div class="device" id="deviceLabel"></div></footer>
 </div>
 
 <div class="modal" id="pinDlg" hidden>
@@ -133,6 +134,25 @@ footer{text-align:center;margin-top:20px}
 </script>
 <script>
 var KEY = '__KEY__';
+var FORCED_DEVICE = '__DEVICE__';
+var DEVICE = detectDevice();
+
+/**
+ * 'mobile' (a phone), 'tablet', 'desktop' — or 'kiosk' when the link says &device=kiosk (the shul's tablet).
+ * Client hints first (Chrome/Edge/Android), then the user-agent string. iPadOS reports itself as a Mac,
+ * so a "Mac" with a touch screen is a tablet.
+ */
+function detectDevice() {
+  if (FORCED_DEVICE && FORCED_DEVICE.indexOf('__') !== 0) return FORCED_DEVICE;
+  var ua = navigator.userAgent || '';
+  var uad = navigator.userAgentData;
+  if (/iPhone|iPod|Windows Phone|IEMobile|BlackBerry|Opera Mini/i.test(ua)) return 'mobile';
+  if (/iPad|Tablet|PlayBook|Silk|Kindle/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 0)) return 'tablet';
+  if (/Android/i.test(ua)) return /Mobile/i.test(ua) ? 'mobile' : 'tablet';      // Android tablets omit "Mobile"
+  if (uad && uad.mobile === true) return 'mobile';
+  return 'desktop';
+}
+var DEVICE_NAMES = { mobile: 'טלפון נייד', tablet: 'טאבלט', desktop: 'מחשב', kiosk: 'טאבלט בית הכנסת' };
 var S = { info: null, roster: [], pin: '', selectedId: '', phoneId: '', seq: 0, lookupTimer: null, resetTimer: null, busy: false };
 
 function $(id) { return document.getElementById(id); }
@@ -284,7 +304,7 @@ function submit(ev) {
   if ($('phone').value.trim() && !validPhone_(phone)) return showMsg('מספר הטלפון אינו תקין');
   if (!pid && !last) { $('last').focus(); return showMsg('נא למלא שם משפחה'); }
   setBusy(true);
-  call('kioskSubmit', [KEY, { phone: phone, first: first, last: last, personId: pid,
+  call('kioskSubmit', [KEY, { phone: phone, first: first, last: last, personId: pid, device: S.pin ? '' : DEVICE,
                               pin: S.pin, date: S.pin ? $('date').value : '' }], done);
 }
 
@@ -332,6 +352,7 @@ function reset() {
 function gabbaiUi(on) {
   show('gabbaiBar', on);
   show('gabbaiOn', !on);
+  $('deviceLabel').textContent = on ? '' : (DEVICE_NAMES[DEVICE] || '');
   if (on) { $('date').value = S.info.today; $('date').max = S.info.today; }
 }
 function openPin() { $('pin').value = ''; show('pinMsg', false); show('pinDlg', true); $('pin').focus(); }
@@ -359,6 +380,7 @@ $('pinOk').addEventListener('click', checkPin);
 $('pin').addEventListener('keydown', function (e) { if (e.key === 'Enter') checkPin(); });
 $('pinCancel').addEventListener('click', function () { show('pinDlg', false); });
 
+$('deviceLabel').textContent = DEVICE_NAMES[DEVICE] || '';
 init();
 // Keep the date and the opening hours current on a tablet that stays on all day.
 setInterval(function () {

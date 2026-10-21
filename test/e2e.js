@@ -221,3 +221,15 @@ console.log('\nALL OK');
   assert(web('kioskInit', key).roster.find(p => p.id === 'P001').last === 'כהנא');
   console.log('cache safety OK');
 }
+
+// ---------- Device detection (server side of it) ----------
+{
+  assert(G.doGet({ parameter: { k: key, device: 'kiosk' } }).html.includes("var FORCED_DEVICE = 'kiosk'"));
+  assert(G.doGet({ parameter: { k: key, device: 'evil<script>' } }).html.includes("var FORCED_DEVICE = ''"));
+  const r = sub({ phone: '0599999999', first: 'נייד', last: 'בודק', device: 'mobile' });
+  assert.equal(r.status, 'created');
+  const att = rows('נוכחות'); assert.equal(att[att.length - 1][3], 'דף רישום · נייד');
+  sub({ phone: '0599999998', first: 'גבאי', last: 'בודק', device: 'mobile', pin, date: past[0] });
+  const att2 = rows('נוכחות'); assert.equal(att2[att2.length - 1][3], 'גבאי');
+  console.log('device OK');
+}

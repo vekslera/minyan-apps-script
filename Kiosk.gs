@@ -6,7 +6,10 @@
 function doGet(e) {
   const key = kioskKey_();
   const ok = e && e.parameter && e.parameter.k === key;
-  return HtmlService.createHtmlOutput(ok ? page_('KioskPage').replace('__KEY__', () => key) : page_('BadLinkPage'))
+  // "&device=kiosk" on the link marks the shul's own tablet, whatever the browser reports (see README).
+  const forced = ok && DEVICES.indexOf(String(e.parameter.device || '')) >= 0 ? e.parameter.device : '';
+  return HtmlService.createHtmlOutput(ok ? page_('KioskPage').replace('__KEY__', () => key).replace('__DEVICE__', () => forced)
+                                         : page_('BadLinkPage'))
     .setTitle('רישום נוכחות במניין')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
@@ -69,7 +72,7 @@ function kioskSubmit(key, d) {
     if (ctx.excluded.has(date)) return fail('תאריך זה מסומן כיום ללא מניין');
     if (!gabbai && !isOpenHour_(s, ctx.tz)) return fail('הרישום פתוח בין השעות ' + s.from + ':00 ל-' + s.to + ':00');
 
-    const e = { date: date, source: gabbai ? SRC.GABBAI : SRC.KIOSK, loggedAt: new Date(),
+    const e = { date: date, source: gabbai ? SRC.GABBAI : sourceLabel_(d.device), loggedAt: new Date(),
                 first: clean_(d.first), last: clean_(d.last), phone: normPhone_(d.phone), full: '',
                 personId: String(d.personId || '').trim() };
     if (e.phone && !validPhone_(e.phone)) return fail('מספר הטלפון אינו תקין');
@@ -128,6 +131,12 @@ function personStats_(ctx, id) {
   const count = r ? r.count : 0;
   return { count: count, days: st.days.length, pct: Math.round(100 * count / st.days.length),
            eligible: count * 100 >= s.threshold * st.days.length, threshold: s.threshold };
+}
+
+/** "דף רישום · נייד" — where a self-registration came from, as the page detected it. */
+function sourceLabel_(device) {
+  const label = DEVICE_LABELS[String(device || '')];
+  return label ? SRC.KIOSK + ' · ' + label : SRC.KIOSK;
 }
 
 function pub_(p) {

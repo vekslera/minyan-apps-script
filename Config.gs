@@ -16,6 +16,11 @@ const DUPS_HDR   = ['מזהה להשאיר', 'שם', 'מזהה למזג לתוכ
 const DRAWS_HDR  = ['זמן ההגרלה', 'הזוכה', 'מזהה', 'נוכחות', 'מספר המשתתפים', 'המשתתפים'];
 
 const SRC = { KIOSK: 'דף רישום', GABBAI: 'גבאי', WA: 'וואטסאפ' };
+
+// Device types the registration page detects (not used in gabbai mode). 'kiosk' = the shul's own tablet,
+// set with "&device=kiosk" on its link.
+const DEVICES = ['mobile', 'tablet', 'desktop', 'kiosk'];
+const DEVICE_LABELS = { mobile: 'נייד', tablet: 'טאבלט', desktop: 'מחשב', kiosk: 'טאבלט בית הכנסת' };
 const ST  = { WAIT: 'ממתין', DONE: 'טופל', IGNORED: 'לא נרשם' };
 
 const SET = {

@@ -183,6 +183,14 @@ Then upload it with `clasp push` (route B: just save the file).
 
 ---
 
+### The device the page runs on
+
+Outside gabbai mode, the page detects what it runs on: **טלפון נייד** (phone), **טאבלט** (tablet) or **מחשב** (desktop). It shows the result in small print under "מצב גבאי".
+
+- **Where it's recorded.** Each self-registration stores it in the **מקור** column of the נוכחות sheet, for example `דף רישום · נייד`. Gabbai-mode registrations stay `גבאי`.
+- **How it decides.** It uses the browser's own report (client hints, then the user-agent). An iPad that presents itself as a Mac is recognized by its touch screen.
+- **The shul's own tablet.** Add `&device=kiosk` to the end of its link, i.e. `…/exec?k=…&device=kiosk`. That marks it as **טאבלט בית הכנסת** whatever the browser reports, so it is never treated as a private phone. The printed QR code should stay *without* this ending.
+
 ## 8. Daily use
 
 The **הוראות** tab in the Sheet explains it in Hebrew. In short:
@@ -279,6 +287,7 @@ The tests run the real `.gs` files in Node.js against a simulated Sheet. They ne
 node test/e2e.js           # end-to-end: registration, import, review, reports, settings  → "ALL OK"
 node test/hebcal_check.js  # Hebrew calendar vs. the ICU calendar, 2023–2028
 node test/ui.js            # renders the pages in Chromium; needs:  npm install playwright
+node test/device.js        # device detection with emulated iPhone/Android/iPad/desktop browsers (Playwright)
 node test/profile.js       # counts Google-service calls per action on a month of sample data
 ```
 
