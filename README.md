@@ -2,7 +2,10 @@
 
 A Google Sheet plus Apps Script that tracks attendance at a weekday minyan and runs a lottery for regular attendees.
 
-- **Registration page.** A Hebrew page for a tablet in the shul. A person types a phone number (or a surname) and taps "רישום נוכחות".
+- **Registration page.** A Hebrew page that people open on their own phone or tablet, by scanning a QR code at the shul (or on a shul tablet, if there is one). A person types a phone number (or a surname) and taps "רישום נוכחות".
+  - **Location check.** Self-registration must come from the shul. Someone outside is told so, and can retry or send the registration for the gabbai's approval. Coordinates are never stored.
+  - **Remembered number.** On a phone, a number that was entered once is remembered for next time.
+  - **Computers.** A computer can be used only in gabbai mode.
 - **Gabbai mode.** The gabbai can register others, also for earlier dates.
 - **WhatsApp import.** Paste the attendance lists posted in the WhatsApp group. Each name is matched to a known person, allowing for typos, nicknames and swapped first/last names.
 - **Review screen.** Uncertain matches wait here. The gabbai confirms the person and adds or confirms the phone number.
@@ -21,7 +24,7 @@ Everything the users see is in Hebrew. The code and this README are in English.
 4. [Run setup() and grant permissions](#4-run-setup-and-grant-permissions)
 5. [Publish the registration page](#5-publish-the-registration-page-web-app)
 6. [Fill in the settings](#6-fill-in-the-settings)
-7. [Open the page on the tablet](#7-open-the-page-on-the-tablet)
+7. [Open the page and test it](#7-open-the-page-and-test-it)
 8. [Daily use](#8-daily-use)
 9. [Updating the code later](#9-updating-the-code-later)
 10. [Troubleshooting](#10-troubleshooting)
@@ -35,7 +38,7 @@ Google's menus are shown here as **English / עברית**, because the labels de
 ## 1. What you need
 
 - **A Google account** to own the Sheet. A dedicated account for the minyan is a good idea (for example `minyan.yourshul@gmail.com`): the registration page runs under this account, and the gabbai can be given access to it.
-- **A computer with a browser.** The installation is done on a computer, not on the tablet.
+- **A computer with a browser.** The installation is done on a computer, not on a phone.
 - **For route A only:** [Node.js](https://nodejs.org) 22 or newer, and `clasp`, Google's command-line tool for Apps Script. Route B needs nothing besides the browser.
 
 Sign in to Chrome with **only** the minyan account while installing, or use a separate Chrome profile for it. Apps Script misbehaves when several Google accounts are signed in at once ([§10](#10-troubleshooting)).
@@ -138,13 +141,13 @@ In the script editor:
 3. Set:
    - **Description:** e.g. `registration page`
    - **Execute as / הפעלה בתור:** **Me / אני (your-account@gmail.com)**
-   - **Who has access / למי יש גישה:** **Anyone / כל אחד**. Not "Anyone with a Google account", because the tablet need not be signed in.
+   - **Who has access / למי יש גישה:** **Anyone / כל אחד**. Not "Anyone with a Google account", because people's phones need not be signed in to Google.
 4. **Deploy / פריסה** (authorize again if asked).
 5. Copy two things from the result screen:
    - the **Deployment ID / מזהה פריסה** (starts with `AKfycb…`);
    - the **Web app URL**, which is `https://script.google.com/macros/s/<Deployment ID>/exec`.
 
-Create a **new** deployment only this once. Later code updates go to the **same** deployment ([§9](#9-updating-the-code-later)); otherwise the address changes and the tablet's link stops working.
+Create a **new** deployment only this once. Later code updates go to the **same** deployment ([§9](#9-updating-the-code-later)); otherwise the address changes and the links (and the printed QR code) stop working.
 
 Route A alternative: `clasp create-deployment -d "registration page"` prints the deployment ID.
 
@@ -187,11 +190,16 @@ Then upload it with `clasp push` (route B: just save the file).
 
 ---
 
-## 7. Open the page on the tablet
+## 7. Open the page and test it
 
 1. In the Sheet: **מניין → קישור לדף הרישום**. A window shows the full link (ending in `?k=…`), a QR code, and the gabbai code.
-2. Open that link on the tablet (scan the QR or send it), and add it to the home screen.
-3. Test it: register yourself with your phone number. A row appears in the **נוכחות** tab.
+2. **Make it available to the people who come:**
+   - **Their own phones.** Print the QR code and put it up in the shul. People scan it with the phone's camera and may add the page to the home screen.
+   - **A shul tablet, if there is one.** Open the link with `&device=kiosk` added at the end, and add it to the home screen ([below](#the-device-the-page-runs-on)).
+3. **Test it on a phone, standing in the shul:**
+   - **Location.** Open the page, tap **מצב גבאי**, enter the code and press **בדיקת מיקום**. You should see the distance from the shul and "בתוך התחום ✓" ([location check](#location-check-registering-from-the-shul)).
+   - **Registration.** Leave gabbai mode ("יציאה") and register yourself. A row appears in the **נוכחות** tab, with `דף רישום · נייד` in the מקור column.
+   - **From a computer** only gabbai mode works. Self-registration there shows "רישום עצמי — מטלפון נייד או מטאבלט", by design.
 
 - **Use the full link, with `?k=…`.** The bare `/exec` address deliberately shows "הקישור אינו תקין". The key keeps people who only know the address from registering from home.
 - **Keep the full link private.** Anyone who has it can register.
@@ -237,7 +245,10 @@ When the page runs on a **phone** (not the shul's tablet, not gabbai mode):
 
 The **הוראות** tab in the Sheet explains it in Hebrew. In short:
 
-- **Tablet.** A person types a phone number and taps "רישום נוכחות". Israeli mobile, 07X and landline numbers and US/Canadian numbers (`+1`) are accepted, typed with or without dashes, spaces or a country code. The first time, they also type their name. The page suggests known names while typing.
+- **Phone or tablet, in the shul.** A person scans the QR code (or opens the saved page), types a phone number or a surname, and taps "רישום נוכחות". The page suggests known names while typing.
+  - **Phone numbers.** Israeli mobile, 07X and landline numbers and US/Canadian numbers (`+1`) are accepted, typed with or without dashes, spaces or a country code. The number is optional; the first time, people also type their name.
+  - **On a phone, the number is remembered** for next time.
+  - **Location.** The phone asks for location permission the first time. Someone reported as outside the shul can retry, or send the registration for the gabbai's approval (it then appears in **רישומים לבדיקה**).
 - **Gabbai mode** ("מצב גבאי" at the bottom of the page, plus the code): register others, choose an earlier date, and register outside the self-registration hours.
 - **מניין → ייבוא רשימה מוואטסאפ.** Paste the lists from WhatsApp; a date line such as `19/10` or `ח׳ חשוון` starts each day. Check the dates, then confirm the names in the review screen.
 - **מניין → רישומים לבדיקה.** Entries the system wasn't sure about. Pick the right person, confirm or add the phone, and save.
@@ -260,7 +271,7 @@ Menus and dialogs in the Sheet always use the latest uploaded code. The **regist
 ./deploy.sh "what changed"       # macOS / Linux
 ```
 
-Both run `clasp push -f`, then `clasp update-deployment <deploymentId from Secrets.gs>`. The address and the tablet's link stay the same.
+Both run `clasp push -f`, then `clasp update-deployment <deploymentId from Secrets.gs>`. The address, the links and the printed QR code stay the same.
 
 - **PowerShell may block the script.** If it says running scripts is disabled, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
 
@@ -282,7 +293,11 @@ Don't create a new deployment for an update: it gets a new address.
 | "דף הרישום עדיין לא פורסם" when opening the link dialog | No web-app address is known. Set `deploymentId` in `Secrets.gs`, or paste the URL into **column B, row 9** of הגדרות. |
 | Page says "הקישור אינו תקין" | You opened the bare `/exec` address. Use the full link from **מניין → קישור לדף הרישום**. |
 | Google page: "Sorry, unable to open the file at this time / מצטערים, לא ניתן לפתוח את הקובץ כרגע" | The address doesn't belong to an *active* deployment (an old or archived one, or a typo), or several Google accounts are signed in. Check **Deploy → Manage deployments** and compare the deployment ID with yours. Try a private window. In the editor, **Executions / ביצועים** shows a `doGet` row for every request that actually reached the script. |
-| A registration shows "הרישום התקבל ויאושר על ידי הגבאי" | The system wasn't sure who it was. The entry waits in **מניין → רישומים לבדיקה**. |
+| A registration shows "הרישום התקבל ויאושר על ידי הגבאי" | The system wasn't sure who it was, or the person sent it for approval from outside the shul. The entry waits in **מניין → רישומים לבדיקה**; its note says why. |
+| A computer shows "רישום עצמי — מטלפון נייד או מטאבלט" | By design: self-registration is for phones and tablets. On a computer use **מצב גבאי**. |
+| Someone standing in the shul gets "נראה שאתה מחוץ לבית הכנסת" | Indoor GPS can be poor. They can press "נסה שוב" after a few seconds, or "שלח לאישור הגבאי". If it happens often, check with **בדיקת מיקום** (gabbai mode) and raise `shulRadius`, or correct `shulLat`/`shulLng`, in `Secrets.gs`. |
+| Every phone gets "לא התקבל מיקום", even after allowing location | Location permission: phone settings → the browser → Location → allow, and in the browser the site's permission. If it still fails for everyone, the browser may not allow location inside Google's page frame; meanwhile clear `shulLat`/`shulLng` in `Secrets.gs` to turn the check off, and redeploy. |
+| A person's number is no longer filled in | The browser's data was cleared, or a private tab was used. They type it once more. |
 | A day shows "אין אף רישום" in a report | Import that day's WhatsApp list, or add the date to column E of הגדרות if there was no minyan. |
 
 ---
@@ -355,5 +370,5 @@ node test/profile.js       # counts Google-service calls per action on a month o
 - **Each call to a Google service is the main cost**, roughly 30–150 ms on Google's servers. `test/profile.js` counts them per action.
 - **Name suggestions run in the page.** The registration page matches names itself, against the list of names it gets once on load and refreshes every 5 minutes. That list never includes phone numbers. Typing never waits for the server; only a complete phone number is checked there.
 - **Cache for read-only lookups.** People and settings are kept in the script cache for up to 10 minutes. The cache is cleared whenever the script writes, and by the `onEdit` trigger whenever someone edits the אנשים or הגדרות sheet by hand. Every write reads the sheet fresh, so the cache can never overwrite data.
-- **Deleting rows by hand** fires no `onEdit`. The tablet may then show a deleted name for up to 10 minutes; registrations are not affected.
+- **Deleting rows by hand** fires no `onEdit`. The registration page may then still suggest a deleted name for up to 10 minutes; registrations are not affected.
 - **Large sheets load only when needed.** The attendance history and the review sheet are read only by actions that use them.
