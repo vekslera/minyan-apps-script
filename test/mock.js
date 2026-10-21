@@ -92,7 +92,11 @@ function makeEnv(opts) {
     constructor(...a) { if (a.length) super(...a); else super(RealDate.now() + now.offsetMs); }
     static now() { return RealDate.now() + now.offsetMs; }
   }
-  const htmlOut = s => { const o = { html: s, getContent: () => s }; ['setTitle', 'addMetaTag', 'setWidth', 'setHeight'].forEach(m => o[m] = () => o); return o; };
+  // Like Google's HtmlService: an HtmlOutput's content has the comments in its scripts removed
+  // (seen on the live page). So nothing may depend on a comment, e.g. a marker like /*X*/.
+  const stripComments = code => code.replace(/^[ \t]*\/\*[\s\S]*?\*\/[ \t]*$/gm, '').replace(/^[ \t]*\/\/.*$/gm, '');
+  const stripInScripts = html => html.replace(/(<script>)([\s\S]*?)(<\/script>)/g, (m, a, code, b) => a + stripComments(code) + b);
+  const htmlOut = raw => { const s = stripInScripts(raw); const o = { html: s, getContent: () => s }; ['setTitle', 'addMetaTag', 'setWidth', 'setHeight'].forEach(m => o[m] = () => o); return o; };
   const ctx = {
     console, Date: FakeDate, Set, Map, Math, JSON, Intl, Number, String, Array, Object, isNaN, RegExp, Error,
     SpreadsheetApp: { getActive: () => ss, getActiveSpreadsheet: () => ss, getUi: () => { if (ctx.__webContext) throw new Error('Cannot call SpreadsheetApp.getUi() from this context.'); return ui; }, flush() {} },
@@ -124,10 +128,21 @@ function makeEnv(opts) {
   if (dup.length) throw new Error('Duplicate Apps Script file names: ' + dup.join(', '));
   // Like Apps Script: an HTML-type file is found by its name without extension; scripts/*.js are HTML-type
   // files too (see "htmlExtensions" in .clasp.json.example).
-  ctx.HtmlService.createHtmlOutputFromFile = name => {
+  const projectFile = name => {
     const file = [name + '.html', name + '.js'].map(f => path.join(dir, f)).find(f => fs.existsSync(f));
     if (!file) throw new Error('No HTML file named ' + name + ' was found.');
-    return htmlOut(fs.readFileSync(file, 'utf8'));
+    return file;
+  };
+  // Like Google: reading a file through createHtmlOutputFromFile rewrites it. In a file that is plain script
+  // (no tags), the comments go and every "<" becomes "&lt;" — exactly what broke the live page.
+  ctx.HtmlService.createHtmlOutputFromFile = name => {
+    const file = projectFile(name), raw = fs.readFileSync(file, 'utf8');
+    return htmlOut(file.endsWith('.js') ? stripComments(raw).replace(/</g, '&lt;') : raw);
+  };
+  // The template's raw content is the file exactly as written.
+  ctx.HtmlService.createTemplateFromFile = name => {
+    const raw = fs.readFileSync(projectFile(name), 'utf8');
+    return { getRawContent: () => raw, evaluate: () => htmlOut(raw) };
   };
   ctx.HtmlService.createHtmlOutputFromFile.getContent = undefined;
   // Tests never read your real Secrets.gs; a test may pass its own values instead.

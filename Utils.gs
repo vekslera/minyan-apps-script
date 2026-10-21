@@ -147,19 +147,29 @@ function dmyToKey_(d, m, y, todayKey) {
  *  - <script data-include="scripts/kiosk/main.js"></script> is replaced by that file's code. Apps Script
  *    can't serve .js files to the browser, so the browser code lives in scripts/*.js, is uploaded by clasp
  *    as HTML-type files (see "htmlExtensions" in .clasp.json), and is inlined here;
- *  - the __SHARED_JS__ marker gets the server functions the pages share (sharedJs_).
+ *  - <link data-include="styles/tools.html"> is replaced by that file (a <style> block);
+ *  - <script data-shared></script> gets the server functions the pages share (sharedJs_).
  */
 function page_(name) {
-  return HtmlService.createHtmlOutputFromFile(name).getContent()
+  return fileText_(name)
     .replace(/<script data-include="([^"]+)"><\/script>/g, (m, file) => '<script>\n' + clientScript_(file) + '\n</script>')
-    .replace(/<link data-include="([^"]+)\.html">/g, (m, file) => HtmlService.createHtmlOutputFromFile(file).getContent())
-    .replace('/*__SHARED_JS__*/', () => sharedJs_());
+    .replace(/<link data-include="([^"]+)\.html">/g, (m, file) => fileText_(file))
+    .replace('<script data-shared></script>', () => '<script>\n' + sharedJs_() + '\n</script>');
 }
+
+/**
+ * A project file's text exactly as written. Not createHtmlOutputFromFile(name).getContent(): that one is
+ * rewritten by Google — comments are removed and, in a file that is plain script, every "<" becomes "&lt;",
+ * which breaks the code. The template's raw content is the file untouched.
+ */
+function fileText_(name) { return HtmlService.createTemplateFromFile(name).getRawContent(); }
 
 /** The code of one browser script, e.g. "scripts/kiosk/main.js" (stored in Apps Script as "scripts/kiosk/main"). */
 function clientScript_(file) {
-  const code = HtmlService.createHtmlOutputFromFile(file.replace(/\.js$/, '')).getContent();
+  const code = fileText_(file.replace(/\.js$/, ''));
   if (/<\/script/i.test(code)) throw new Error(file + ' must not contain "</script"');
+  // Every script starts with a // comment line; if it's missing, the file was not read as written.
+  if (!/^\s*\/\//.test(code)) throw new Error(file + ' was not read as written (its first comment line is missing)');
   return code;
 }
 

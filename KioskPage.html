@@ -76,6 +76,15 @@ footer{text-align:center;margin-top:20px}
 </style>
 </head>
 <body>
+<script>
+// Shows any script error on the page itself instead of leaving it stuck on "טוען…".
+window.onerror = function (msg) {
+  var d = document.createElement('div');
+  d.setAttribute('style', 'position:fixed;top:0;left:0;right:0;z-index:999;background:#fdeceb;color:#b42318;font:15px Arial,sans-serif;padding:10px 14px;direction:rtl');
+  d.textContent = 'תקלה בדף: ' + msg + ' — נא לדווח לגבאי';
+  document.body.appendChild(d);
+};
+</script>
 <div class="wrap">
   <header>
     <h1 id="title">רישום נוכחות</h1>
@@ -147,9 +156,7 @@ footer{text-align:center;margin-top:20px}
   </div>
 </div>
 
-<script>
-/*__SHARED_JS__*/
-</script>
+<script data-shared></script>
 <script>
 var KEY = '__KEY__';
 var FORCED_DEVICE = '__DEVICE__';

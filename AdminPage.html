@@ -8,6 +8,15 @@
 <link data-include="styles/tools.html">
 </head>
 <body>
+<script>
+// Shows any script error on the page itself instead of leaving it stuck on "טוען…".
+window.onerror = function (msg) {
+  var d = document.createElement('div');
+  d.setAttribute('style', 'position:fixed;top:0;left:0;right:0;z-index:999;background:#fdeceb;color:#b42318;font:15px Arial,sans-serif;padding:10px 14px;direction:rtl');
+  d.textContent = 'תקלה בדף: ' + msg + ' — נא לדווח לגבאי';
+  document.body.appendChild(d);
+};
+</script>
 <div class="tabs">
   <button class="tab" data-v="import">ייבוא מוואטסאפ</button>
   <button class="tab" data-v="review">רישומים לבדיקה <span class="count" id="cnt" hidden></span></button>
@@ -38,9 +47,7 @@
   <button class="btn primary" id="barBtn" type="button"></button>
 </div>
 
-<script>
-/*__SHARED_JS__*/
-</script>
+<script data-shared></script>
 <script>
 var TOKEN = '__TOKEN__', START = '__VIEW__';
 var API = { prefix: 'admin', auth: function () { return [TOKEN]; } };

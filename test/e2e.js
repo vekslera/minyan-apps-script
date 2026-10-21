@@ -357,7 +357,7 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   // pages: the tools page is complete; the registration page links to it
   const page = W('doGet', { parameter: { k: k, view: 'gabbai' } }).html;
   assert(page.includes("var KEY = '" + k + "'") && page.includes('function startGabbai') && page.includes('function loadReview'));
-  assert(!/__[A-Z]+__|data-include/.test(page.replace('/*__SHARED_JS__*/', '')), 'no placeholders left in the tools page');
+  assert(!/__[A-Z]+__|data-include/.test(page), 'no placeholders left in the tools page');
   assert(/TOOLS_URL = 'https:\/\/script\.google\.com\/macros\/s\/AKfyc_EXAMPLE\/exec\?k=\w+&view=gabbai'/.test(W('doGet', { parameter: { k: k } }).html));
   assert(W('doGet', { parameter: { k: 'bad', view: 'gabbai' } }).html.includes('הקישור אינו תקין'));
   // without a session nothing works

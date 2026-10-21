@@ -330,6 +330,7 @@ Don't create a new deployment for an update: it gets a new address.
 | A registration shows "הרישום התקבל ויאושר על ידי הגבאי" | The system wasn't sure who it was, or the person sent it for approval from outside the shul. The entry waits in **מניין → רישומים לבדיקה**; its note says why. |
 | "קוד שגוי 3 פעמים — הכניסה נעולה ל-60 שניות" | Wait a minute and type the code carefully; it is case-sensitive. If the code is lost, the Sheet's owner can set a new one: **מניין → שינוי קוד גבאי**. |
 | "ההתחברות למצב גבאי הסתיימה" | The session ended: 30 minutes without activity, or the code was changed. Log in again. |
+| The page stays on "טוען…", or shows a red bar "תקלה בדף" | The browser code failed. The red bar has the error message. If Executions shows `doGet` but no `kioskInit`, it's the browser side: open the page on a computer, press F12 → Console, and look for the error. |
 | A computer shows "רישום עצמי — מטלפון נייד או מטאבלט" | By design: self-registration is for phones and tablets. On a computer use **מצב גבאי**. |
 | Someone standing in the shul gets "נראה שאתה מחוץ לבית הכנסת" | Indoor GPS can be poor. They can press "נסה שוב" after a few seconds, or "שלח לאישור הגבאי". If it happens often, check with **בדיקת מיקום** (gabbai mode) and raise `shulRadius`, or correct `shulLat`/`shulLng`, in `Secrets.gs`. |
 | Every phone gets "לא התקבל מיקום", even after allowing location | Location permission: phone settings → the browser → Location → allow, and in the browser the site's permission. If it still fails for everyone, the browser may not allow location inside Google's page frame; meanwhile clear `shulLat`/`shulLng` in `Secrets.gs` to turn the check off, and redeploy. |
@@ -381,10 +382,12 @@ Apps Script cannot serve a `.js` file to the browser: a page is one HTML documen
 
 - **Where it lives.** The browser code is in `scripts/**/*.js`, plain JavaScript that your editor understands. `.clasp.json` (`"htmlExtensions": [".html", ".js"]`) uploads each one as an HTML-type file named by its path, e.g. `scripts/kiosk/main`.
 - **How it gets into the page.** A page refers to it with `<script data-include="scripts/kiosk/main.js"></script>`. When the server builds the page (`page_()` in `Utils.gs`), it replaces that tag with the file's code. The page's small first `<script>` holds the values the server fills in (`KEY`, `TOKEN` …), and its last one calls the start function (`startKiosk()`, `startAdmin()`, `startGabbai()` …).
+- **Read as written.** `page_()` reads every file with `HtmlService.createTemplateFromFile(name).getRawContent()`. The usual `createHtmlOutputFromFile(name).getContent()` does not return the file as written: Google removes the comments, and in a plain script file turns every `<` into `&lt;`, which breaks the code. For the same reason nothing may depend on a comment, so the shared-code marker is a tag, not a comment. The test mock (`test/mock.js`) behaves the same way, so the tests catch this.
+- **Errors show on the page.** A small script at the top of each page shows any browser error in a red bar, instead of the page staying on "טוען…".
 - **Shared styles.** `<link data-include="styles/tools.html">` is replaced the same way with that file's `<style>` block.
 - **One screen, two pages.** The import and review scripts call the server through `call('GetPending', …)`. Each page sets `API`: the Sheet dialog sends it to `adminGetPending(TOKEN)`, the tools page to `gabbaiGetPending(KEY, session)`.
 - **Declarations only.** The files only declare functions and variables; nothing runs until the page calls its start function. Order between files therefore doesn't matter, and a file uploaded by mistake as server code can't break the project (a test checks this).
-- **Code shared with the server.** Phone rules and name matching are not copied into `scripts/`. They are the server's own functions, sent into the page as text by `sharedJs_()` (the `/*__SHARED_JS__*/` marker in the page).
+- **Code shared with the server.** Phone rules and name matching are not copied into `scripts/`. They are the server's own functions, sent into the page as text by `sharedJs_()` (the `<script data-shared></script>` tag in the page).
 
 ## 12. Private settings (`Secrets.gs`)
 
