@@ -206,8 +206,8 @@ Outside gabbai mode, the page detects what it runs on: **טלפון נייד** (
 
 When the page runs on a **phone** (not the shul's tablet, not gabbai mode):
 
-- **The phone number is required.** The page asks for it, and the server refuses a phone registration without one.
-- **The number is remembered on that phone** after the first registration. On the next visit it is already filled in and recognized ("שלום, …"), so one tap on "רישום נוכחות" is enough.
+- **The phone number is optional**, as everywhere. Without it the person is identified by surname as usual.
+- **If given, the number is remembered on that phone** after the first registration. On the next visit it is already filled in and recognized ("שלום, …"), so one tap on "רישום נוכחות" is enough.
 - **"זה לא אני — להקליד מספר אחר"** clears the remembered number, for a phone shared within a family.
 - **First use.** The field is marked as a phone-number field, so the phone's keyboard or autofill may offer the owner's number.
 - **Why not detect the number automatically?** No web page can read the device's own phone number; browsers don't allow it.
@@ -287,7 +287,7 @@ Don't create a new deployment for an update: it gets a new address.
 | `AdminPage.html` | Import + review dialog: markup and styles |
 | `LinkDialog.html`, `ReportTextDialog.html`, `BadLinkPage.html` | Small dialogs/pages |
 | `scripts/common/dom.js`, `clipboard.js` | Browser helpers shared by the pages |
-| `scripts/kiosk/*.js` | Registration page: `helpers`, `deviceDetection`, `hebrewDate`, `lookup` (live suggestions), `registration` (submit/confirmation), `gabbaiMode`, `myPhone` (required and remembered number on a phone), `main` (state + `startKiosk()`) |
+| `scripts/kiosk/*.js` | Registration page: `helpers`, `deviceDetection`, `hebrewDate`, `lookup` (live suggestions), `registration` (submit/confirmation), `gabbaiMode`, `myPhone` (remembered number on a phone), `main` (state + `startKiosk()`) |
 | `scripts/admin/*.js` | Import/review dialog: `helpers`, `import`, `review`, `main` (tabs + `startAdmin()`) |
 | `scripts/dialogs/*.js` | `linkDialog` (QR + copy), `reportText` (copy) |
 | `appsscript.json` | Manifest (time zone, V8, web-app access) |
@@ -324,7 +324,7 @@ node test/e2e.js           # end-to-end: registration, import, review, reports, 
 node test/hebcal_check.js  # Hebrew calendar vs. the ICU calendar, 2023–2028
 node test/ui.js            # renders the pages in Chromium; needs:  npm install playwright
 node test/device.js        # device detection with emulated iPhone/Android/iPad/desktop browsers (Playwright)
-node test/mobile.js        # personal-phone flow: required, remembered, "זה לא אני", gabbai mode, shul tablet (Playwright)
+node test/mobile.js        # personal-phone flow: optional, remembered, "זה לא אני", gabbai mode, shul tablet (Playwright)
 node test/profile.js       # counts Google-service calls per action on a month of sample data
 ```
 

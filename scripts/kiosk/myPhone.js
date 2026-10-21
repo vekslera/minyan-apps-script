@@ -1,5 +1,6 @@
-// Registration page — on a personal phone (not the shul's tablet, not gabbai mode) the phone number is
-// required, and it is remembered on that phone, so next time one tap registers.
+// Registration page — on a personal phone (not the shul's tablet, not gabbai mode) the phone number, if
+// given, is remembered on that phone, so next time one tap registers. It stays optional: without it the
+// person is identified by surname as usual.
 // A web page cannot read the device's own number; this is the closest substitute: the browser may offer
 // it as autofill the first time (autocomplete="tel"), and after that the page remembers it.
 // Declarations only — nothing runs when the file loads; the page calls the start function.
@@ -11,11 +12,10 @@ function savedPhone() { try { return localStorage.getItem(MY_PHONE_KEY) || ''; }
 function rememberPhone(p) { try { localStorage.setItem(MY_PHONE_KEY, p); } catch (e) {} }
 function forgetPhone() { try { localStorage.removeItem(MY_PHONE_KEY); } catch (e) {} }
 
-/** Marks the number as required on a personal phone and lets the browser offer the owner's number. */
+/** On a personal phone: lets the browser offer the owner's number and says it will be remembered. */
 function setupPersonalPhone() {
   var on = onPersonalPhone();
-  show('phoneReq', on);
-  $('phoneNote').textContent = on ? '(חובה — יישמר בטלפון לפעם הבאה)' : '(מספיק בפעמים הבאות)';
+  $('phoneNote').textContent = on ? '(יישמר בטלפון לפעם הבאה)' : '(מספיק בפעמים הבאות)';
   $('phone').setAttribute('autocomplete', on ? 'tel' : 'off');
   $('phone').setAttribute('name', on ? 'tel' : 'phone');
 }

@@ -1,4 +1,4 @@
-// Personal phone flow on the registration page (needs: npm install playwright).
+// Personal phone flow on the registration page: optional number, remembered, "זה לא אני" (needs: npm install playwright).
 // The page is served from a real origin so that localStorage works, as it does on Google's servers.
 const assert = require('assert');
 const { chromium } = require('playwright');
@@ -23,12 +23,16 @@ const TABLET = 'Mozilla/5.0 (Linux; Android 13; SM-X710) AppleWebKit/537.36 (KHT
     return p;
   }
   const phoneCtx = await browser.newContext({ userAgent: IPHONE, hasTouch: true, isMobile: true, viewport: { width: 390, height: 760 } });
-  // 1st visit on a phone: number required, field offers autofill
+  // 1st visit on a phone: the number is optional — registering by surname works and remembers nothing
   let p = await open(phoneCtx);
-  assert.equal(await p.isVisible('#phoneReq'), true);
   assert.equal(await p.getAttribute('#phone', 'autocomplete'), 'tel');
-  await p.fill('#last', 'כהן'); await p.fill('#first', 'משה'); await p.click('#submit'); await p.waitForTimeout(200);
-  console.log('no number on a phone →', await p.textContent('#msg'));
+  assert.equal(await p.textContent('#phoneNote'), '(יישמר בטלפון לפעם הבאה)');
+  await p.fill('#last', 'לוי'); await p.fill('#first', 'דוד'); await p.click('#submit'); await p.waitForTimeout(300);
+  console.log('no number on a phone →', (await p.textContent('#doneTitle')).trim());
+  assert(/דוד לוי/.test(await p.textContent('#doneTitle')));
+  assert.equal(await p.evaluate(() => localStorage.getItem('minyanMyPhone')), null);
+  await p.click('#again');
+  // with a number: remembered
   await p.fill('#phone', '052-111-1111'); await p.waitForTimeout(300);
   await p.click('#submit'); await p.waitForTimeout(300);
   assert.equal(await p.evaluate(() => localStorage.getItem('minyanMyPhone')), '0521111111');
@@ -50,16 +54,16 @@ const TABLET = 'Mozilla/5.0 (Linux; Android 13; SM-X710) AppleWebKit/537.36 (KHT
   p = await open(phoneCtx);
   const pin = String(env.ss.getSheetByName('הגדרות').getRange('B8').getValue());
   await p.click('#gabbaiOn'); await p.fill('#pin', pin); await p.click('#pinOk'); await p.waitForTimeout(300);
-  assert.equal(await p.isVisible('#phoneReq'), false); assert.equal(await p.inputValue('#phone'), '');
-  console.log('gabbai mode on a phone → not required, not prefilled');
+  assert.equal(await p.inputValue('#phone'), '');
+  console.log('gabbai mode on a phone → not prefilled');
   await p.close(); await phoneCtx.close();
   // the shul tablet: never required, never remembered
   const tabCtx = await browser.newContext({ userAgent: TABLET, hasTouch: true });
   p = await open(tabCtx, { device: 'kiosk' });
-  assert.equal(await p.isVisible('#phoneReq'), false); assert.equal(await p.getAttribute('#phone', 'autocomplete'), 'off');
+  assert.equal(await p.getAttribute('#phone', 'autocomplete'), 'off');
   await p.fill('#phone', '0521111111'); await p.waitForTimeout(300); await p.click('#submit'); await p.waitForTimeout(300);
   assert.equal(await p.evaluate(() => localStorage.getItem('minyanMyPhone')), null);
-  console.log('shul tablet → not required, nothing remembered');
+  console.log('shul tablet → nothing remembered');
   await browser.close();
   console.log('mobile flow OK');
 })().catch(e => { console.error(e); process.exit(1); });

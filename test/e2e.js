@@ -250,11 +250,11 @@ console.log('\nALL OK');
   console.log('client scripts OK (' + files.length + ' files)');
 }
 
-// ---------- Personal phone: the number is required ----------
+// ---------- Personal phone: the number is optional, the surname identifies as usual ----------
 {
   const r = sub({ first: 'בלי', last: 'טלפון', device: 'mobile' });
-  assert.equal(r.ok, false); assert(/טלפון/.test(r.message));
-  assert.equal(sub({ first: 'בלי', last: 'טלפון', device: 'tablet' }).ok, true);          // tablet: optional
-  assert.equal(sub({ first: 'גבאי', last: 'בלי טלפון', device: 'mobile', pin, date: past[1] }).ok, true);  // gabbai: optional
-  console.log('mobile phone rule OK');
+  assert.equal(r.ok, true); assert.equal(r.status, 'created');
+  const again = sub({ last: 'טלפון', device: 'mobile' });
+  assert.equal(again.ok, true); assert.equal(again.name, 'בלי טלפון');
+  console.log('mobile without phone OK');
 }

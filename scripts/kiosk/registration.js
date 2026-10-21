@@ -38,7 +38,6 @@ function submit(ev) {
   showMsg('');
   var phone = normPhone($('phone').value), last = $('last').value.trim(), first = $('first').value.trim();
   var pid = S.selectedId || S.phoneId;
-  if (onPersonalPhone() && !$('phone').value.trim()) { $('phone').focus(); return showMsg('בטלפון נייד יש להקיש את מספר הטלפון שלך'); }
   if ($('phone').value.trim() && !validPhone_(phone)) return showMsg('מספר הטלפון אינו תקין');
   S.lastPhone = phone;
   if (!pid && !last) { $('last').focus(); return showMsg('נא למלא שם משפחה'); }

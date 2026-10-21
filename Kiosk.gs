@@ -76,7 +76,6 @@ function kioskSubmit(key, d) {
                 first: clean_(d.first), last: clean_(d.last), phone: normPhone_(d.phone), full: '',
                 personId: String(d.personId || '').trim() };
     if (e.phone && !validPhone_(e.phone)) return fail('מספר הטלפון אינו תקין');
-    if (!gabbai && d.device === 'mobile' && !e.phone) return fail('בטלפון נייד יש להקיש את מספר הטלפון שלך');
     const owner = e.phone ? ctx.people.find(p => p.phone === e.phone) : null;
     if (!e.personId && !owner && !e.last) return fail('נא למלא שם משפחה');
 
