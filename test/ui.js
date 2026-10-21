@@ -7,7 +7,7 @@ env.userEdit('הגדרות', 'B6', 0); env.userEdit('הגדרות', 'B7', 24);
 const today = G.todayKey_('Asia/Jerusalem');
 env.userEdit('הגדרות', 'B3', G.keyToDate_(G.addDays_(today, -9), 'Asia/Jerusalem'));
 const key = env.props.KIOSK_KEY, tok = env.props.ADMIN_TOKEN, pin = String(st.getRange('B8').getValue());
-const sub = d => G.kioskSubmit(key, d);
+const sub = d => G.kioskSubmit(key, Object.assign({ device: 'tablet' }, d));
 sub({ phone: '0521111111', first: 'משה', last: 'כהן' });
 sub({ phone: '0544444444', first: 'יצחק', last: 'כהן' });
 sub({ first: 'דוד', last: 'לוי' });
@@ -47,7 +47,7 @@ const shim = `
     return p;
   }
   // ---------- Kiosk (tablet portrait) ----------
-  const kioskHtml = G.doGet({ parameter: { k: key } }).html;
+  const kioskHtml = G.doGet({ parameter: { k: key, device: 'kiosk' } }).html;   // the headless browser looks like a computer
   let k = await page(kioskHtml, { width: 800, height: 1000 }, true);
   console.log('hebDate:', await k.textContent('#hebDate'), '|', await k.textContent('#gregDate'));
   await k.screenshot({ path: 'shots/k1-start.png' });

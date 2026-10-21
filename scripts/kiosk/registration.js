@@ -23,15 +23,16 @@ function refreshClosed() {
     if (i.dow === 6) why = 'שבת שלום<small>אין רישום בשבת</small>';
     else if (i.noMinyan) why = 'היום אין רישום';
     else if (!i.open) why = 'הרישום סגור כעת<small>הרישום פתוח בין השעות ' + i.from + ':00 ל-' + i.to + ':00</small>';
+    else if (DEVICE === 'desktop') why = 'רישום עצמי — מטלפון נייד או מטאבלט<small>במחשב אפשר לרשום רק במצב גבאי</small>';
   }
   $('closed').innerHTML = why;
   show('closed', !!why);
-  if (!$('done').hidden) return;
+  if (!$('done').hidden || !$('where').hidden) return;
   show('form', !why);
 }
 // ---------- Submit ----------
-function showMsg(t) { $('msg').textContent = t; show('msg', !!t); }
-function setBusy(on) { S.busy = on; $('submit').disabled = on; $('submit').textContent = on ? 'רושם…' : 'רישום נוכחות'; }
+function showMsg(t) { $('msg').className = 'msg err'; $('msg').textContent = t; show('msg', !!t); }
+function setBusy(on, label) { S.busy = on; $('submit').disabled = on; $('submit').textContent = on ? (label || 'רושם…') : 'רישום נוכחות'; }
 function submit(ev) {
   ev.preventDefault();
   if (S.busy) return;
@@ -41,12 +42,26 @@ function submit(ev) {
   if ($('phone').value.trim() && !validPhone_(phone)) return showMsg('מספר הטלפון אינו תקין');
   S.lastPhone = phone;
   if (!pid && !last) { $('last').focus(); return showMsg('נא למלא שם משפחה'); }
+  S.form = { phone: phone, first: first, last: last, personId: pid };
+  resubmit(false);
+}
+/** Sends the registration — with a fresh position first when this device must be in the shul. */
+function resubmit(outsideOk) {
+  if (!needsLocation()) { S.loc = null; return send(false); }
+  if (outsideOk) return send(true);
+  setBusy(true, 'בודק מיקום…');
+  getLocation(function (loc) { S.loc = loc; send(false); });
+}
+function send(outsideOk) {
   setBusy(true);
-  call('kioskSubmit', [KEY, { phone: phone, first: first, last: last, personId: pid, device: S.pin ? '' : DEVICE,
-                              pin: S.pin, date: S.pin ? $('date').value : '' }], done);
+  var f = S.form;
+  call('kioskSubmit', [KEY, { phone: f.phone, first: f.first, last: f.last, personId: f.personId, device: S.pin ? '' : DEVICE,
+                              pin: S.pin, date: S.pin ? $('date').value : '', loc: S.pin ? null : S.loc,
+                              outsideOk: !!outsideOk }], done);
 }
 function done(res) {
   setBusy(false);
+  if (!res.ok && res.where) return showWhere(res);
   if (!res.ok) return showMsg(res.message);
   if (onPersonalPhone() && validPhone_(S.lastPhone)) rememberPhone(S.lastPhone);
   if (res.person && !S.roster.some(function (p) { return p.id === res.person.id; })) S.roster.push(res.person);
@@ -81,6 +96,7 @@ function reset() {
   S.selectedId = ''; S.phoneId = ''; S.seq++;
   show('phoneHit', false); show('names', true); renderChips([]); showMsg('');
   show('done', false);
+  show('where', false);
   refreshClosed();
   if (S.pin) $('phone').focus();
   prefillPhone();

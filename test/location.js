@@ -1,0 +1,89 @@
+// Location check on the registration page, with emulated GPS (needs: npm install playwright).
+const assert = require('assert');
+const { chromium } = require('playwright');
+const { makeEnv } = require('./mock');
+const SHUL = { latitude: 31.9857703, longitude: 34.8582831 };
+const north = m => ({ latitude: SHUL.latitude + m / 111320, longitude: SHUL.longitude });
+const env = makeEnv({ secrets: { shulLat: String(SHUL.latitude), shulLng: String(SHUL.longitude), shulRadius: 150 } });
+const G = env.ctx; G.setup();
+env.userEdit('הגדרות', 'B6', 0); env.userEdit('הגדרות', 'B7', 24);
+const key = env.props.KIOSK_KEY, pin = String(env.ss.getSheetByName('הגדרות').getRange('B8').getValue());
+G.kioskSubmit(key, { phone: '0521111111', first: 'משה', last: 'כהן', device: 'kiosk' });
+const shim = `(function(){function r(h){return new Proxy({},{get:function(_,p){if(p==='withSuccessHandler')return function(f){return r(Object.assign({},h,{ok:f}))};if(p==='withFailureHandler')return function(f){return r(Object.assign({},h,{fail:f}))};return function(){var a=[].slice.call(arguments);window.__gs(p,JSON.stringify(a)).then(function(x){var o=JSON.parse(x);if(o.err){h.fail&&h.fail({message:o.err})}else{h.ok&&h.ok(o.val)}})}}})}window.google={script:{run:r({})}}})();`;
+const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+const sent = [];
+(async () => {
+  const browser = await chromium.launch();
+  async function open(ctxOpts, params) {
+    const ctx = await browser.newContext(Object.assign({ viewport: { width: 390, height: 760 } }, ctxOpts));
+    const p = await ctx.newPage();
+    p.on('pageerror', e => { throw e; });
+    await p.exposeFunction('__gs', (fn, a) => {
+      const args = JSON.parse(a); if (fn === 'kioskSubmit') sent.push(args[1]);
+      G.__webContext = true; try { return JSON.stringify({ val: G[fn](...args) }); } catch (e) { return JSON.stringify({ err: e.message }); } finally { G.__webContext = false; }
+    });
+    const html = G.doGet({ parameter: Object.assign({ k: key }, params || {}) }).html.replace('<head>', '<head><script>' + shim + '</script>');
+    await p.route('https://kiosk.test/', r => r.fulfill({ contentType: 'text/html', body: html }));
+    await p.route(/fonts\.g/, r => r.abort());
+    await p.goto('https://kiosk.test/'); await p.waitForTimeout(400);
+    return { ctx, p };
+  }
+  const phone = { userAgent: IPHONE, hasTouch: true, isMobile: true, permissions: ['geolocation'] };
+
+  // 1. inside the shul → registered
+  let { ctx, p } = await open(Object.assign({ geolocation: Object.assign(north(30), { accuracy: 15 }) }, phone));
+  await p.fill('#phone', '0521111111'); await p.waitForTimeout(300); await p.click('#submit'); await p.waitForTimeout(500);
+  console.log('inside →', (await p.textContent('#doneTitle')).trim());
+  assert(/משה כהן/.test(await p.textContent('#doneTitle')));
+  await ctx.close();
+
+  // 2. outside → told so; walks in and retries → registered
+  ({ ctx, p } = await open(Object.assign({ geolocation: Object.assign(north(850), { accuracy: 20 }) }, phone)));
+  await p.fill('#last', 'לוי'); await p.fill('#first', 'דוד'); await p.click('#submit'); await p.waitForTimeout(500);
+  assert.equal(await p.isVisible('#where'), true);
+  console.log('outside →', (await p.textContent('#whereTitle')).trim(), '|', (await p.textContent('#whereText')).trim().slice(0, 40));
+  await p.screenshot({ path: 'test/shots/l1-outside.png' });
+  await ctx.setGeolocation(Object.assign(north(40), { accuracy: 15 }));
+  await p.click('#whereRetry'); await p.waitForTimeout(500);
+  console.log('after walking in + retry →', (await p.textContent('#doneTitle')).trim());
+  assert(/דוד לוי/.test(await p.textContent('#doneTitle')));
+  // 3. outside again → sends it for the gabbai's approval
+  await p.click('#again');
+  await ctx.setGeolocation(Object.assign(north(2000), { accuracy: 20 }));
+  await p.fill('#last', 'פרידמן'); await p.fill('#first', 'יוסף'); await p.click('#submit'); await p.waitForTimeout(500);
+  await p.click('#whereSend'); await p.waitForTimeout(500);
+  console.log('send for approval →', (await p.textContent('#doneTitle')).trim(), '/', (await p.textContent('#doneText')).trim());
+  assert.equal((await p.textContent('#doneTitle')).trim(), 'הרישום התקבל');
+  await ctx.close();
+
+  // 4. location permission refused → explained
+  ({ ctx, p } = await open({ userAgent: IPHONE, hasTouch: true, isMobile: true }));
+  await p.fill('#last', 'כהן'); await p.click('#submit'); await p.waitForTimeout(800);
+  console.log('no permission →', (await p.textContent('#whereTitle')).trim(), '|', (await p.textContent('#whereText')).trim().slice(0, 50));
+  assert.equal((await p.textContent('#whereTitle')).trim(), 'לא התקבל מיקום');
+  await p.screenshot({ path: 'test/shots/l2-no-permission.png' });
+  await ctx.close();
+
+  // 5. a computer: self-registration closed, gabbai mode works, with the location test
+  ({ ctx, p } = await open({ permissions: ['geolocation'], geolocation: Object.assign(north(60), { accuracy: 12 }) }));
+  console.log('computer →', (await p.textContent('#closed')).trim());
+  assert.equal(await p.isVisible('#form'), false);
+  await p.click('#gabbaiOn'); await p.fill('#pin', pin); await p.click('#pinOk'); await p.waitForTimeout(400);
+  assert.equal(await p.isVisible('#form'), true);
+  await p.click('#locTest'); await p.waitForTimeout(500);
+  console.log('gabbai location test →', (await p.textContent('#msg')).trim());
+  assert(/60 מ׳/.test(await p.textContent('#msg')));
+  await ctx.close();
+
+  // 6. the shul tablet link (&device=kiosk) never asks for a location
+  ({ ctx, p } = await open({ userAgent: IPHONE, hasTouch: true }, { device: 'kiosk' }));
+  await p.fill('#phone', '0521111111'); await p.waitForTimeout(300); await p.click('#submit'); await p.waitForTimeout(500);
+  assert(/משה כהן/.test(await p.textContent('#doneTitle'))); console.log('shul tablet → registered without location');
+  await ctx.close();
+
+  // the coordinates went to the server only with self-registrations, and were never stored
+  assert(sent.filter(s => s.loc && s.loc.lat).length >= 3);
+  assert(!/31\.98|34\.85/.test(JSON.stringify(env.ss.getSheets().map(s => s.data))));
+  await browser.close();
+  console.log('location flow OK');
+})().catch(e => { console.error(e); process.exit(1); });

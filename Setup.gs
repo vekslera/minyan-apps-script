@@ -6,6 +6,7 @@
  *   Config.gs          sheet names, column layouts, settings labels, matching thresholds
  *   Kiosk.gs           the registration web page's server side (doGet + kiosk* functions)
  *   Admin.gs           WhatsApp import and review dialogs (admin* functions), registration-link dialog
+ *   Location.gs        location check for self-registration (coordinates are never stored)
  *   Matching.gs        who-is-this logic: phone first, then fuzzy Hebrew name matching
  *   Names.gs           first-name list and nicknames (מנדי = מנחם מענדל …)
  *   Data.gs            reading/writing the People, Attendance and Review sheets
@@ -134,11 +135,13 @@ function writeHelp_(sh) {
     ['רישום יומי'],
     ['הטאבלט בבית הכנסת פתוח על דף הרישום. כל מתפלל מקיש מספר טלפון ולוחץ "רישום נוכחות". בפעם הראשונה ממלאים גם שם.'],
     ['מספר הטלפון הוא המזהה העיקרי. שדה החובה היחיד הוא שם משפחה. בזמן ההקלדה הדף מציע שמות שכבר רשומים.'],
+    ['רישום עצמי — רק מטלפון נייד או מטאבלט, ומתוך בית הכנסת (בדיקת מיקום). מי שנמצא מחוץ לבית הכנסת יכול לנסות שוב או לשלוח לאישור הגבאי. במחשב — רק במצב גבאי.'],
     ['בטאבלט של בית הכנסת: מוסיפים לסוף הקישור ‎&device=kiosk‎ — כך הוא מזוהה תמיד כטאבלט בית הכנסת ולא כטלפון פרטי.'],
     ['אפשר טלפון נייד או קווי ישראלי (05X, 07X, 02/03/04/08/09) ומספר אמריקאי (‎+1‎). אפשר להקליד עם מקפים, רווחים או קידומת בינלאומית.'],
     [''],
     ['מצב גבאי'],
     ['בתחתית דף הרישום: "מצב גבאי" + קוד הגבאי (בגיליון הגדרות, או בקובץ Secrets.gs אם הוגדר שם). מאפשר לרשום אחרים, גם לתאריכים קודמים ומחוץ לשעות הרישום.'],
+    ['במצב גבאי יש כפתור "בדיקת מיקום": מראה את המרחק מבית הכנסת ואת דיוק המיקום. שימושי כדי לבדוק שהרדיוס מתאים.'],
     [''],
     ['רישומים לבדיקה'],
     ['כשהמערכת לא בטוחה מי נרשם (איות דומה, כמה אנשים באותו שם, טלפון של מישהו אחר) — הרישום ממתין לאישור.'],

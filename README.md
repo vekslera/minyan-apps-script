@@ -91,7 +91,7 @@ clasp login                # opens a browser: choose the minyan account and allo
 **Push:**
 
 ```bash
-clasp status      # lists what will be uploaded: 12 .gs files + Secrets.gs, 5 .html files, 16 scripts/…/*.js files, appsscript.json
+clasp status      # lists what will be uploaded: 13 .gs files + Secrets.gs, 5 .html files, 17 scripts/…/*.js files, appsscript.json
 clasp push -f     # -f overwrites the project's manifest without asking
 ```
 
@@ -103,11 +103,11 @@ clasp push -f     # -f overwrites the project's manifest without asking
 In the script editor:
 
 1. Click the default file **`Code.gs`** → ⋮ → **Rename / שינוי שם** → `Setup`. Replace its content with the content of `Setup.gs`.
-2. For each of the other `.gs` files (`Admin`, `Config`, `Data`, `Duplicates`, `HebrewCalendar`, `Kiosk`, `Matching`, `Names`, `Reports`, `Utils`, `WhatsApp`): **Files / קבצים → + → Script / סקריפט**. Type the name **without `.gs`** and paste the content.
+2. For each of the other `.gs` files (`Admin`, `Config`, `Data`, `Duplicates`, `HebrewCalendar`, `Kiosk`, `Location`, `Matching`, `Names`, `Reports`, `Utils`, `WhatsApp`): **Files / קבצים → + → Script / סקריפט**. Type the name **without `.gs`** and paste the content.
 3. For each `.html` file: **+ → HTML**. Type the name **exactly**, without `.html`: `KioskPage`, `AdminPage`, `LinkDialog`, `ReportTextDialog`, `BadLinkPage`, then paste.
-4. For each file in the `scripts` folder: also **+ → HTML** (not Script). Type its path **without `.js`**, slashes included, e.g. `scripts/kiosk/main`. Paste the file's content as it is. All 16 files:
+4. For each file in the `scripts` folder: also **+ → HTML** (not Script). Type its path **without `.js`**, slashes included, e.g. `scripts/kiosk/main`. Paste the file's content as it is. All 17 files:
    `scripts/common/dom`, `scripts/common/clipboard`,
-   `scripts/kiosk/helpers`, `scripts/kiosk/deviceDetection`, `scripts/kiosk/hebrewDate`, `scripts/kiosk/lookup`, `scripts/kiosk/registration`, `scripts/kiosk/gabbaiMode`, `scripts/kiosk/myPhone`, `scripts/kiosk/main`,
+   `scripts/kiosk/helpers`, `scripts/kiosk/deviceDetection`, `scripts/kiosk/hebrewDate`, `scripts/kiosk/lookup`, `scripts/kiosk/registration`, `scripts/kiosk/gabbaiMode`, `scripts/kiosk/myPhone`, `scripts/kiosk/location`, `scripts/kiosk/main`,
    `scripts/admin/helpers`, `scripts/admin/import`, `scripts/admin/review`, `scripts/admin/main`,
    `scripts/dialogs/linkDialog`, `scripts/dialogs/reportText`.
 5. **Optional:** create `Secrets` (+ → Script) from `Secrets.gs.example`. Without it, everything is configured in the הגדרות sheet.
@@ -160,6 +160,10 @@ const SECRETS = {
   deploymentId: 'AKfycb…',         // from step 5
   gabbaiPin: '2468',               // your choice; empty = use the code in the הגדרות sheet
   lotteryThreshold: 75,            // % of minyan days needed for the lottery; empty = use the הגדרות sheet
+  shulLat: 31.9857703,             // the shul's point (Google Maps → right-click → coordinates);
+  shulLng: 34.8582831,             //   empty = no location check
+  shulRadius: 150,                 // metres
+  locationLog: false,              // reserved, not implemented yet
   kioskKey: '',                    // leave empty
 };
 ```
@@ -201,6 +205,22 @@ Outside gabbai mode, the page detects what it runs on: **טלפון נייד** (
 - **Where it's recorded.** Each self-registration stores it in the **מקור** column of the נוכחות sheet, for example `דף רישום · נייד`. Gabbai-mode registrations stay `גבאי`.
 - **How it decides.** It uses the browser's own report (client hints, then the user-agent). An iPad that presents itself as a Mac is recognized by its touch screen.
 - **The shul's own tablet.** Add `&device=kiosk` to the end of its link, i.e. `…/exec?k=…&device=kiosk`. That marks it as **טאבלט בית הכנסת** whatever the browser reports, so it is never treated as a private phone. The printed QR code should stay *without* this ending.
+
+### Location check: registering from the shul
+
+When `shulLat`, `shulLng` and `shulRadius` are set in `Secrets.gs`, a **self-registration** must come from within that radius of the shul (150 m by default).
+
+- **Who is checked.** Phones and tablets registering themselves. Gabbai mode and the shul's own tablet (`&device=kiosk`) are not checked. A **computer cannot self-register at all**: it shows "רישום עצמי — מטלפון נייד או מטאבלט" and works only in gabbai mode.
+- **How it works.** When the person taps "רישום נוכחות", the browser asks for location permission (the first time), takes a fresh reading and sends it with the registration. The server compares it with the shul's point.
+- **Indoor tolerance.** GPS indoors is often off by tens of metres, so a reading counts as inside if the shul lies within its accuracy circle, up to one extra radius.
+- **Outside the shul, or no position** (permission refused, GPS off): the person sees "נראה שאתה מחוץ לבית הכנסת" with the approximate distance, or "לא התקבל מיקום" with what to fix. Nothing is refused outright; there are two choices:
+  - **"נסה שוב"** takes a new reading, for someone who has just walked in.
+  - **"שלח לאישור הגבאי"** puts the registration on the **רישומים לבדיקה** list. The note there says only `מחוץ לבית הכנסת (~850 מ׳)` or `ללא מיקום (…)`.
+- **Privacy.** The coordinates are used once on the server for that comparison and are **never stored** anywhere. Only the outcome is kept, and only for entries sent for approval. A test checks that no coordinate ever reaches the spreadsheet.
+- **Checking the radius.** In gabbai mode, **"בדיקת מיקום"** shows this device's distance from the shul, the GPS accuracy and whether it counts as inside. Use it once standing in the shul.
+- **Reserved, not implemented yet:** `locationLog` in `Secrets.gs` and `logLocationCheck_()` in `Location.gs`. This is a hook for a future log of check *outcomes*, to investigate poor readings. Today it does nothing.
+
+The location prompt runs inside Google's page frame. If a browser doesn't allow location there, every reading fails with "לא התקבל מיקום". Check this once with "בדיקת מיקום" on a real phone after deploying.
 
 ### On a personal phone
 
@@ -275,6 +295,7 @@ Don't create a new deployment for an update: it gets a new address.
 | `Config.gs` | Sheet names, column layouts, settings labels, matching thresholds |
 | `Kiosk.gs` | Server side of the registration page (`doGet`, `kiosk*`) |
 | `Admin.gs` | WhatsApp import and review dialogs (`admin*`), registration-link dialog |
+| `Location.gs` | Location check for self-registration: distance to the shul, never storing coordinates |
 | `Matching.gs` | Who-is-this logic: phone first, then fuzzy Hebrew name matching |
 | `Names.gs` | First-name list and nicknames (מנדי = מנחם מענדל …) |
 | `Data.gs` | Reading/writing the People, Attendance and Review sheets |
@@ -287,7 +308,7 @@ Don't create a new deployment for an update: it gets a new address.
 | `AdminPage.html` | Import + review dialog: markup and styles |
 | `LinkDialog.html`, `ReportTextDialog.html`, `BadLinkPage.html` | Small dialogs/pages |
 | `scripts/common/dom.js`, `clipboard.js` | Browser helpers shared by the pages |
-| `scripts/kiosk/*.js` | Registration page: `helpers`, `deviceDetection`, `hebrewDate`, `lookup` (live suggestions), `registration` (submit/confirmation), `gabbaiMode`, `myPhone` (remembered number on a phone), `main` (state + `startKiosk()`) |
+| `scripts/kiosk/*.js` | Registration page: `helpers`, `deviceDetection`, `hebrewDate`, `lookup` (live suggestions), `registration` (submit/confirmation), `gabbaiMode`, `myPhone` (remembered number on a phone), `location` (location check, "outside the shul" panel, gabbai test), `main` (state + `startKiosk()`) |
 | `scripts/admin/*.js` | Import/review dialog: `helpers`, `import`, `review`, `main` (tabs + `startAdmin()`) |
 | `scripts/dialogs/*.js` | `linkDialog` (QR + copy), `reportText` (copy) |
 | `appsscript.json` | Manifest (time zone, V8, web-app access) |
@@ -310,7 +331,7 @@ Apps Script cannot serve a `.js` file to the browser: a page is one HTML documen
 ## 12. Private settings (`Secrets.gs`)
 
 - **Where they live.** Private values live in `Secrets.gs`. It is in `.gitignore`, so it never reaches git, but `clasp push` uploads it and the script reads it at run time.
-- **What it holds.** The owner account, the web-app deployment ID (the page address is built from it), the gabbai code, the lottery threshold and, optionally, a fixed link key.
+- **What it holds.** The owner account, the web-app deployment ID (the page address is built from it), the gabbai code, the lottery threshold, the shul's location and radius and, optionally, a fixed link key.
 - **Every value is optional.** An empty value falls back to the הגדרות sheet or to an automatically generated key.
 - **Other private files.** `.clasp.json` (your Script ID) is also git-ignored.
 - **No passwords.** None are stored anywhere in the project. `clasp login` keeps its token in your user folder (`~/.clasprc.json`), outside the repo.
@@ -325,6 +346,7 @@ node test/hebcal_check.js  # Hebrew calendar vs. the ICU calendar, 2023–2028
 node test/ui.js            # renders the pages in Chromium; needs:  npm install playwright
 node test/device.js        # device detection with emulated iPhone/Android/iPad/desktop browsers (Playwright)
 node test/mobile.js        # personal-phone flow: optional, remembered, "זה לא אני", gabbai mode, shul tablet (Playwright)
+node test/location.js      # location check with emulated GPS: inside, outside + retry, send for approval, no permission, computer (Playwright)
 node test/profile.js       # counts Google-service calls per action on a month of sample data
 ```
 

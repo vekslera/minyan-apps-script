@@ -65,6 +65,11 @@ footer{text-align:center;margin-top:20px}
 .modal .row{display:flex;gap:10px;margin-top:12px}
 .modal .row button{flex:1;margin:0}
 .loading{text-align:center;color:var(--muted);padding:30px}
+.where{text-align:center;padding:22px 6px 6px}
+.where h2{font-size:26px;margin:0 0 8px}
+.where p{margin:6px 0 16px;color:var(--muted);font-size:19px;line-height:1.5}
+.where .secondary{display:block;width:100%;margin:10px 0 0}
+.msg.info{background:var(--accent-soft);color:var(--ink)}
 .notme{display:block;margin:-8px 0 12px;font-size:16px}
 .device{color:var(--muted);font-size:12px;opacity:.7;margin-top:2px}
 [hidden]{display:none!important}
@@ -80,6 +85,7 @@ footer{text-align:center;margin-top:20px}
   <div class="gabbai" id="gabbaiBar" hidden>
     <span>מצב גבאי</span>
     <label>תאריך <input type="date" id="date"></label>
+    <button class="link" id="locTest" type="button" hidden>בדיקת מיקום</button>
     <button class="link" id="gabbaiOff" type="button">יציאה</button>
   </div>
 
@@ -106,6 +112,15 @@ footer{text-align:center;margin-top:20px}
       <div class="msg err" id="msg" hidden></div>
       <button class="primary" id="submit" type="submit">רישום נוכחות</button>
     </form>
+
+    <div class="where" id="where" hidden>
+      <div class="mark wait">!</div>
+      <h2 id="whereTitle"></h2>
+      <p id="whereText"></p>
+      <button class="primary" id="whereRetry" type="button">נסה שוב</button>
+      <button class="secondary" id="whereSend" type="button">שלח לאישור הגבאי</button>
+      <button class="link" id="whereCancel" type="button">ביטול</button>
+    </div>
 
     <div class="done" id="done" hidden>
       <div class="mark" id="mark">✓</div>
@@ -146,6 +161,7 @@ var FORCED_DEVICE = '__DEVICE__';
 <script data-include="scripts/kiosk/registration.js"></script>
 <script data-include="scripts/kiosk/gabbaiMode.js"></script>
 <script data-include="scripts/kiosk/myPhone.js"></script>
+<script data-include="scripts/kiosk/location.js"></script>
 <script data-include="scripts/kiosk/main.js"></script>
 <script>startKiosk();</script>
 </body>

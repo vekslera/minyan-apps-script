@@ -32,7 +32,8 @@ console.log('init:', JSON.stringify(web('kioskInit', key)));
 assert.throws(() => web('adminGetPending', 'nope'));
 assert.throws(() => web('menuDraw'));
 
-const sub = d => web('kioskSubmit', key, d);
+// Registrations come from a tablet unless a test says otherwise (a computer may only use gabbai mode).
+const sub = d => web('kioskSubmit', key, Object.assign({ device: 'tablet' }, d));
 let r;
 r = sub({ phone: '052-111-1111', first: 'משה', last: 'כהן' }); console.log('1 new w/ phone:', r.status, r.name, JSON.stringify(r.stats)); assert.equal(r.status, 'created');
 r = sub({ phone: '0521111111' }); console.log('2 phone only again:', r.status); assert.equal(r.status, 'already');
@@ -257,4 +258,56 @@ console.log('\nALL OK');
   const again = sub({ last: 'טלפון', device: 'mobile' });
   assert.equal(again.ok, true); assert.equal(again.name, 'בלי טלפון');
   console.log('mobile without phone OK');
+}
+
+// ---------- Location check (Secrets.gs: shulLat/shulLng/shulRadius) ----------
+{
+  const SHUL = { lat: 31.9857703, lng: 34.8582831 };
+  const envL = makeEnv({ secrets: { shulLat: String(SHUL.lat), shulLng: String(SHUL.lng), shulRadius: 150 } });
+  const L = envL.ctx; L.setup();
+  envL.userEdit('הגדרות', 'B6', 0); envL.userEdit('הגדרות', 'B7', 24);
+  const k = envL.props.KIOSK_KEY, lpin = String(envL.ss.getSheetByName('הגדרות').getRange('B8').getValue());
+  const wsub = d => { L.__webContext = true; try { return L.kioskSubmit(k, d); } finally { L.__webContext = false; } };
+  const north = m => ({ lat: SHUL.lat + m / 111320, lng: SHUL.lng });           // m metres north of the shul
+  assert.equal(L.kioskInit(k).locationCheck, true);
+  // a computer may not self-register; nor may a page that doesn't say what it runs on
+  assert.match(wsub({ last: 'כהן', device: 'desktop', loc: { lat: SHUL.lat, lng: SHUL.lng, acc: 10 } }).message, /טאבלט/);
+  assert.equal(wsub({ last: 'כהן', loc: { lat: SHUL.lat, lng: SHUL.lng, acc: 10 } }).ok, false);
+  // inside
+  let r = wsub({ phone: '0521111111', first: 'משה', last: 'כהן', device: 'mobile', loc: Object.assign(north(20), { acc: 15 }) });
+  assert.equal(r.ok, true); assert.equal(r.status, 'created');
+  r = wsub({ phone: '0522222222', first: 'דוד', last: 'לוי', device: 'tablet', loc: Object.assign(north(200), { acc: 80 }) });
+  assert.equal(r.status, 'created', '200 m away with ±80 m accuracy counts as inside');
+  // outside → told so, with a rounded distance; nothing recorded
+  const attBefore = envL.ss.getSheetByName('נוכחות').getLastRow();
+  r = wsub({ phone: '0523333333', first: 'יוסף', last: 'פרידמן', device: 'mobile', loc: Object.assign(north(847), { acc: 20 }) });
+  assert.equal(r.ok, false); assert.equal(r.where, 'outside'); assert.equal(r.distance, 850);
+  assert.equal(envL.ss.getSheetByName('נוכחות').getLastRow(), attBefore);
+  // … sends it for approval → review list with the distance only
+  r = wsub({ phone: '0523333333', first: 'יוסף', last: 'פרידמן', device: 'mobile', loc: Object.assign(north(847), { acc: 20 }), outsideOk: true });
+  assert.equal(r.ok, true); assert.equal(r.status, 'pending');
+  // no position (permission denied) → told so; then for approval
+  r = wsub({ last: 'כהן', personId: 'P001', device: 'mobile', loc: { error: 'denied' } });
+  assert.equal(r.where, 'none'); assert(/הרשאת מיקום/.test(r.message));
+  r = wsub({ personId: 'P001', device: 'mobile', loc: { error: 'denied' }, outsideOk: true });
+  assert.equal(r.status, 'pending');
+  const pend = envL.ss.getSheetByName('לבדיקה'); const notes = pend.getRange(2, 1, pend.getLastRow() - 1, 10).getValues();
+  assert.equal(notes[0][8], 'מחוץ לבית הכנסת (~850 מ׳)'); assert.equal(notes[1][8], 'ללא מיקום (לא ניתנה הרשאת מיקום)');
+  assert.equal(notes[1][6], 'כהן', 'pending row carries the chosen person\'s name');
+  // the review screen suggests the person
+  const g = L.adminGetPending(envL.props.ADMIN_TOKEN).groups;
+  assert(g.some(x => x.bestId === 'P001'));
+  // the shul tablet and gabbai mode are not checked
+  assert.equal(wsub({ phone: '0524444444', first: 'א', last: 'טאבלט', device: 'kiosk' }).status, 'created');
+  assert.equal(wsub({ phone: '0525555555', first: 'ב', last: 'גבאי', pin: lpin, device: '' }).status, 'created');
+  // nothing anywhere in the spreadsheet looks like a coordinate
+  const all = JSON.stringify(envL.ss.getSheets().map(s => s.data));
+  assert(!/31\.98|34\.85/.test(all), 'coordinates must never be stored');
+  // gabbai location test
+  const t = L.kioskCheckLocation(k, lpin, Object.assign(north(60), { acc: 12 }));
+  assert.equal(t.inside, true); assert.equal(t.distance, 60); assert.equal(t.radius, 150);
+  assert.throws(() => L.kioskCheckLocation(k, '0000', north(0)));
+  // without Secrets.gs coordinates the check is off
+  assert.equal(G.kioskInit(key).locationCheck, false);
+  console.log('location OK');
 }

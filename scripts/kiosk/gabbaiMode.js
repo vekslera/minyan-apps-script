@@ -7,6 +7,7 @@ function gabbaiUi(on) {
   show('gabbaiOn', !on);
   $('deviceLabel').textContent = on ? '' : (DEVICE_NAMES[DEVICE] || '');
   setupPersonalPhone();
+  show('locTest', on && !!(S.info && S.info.locationCheck));
   if (on) { $('date').value = S.info.today; $('date').max = S.info.today; }
 }
 function openPin() { $('pin').value = ''; show('pinMsg', false); show('pinDlg', true); $('pin').focus(); }

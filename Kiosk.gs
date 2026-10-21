@@ -23,7 +23,7 @@ function kioskInit(key) {
   const roster = peopleForReading_(ss).map(p => ({ id: p.id, first: p.first, last: p.last, aliases: p.aliases,
                                                     hint: p.phone ? p.phone.slice(-3) : '' }));
   return { name: s.name, today: today, dow: dow_(today), open: isOpenHour_(s, tz),
-           from: s.from, to: s.to, noMinyan: s.excluded.has(today), roster: roster };
+           from: s.from, to: s.to, noMinyan: s.excluded.has(today), roster: roster, locationCheck: !!shulArea_() };
 }
 
 function kioskCheckPin(key, pin) {
@@ -72,12 +72,40 @@ function kioskSubmit(key, d) {
     if (ctx.excluded.has(date)) return fail('תאריך זה מסומן כיום ללא מניין');
     if (!gabbai && !isOpenHour_(s, ctx.tz)) return fail('הרישום פתוח בין השעות ' + s.from + ':00 ל-' + s.to + ':00');
 
+    // Self-registration only from a phone or a tablet; a computer is for gabbai mode.
+    const device = String(d.device || '');
+    if (!gabbai && (device === 'desktop' || !device)) return fail('רישום עצמי אפשרי רק מטלפון נייד או מטאבלט. במחשב — במצב גבאי.');
+
+    // Location: outside the shul (or no position) → tell the person; they may retry or send it for approval.
+    let locNote = '';
+    if (locationRequired_(device, gabbai)) {
+      const chk = checkLocation_(d.loc);
+      logLocationCheck_({ device: device, inside: chk.inside, distance: chk.distance, accuracy: chk.accuracy, reason: chk.reason });
+      if (!chk.inside) {
+        if (!d.outsideOk) {
+          return { ok: false, where: chk.reason ? 'none' : 'outside', message: chk.reason ? LOCATION_REASONS[chk.reason] : '',
+                   distance: chk.reason ? null : roundDistance_(chk.distance) };
+        }
+        locNote = locationNote_(chk);
+      }
+    }
+
     const e = { date: date, source: gabbai ? SRC.GABBAI : sourceLabel_(d.device), loggedAt: new Date(),
                 first: clean_(d.first), last: clean_(d.last), phone: normPhone_(d.phone), full: '',
                 personId: String(d.personId || '').trim() };
     if (e.phone && !validPhone_(e.phone)) return fail('מספר הטלפון אינו תקין');
     const owner = e.phone ? ctx.people.find(p => p.phone === e.phone) : null;
     if (!e.personId && !owner && !e.last) return fail('נא למלא שם משפחה');
+
+    if (locNote) {                                          // sent for the gabbai's approval
+      const chosen = e.personId && ctx.byId[e.personId];
+      if (chosen && !e.first && !e.last) { e.first = chosen.first; e.last = chosen.last; }
+      if (!e.first && !e.last && owner) { e.first = owner.first; e.last = owner.last; }
+      queuePending_(ctx, e, locNote);
+      flushCtx_(ctx);
+      return { ok: true, status: 'pending', date: date, person: null,
+               name: [e.first, e.last].filter(Boolean).join(' '), stats: null };
+    }
 
     const res = submitEntry_(ctx, e);
     flushCtx_(ctx);
