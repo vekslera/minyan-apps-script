@@ -198,7 +198,10 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   const text = html.match(/<textarea id="t">([\s\S]*?)<\/textarea>/)[1];
   console.log('FINAL TEXT:\n' + text);
   assert(text.includes('סיכום התקופה') && text.includes('ימי מניין'));
-  assert(/משתתפים בהגרלה \(\d+\)|עדיין אין/.test(text));
+  assert(/✓ = משתתף בהגרלה \(\d+\)|עדיין אין/.test(text));
+  assert(/^1\. .+ — \d+\/\d+( ✓)?$/m.test(text), 'every person with days/minyan-days, like the weekly text');
+  const listed = text.split('\n').filter(l => /^\d+\. /.test(l)).length;
+  assert.equal(listed, G.computeStats_(G.loadCtx_(env.ss), G.readSettings_(env.ss, 'Asia/Jerusalem').start, G.readSettings_(env.ss, 'Asia/Jerusalem').end).rows.length, 'everyone who came is listed');
   assert.equal(env.log.filter(l => l[0] === 'dialog').slice(-1)[0][1], 'סיכום התקופה — טקסט להדבקה בוואטסאפ');
   console.log('final text OK');
 }

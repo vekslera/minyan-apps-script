@@ -63,25 +63,20 @@ function finalReport_(ctx, fromWeb) {
            pending: countPending_(ctx.ss) };
 }
 
-/** Short summary for WhatsApp: who is in the lottery, and how many came but did not reach the threshold. */
+/**
+ * Summary for WhatsApp, like the weekly text: everyone who came, with days/minyan-days, and ✓ next to
+ * those in the lottery (at or above the threshold).
+ */
 function finalText_(ctx, stats, soFar) {
   const n = stats.days.length;
-  const eligible = stats.rows.filter(r => r.eligible);
-  const others = stats.rows.length - eligible.length;
+  const need = Math.ceil(stats.threshold * n / 100);
+  const eligible = stats.rows.filter(r => r.eligible).length;
   const lines = ['*' + ctx.settings.name + ' — סיכום התקופה ' + fmtShort_(stats.start) + ' עד ' + fmtShort_(stats.end) +
                  (soFar ? ' (עד היום)' : '') + '*',
-                 n + ' ימי מניין · בהגרלה משתתפים מי שהגיעו ל-' + stats.threshold + '% ומעלה', ''];
-  if (eligible.length) {
-    lines.push('✓ משתתפים בהגרלה (' + eligible.length + '):');
-    eligible.forEach((r, i) => lines.push((i + 1) + '. ' + displayName_(r.person) + ' — ' + r.count + '/' + n +
-                                         ' (' + Math.round(r.pct * 100) + '%)'));
-  } else {
-    lines.push('עדיין אין מי שהגיע ל-' + stats.threshold + '% מימי המניין.');
-  }
-  if (others) {
-    const who = others === 1 ? 'מתפלל אחד השתתף' : others + ' מתפללים השתתפו';
-    lines.push('', (eligible.length ? 'עוד ' : '') + who + ' במניין בתקופה.');
-  }
+                 n + ' ימי מניין · בהגרלה: ' + stats.threshold + '% ומעלה' + (n ? ' (לפחות ' + need + ' מתוך ' + n + ')' : ''), ''];
+  stats.rows.forEach((r, i) => lines.push((i + 1) + '. ' + displayName_(r.person) + ' — ' + r.count + '/' + n + (r.eligible ? ' ✓' : '')));
+  if (!stats.rows.length) lines.push('(אין רישומים)');
+  lines.push('', eligible ? '✓ = משתתף בהגרלה (' + eligible + ')' : 'עדיין אין מי שהגיע ל-' + stats.threshold + '% מימי המניין.');
   lines.push('', 'יישר כח לכל המתפללים!');
   return lines.join('\n');
 }

@@ -257,7 +257,7 @@ The same tools are in the Sheet's **מניין** menu:
 
 - **מניין → ייבוא רשימה מוואטסאפ.** Paste the lists from WhatsApp; a date line such as `19/10` or `ח׳ חשוון` starts each day. Check the dates, then confirm the names in the review screen.
 - **מניין → רישומים לבדיקה.** Entries the system wasn't sure about. Pick the right person, confirm or add the phone, and save.
-- **מניין → דוח שבועי / דוח סופי לתקופה.** Each report opens as a new tab, together with a short text to paste into WhatsApp.
+- **מניין → דוח שבועי / דוח סופי לתקופה.** Each report opens as a new tab, together with a text to paste into WhatsApp: everyone who came, with days out of the minyan days (e.g. `משה כהן — 17/20`). In the period summary, ✓ marks those in the lottery, and the top line says how many days that takes.
 - **מניין → הגרלה.** Draws one winner among those at or above the threshold, and logs the draw in the **הגרלות** tab.
 - **מניין → איתור כפילויות** finds people entered twice. Tick "למזג?" next to the real duplicates, then use **מיזוג הכפילויות המסומנות**.
 

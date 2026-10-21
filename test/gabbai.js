@@ -79,7 +79,8 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
   await p.click('#back'); await tile(p, 'final');
   console.log('final lead:', await p.textContent('#finalLead'));
   await p.click('#finalBtn'); await p.waitForTimeout(400);
-  assert(/משתתפים בהגרלה/.test(await p.inputValue('#finalOutText')));
+  const ftext = await p.inputValue('#finalOutText');
+  assert(/משה כהן — \d+\/\d+ ✓/.test(ftext) && /דוד לוי — \d+\/\d+$/m.test(ftext), ftext);
 
   // lottery: two taps
   await p.click('#back'); await tile(p, 'draw');
