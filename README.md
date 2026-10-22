@@ -314,6 +314,8 @@ Menus and dialogs in the Sheet always use the latest uploaded code. The **regist
 
 Both run `clasp push -f`, then `clasp update-deployment <deploymentId from Secrets.gs>`. The address, the links and the printed QR code stay the same.
 
+**Without a terminal:** double-click **`deploy.cmd`** in the project folder (Windows). It runs `deploy.ps1`, shows "DEPLOY OK" or "DEPLOY FAILED", and saves the output to `deploy-last.log`.
+
 - **PowerShell may block the script.** If it says running scripts is disabled, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
 
 **Route B (browser):** **Deploy / פריסה → Manage deployments / ניהול פריסות** → select the web-app deployment → ✎ **Edit / עריכה** → **Version / גרסה: New version / גרסה חדשה** → **Deploy / פריסה**.
