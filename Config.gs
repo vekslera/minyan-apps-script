@@ -30,9 +30,26 @@ const SET = {
   PCT:   'אחוז נוכחות מינימלי להגרלה',
   FROM:  'רישום עצמי פתוח משעה',
   TO:    'רישום עצמי פתוח עד שעה',
-  PIN:   'קוד גבאי',
-  URL:   'כתובת דף הרישום (Web app)',
+  LAT:   'מיקום בית הכנסת — קו רוחב',
+  LNG:   'מיקום בית הכנסת — קו אורך',
+  RADIUS: 'רדיוס מותר (מטרים)',
+  TOL:   'סטיית GPS מותרת (מטרים)',
 };
+// Rows of older versions, read once by setup() to move their values (see migrateSettings_ in Setup.gs).
+const OLD_SET = { PIN: 'קוד גבאי', URL: 'כתובת דף הרישום (Web app)' };
+// The הגדרות sheet, top to bottom (column E holds the "no minyan" dates). setup() keeps this order.
+const SET_ROWS = [
+  [SET.NAME, 'מוצג בראש דף הרישום ובדוחות'],
+  [SET.START, 'היום הראשון שנספר'],
+  [SET.END, 'היום האחרון שנספר'],
+  [SET.PCT, '75 = משתתפים בהגרלה מי שהגיע ל-75% מימי המניין ומעלה'],
+  [SET.FROM, 'שעה עגולה (0–23). מחוץ לשעות אפשר לרשום רק במצב גבאי'],
+  [SET.TO, ''],
+  [SET.LAT, 'ריק = אין בדיקת מיקום. נקבע במדידה בכלי הגבאי ← מיקום בית הכנסת'],
+  [SET.LNG, ''],
+  [SET.RADIUS, 'רישום עצמי מטלפון/טאבלט רק בתוך המרחק הזה מבית הכנסת. מומלץ 40–60'],
+  [SET.TOL, 'כמה אי-דיוק של ה-GPS נסלח מעבר לרדיוס. ריק = חצי רדיוס'],
+];
 
 // Name-matching thresholds (0..1)
 const MATCH = { AUTO: 0.88, SUGGEST: 0.55, GAP: 0.08, DUP: 0.75, PHONE_NAME: 0.6 };

@@ -20,7 +20,7 @@ const st = sheet('הגדרות');
 env.userEdit('הגדרות', 'B6', 0); env.userEdit('הגדרות', 'B7', 24);
 const today = G.todayKey_('Asia/Jerusalem');
 env.userEdit('הגדרות', 'B3', G.keyToDate_(G.addDays_(today, -9), 'Asia/Jerusalem'));
-const pin = String(st.getRange('B8').getValue());
+const pin = G.gabbaiPin_();
 
 // doGet
 assert(G.doGet({ parameter: { k: key } }).html.includes("var KEY = '" + key + "'"));
@@ -137,12 +137,12 @@ console.log(env.log.filter(l => l[0] === 'alert').slice(-1)[0]);
 G.menuFindDuplicates();
 console.log('dups:', JSON.stringify(rows('כפילויות')));
 G.menuKioskLink(); console.log(env.log.slice(-1)[0]);
-env.userEdit('הגדרות', 'B9', 'https://script.google.com/macros/s/ABC/exec');
+env.web.url = 'https://script.google.com/macros/s/ABC/exec';
 G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console.log('link dialog ok');
 
 // ---------- Secrets.gs overrides ----------
 {
-  const env2 = makeEnv({ secrets: { gabbaiPin: '4321', deploymentId: 'AKfycbTEST', kioskKey: 'fixedkey123', lotteryThreshold: '60' } });
+  const env2 = makeEnv({ secrets: { gabbaiPin: '4321', deploymentId: 'AKfycbTEST', kioskKey: 'fixedkey123', lotteryThreshold: '60' } });   // an older Secrets.gs
   const G2 = env2.ctx;
   G2.setup();
   const s2 = G2.readSettings_(env2.ss, 'Asia/Jerusalem');
@@ -269,7 +269,7 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   const envL = makeEnv({ secrets: { shulLat: String(SHUL.lat), shulLng: String(SHUL.lng), shulRadius: 150 } });
   const L = envL.ctx; L.setup();
   envL.userEdit('הגדרות', 'B6', 0); envL.userEdit('הגדרות', 'B7', 24);
-  const k = envL.props.KIOSK_KEY, lpin = String(envL.ss.getSheetByName('הגדרות').getRange('B8').getValue());
+  const k = envL.props.KIOSK_KEY, lpin = envL.ctx.gabbaiPin_();
   const lsess = L.kioskLogin(k, lpin).token;
   const wsub = d => { L.__webContext = true; try { return L.kioskSubmit(k, d); } finally { L.__webContext = false; } };
   const north = m => ({ lat: SHUL.lat + m / 111320, lng: SHUL.lng });           // m metres north of the shul
@@ -304,9 +304,11 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   // the shul tablet and gabbai mode are not checked
   assert.equal(wsub({ phone: '0524444444', first: 'א', last: 'טאבלט', device: 'kiosk' }).status, 'created');
   assert.equal(wsub({ phone: '0525555555', first: 'ב', last: 'גבאי', session: lsess, device: '' }).status, 'created');
-  // nothing anywhere in the spreadsheet looks like a coordinate
-  const all = JSON.stringify(envL.ss.getSheets().map(s => s.data));
+  // no registrant's position anywhere: outside הגדרות nothing looks like a coordinate, and in הגדרות only the shul's own point
+  const all = JSON.stringify(envL.ss.getSheets().filter(s => s.name !== 'הגדרות').map(s => s.data));
   assert(!/31\.98|34\.85/.test(all), 'coordinates must never be stored');
+  const coords = (JSON.stringify(envL.ss.getSheetByName('הגדרות').data).match(/31\.98\d*|34\.85\d*/g) || []).map(Number);
+  assert.deepEqual(coords.sort(), [SHUL.lat, SHUL.lng].sort(), 'the settings hold the shul point only');
   // gabbai location test
   const t = L.kioskCheckLocation(k, lsess, Object.assign(north(60), { acc: 12 }));
   assert.equal(t.inside, true); assert.equal(t.distance, 60); assert.equal(t.radius, 150);
@@ -319,7 +321,9 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
 // ---------- Gabbai access: lockout, sessions, changing the code ----------
 {
   const envA = makeEnv(); const A = envA.ctx; A.setup();
-  const k = envA.props.KIOSK_KEY, code = String(envA.ss.getSheetByName('הגדרות').getRange('B8').getValue());
+  assert(/^\d{6}$/.test(A.gabbaiPin_()), 'a new installation gets a random 6-digit code');
+  A.setPin_('1234');                                               // an old-style short code
+  const k = envA.props.KIOSK_KEY, code = A.gabbaiPin_();
   const w = (fn, ...a) => { A.__webContext = true; try { return A[fn](...a); } finally { A.__webContext = false; } };
   assert.throws(() => w('kioskLogin', k, 'wrong1'), /שגוי/);
   assert.throws(() => w('kioskLogin', k, 'wrong2'), /שגוי/);
@@ -327,7 +331,7 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   assert.throws(() => w('kioskLogin', k, code), /בעוד \d+ שניות/, 'even the right code waits during the lockout');
   envA.now.offsetMs += 61 * 1000;                                   // a minute later
   const s1 = w('kioskLogin', k, code);
-  assert.equal(s1.weakCode, true, 'the 4-digit setup code is reported as weak');
+  assert.equal(s1.weakCode, true, 'a 4-digit code is reported as weak');
   // the session works, logout ends it
   assert.equal(w('kioskInit', k, s1.token).session, true);
   w('kioskLogout', k, s1.token);
@@ -341,8 +345,8 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   assert.equal(w('kioskInit', k, s3).session, false, 'other sessions end when the code changes');
   assert.throws(() => w('kioskLogin', k, code), /שגוי/);
   const s4 = w('kioskLogin', k, 'testcode9'); assert.equal(s4.weakCode, false);
-  assert.match(String(envA.ss.getSheetByName('הגדרות').getRange('C8').getValue()), /שונה על ידי הגבאי/);
-  assert.equal(A.readSettings_(envA.ss, 'Asia/Jerusalem').pin, 'testcode9', 'the changed code wins over Secrets.gs and the sheet');
+  assert.equal(A.readSettings_(envA.ss, 'Asia/Jerusalem').pin, 'testcode9');
+  assert(!JSON.stringify(envA.ss.getSheets().map(x => x.data)).includes('testcode9'), 'the code is never in the Sheet');
   // an expired session (30 minutes without use)
   envA.now.offsetMs += 31 * 60 * 1000;
   console.log('gabbai access OK');
@@ -351,12 +355,12 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
 // ---------- Gabbai tools page: every Sheet tool through the web, with a session ----------
 {
   const envT = makeEnv(); const T = envT.ctx; T.setup();
-  const k = envT.props.KIOSK_KEY, code = String(envT.ss.getSheetByName('הגדרות').getRange('B8').getValue());
+  const k = envT.props.KIOSK_KEY, code = envT.ctx.gabbaiPin_();
   const W = (fn, ...a) => { T.__webContext = true; try { return noDates(T[fn](...a)); } finally { T.__webContext = false; } };
   const day = T.todayKey_('Asia/Jerusalem');
   envT.userEdit('הגדרות', 'B6', 0); envT.userEdit('הגדרות', 'B7', 24);
   envT.userEdit('הגדרות', 'B3', T.keyToDate_(T.addDays_(day, -9), 'Asia/Jerusalem'));
-  envT.userEdit('הגדרות', 'B9', 'https://script.google.com/macros/s/AKfyc_EXAMPLE/exec');
+  envT.web.url = 'https://script.google.com/macros/s/AKfyc_EXAMPLE/exec';
   // pages: the tools page is complete; the registration page links to it
   const page = W('doGet', { parameter: { k: k, view: 'gabbai' } }).html;
   assert(page.includes("var KEY = '" + k + "'") && page.includes('function startGabbai') && page.includes('function loadReview'));
@@ -428,49 +432,122 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   console.log('gabbai tools OK');
 }
 
-// ---------- Shul location set by the gabbai; radius; the accuracy allowance ----------
+// ---------- Shul location in the הגדרות sheet: set by the gabbai; radius; GPS tolerance ----------
 {
   const SH0 = { lat: 31.9857703, lng: 34.8582831 };
   const at = (p, m) => ({ lat: p.lat + m / 111320, lng: p.lng });                 // m metres north of p
-  const envS = makeEnv({ secrets: { shulLat: String(SH0.lat), shulLng: String(SH0.lng), shulRadius: 150 } });
-  const S2 = envS.ctx; S2.setup();
-  const k = envS.props.KIOSK_KEY, code = String(envS.ss.getSheetByName('הגדרות').getRange('B8').getValue());
+  const envS = makeEnv(); const S2 = envS.ctx; S2.setup();
+  const k = envS.props.KIOSK_KEY, code = S2.gabbaiPin_();
   const W = (fn, ...a) => { S2.__webContext = true; try { return noDates(S2[fn](...a)); } finally { S2.__webContext = false; } };
+  const cell = label => { const r = envS.ss.getSheetByName('הגדרות').data.find(x => x[0] === label); return r ? r[1] : undefined; };
   const s = W('kioskLogin', k, code).token;
   assert.throws(() => W('gabbaiShulInfo', k, 'nope'), /כניסה מחדש/);
   let info = W('gabbaiShulInfo', k, s);
-  assert.equal(info.source, 'secrets'); assert.equal(info.radius, 150);
-  // a vague reading is refused; a precise one moves the centre and keeps the radius
-  assert.throws(() => W('gabbaiSetShulLocation', k, s, Object.assign(at(SH0, 300), { acc: 80 })), /לא מדויקת/);
-  const NEW = at(SH0, 300);
-  info = W('gabbaiSetShulLocation', k, s, Object.assign({}, NEW, { acc: 9 }));
-  assert.equal(info.source, 'gabbai'); assert.equal(info.radius, 150); assert.equal(info.acc, 9); assert(info.setAt);
-  assert.equal(W('gabbaiCheckLocation', k, s, Object.assign(at(NEW, 20), { acc: 10 })).inside, true);
-  assert.equal(W('gabbaiCheckLocation', k, s, Object.assign({}, SH0, { acc: 10 })).inside, false, 'the old point is now 300 m away');
-  // radius 40: a house 84 m away is outside even with ±30 m (allowance = at most half the radius)
-  assert.throws(() => W('gabbaiSetShulRadius', k, s, 10), /בין 20 ל-1000/);
-  info = W('gabbaiSetShulRadius', k, s, 40);
-  assert.equal(info.radius, 40); assert.equal(info.lat, NEW.lat);
-  let c = W('gabbaiCheckLocation', k, s, Object.assign(at(NEW, 84), { acc: 30 }));
-  assert.equal(c.inside, false); assert.equal(c.distance, 84);
-  assert.equal(W('gabbaiCheckLocation', k, s, Object.assign(at(NEW, 50), { acc: 15 })).inside, true, '50 m with ±15 m: within 40 + 15');
+  assert.equal(info.configured, false, 'a new installation has no location check');
+  assert.equal(W('kioskInit', k).locationCheck, false);
+  assert.throws(() => W('gabbaiSetShulRadius', k, s, 60, ''), /קודם קובעים/);
+  // a vague reading is refused; a precise one is written to the sheet with a note
+  assert.throws(() => W('gabbaiSetShulLocation', k, s, Object.assign({}, SH0, { acc: 80 })), /לא מדויקת/);
+  info = W('gabbaiSetShulLocation', k, s, Object.assign({}, SH0, { acc: 9 }));
+  assert.equal(info.configured, true); assert.equal(info.radius, 50); assert.equal(info.tolUsed, 25); assert(/נמדד בכלי הגבאי.*±9/.test(info.note));
+  assert.equal(cell('מיקום בית הכנסת — קו רוחב'), SH0.lat); assert.equal(cell('רדיוס מותר (מטרים)'), 50);
   assert.equal(W('kioskInit', k).locationCheck, true);
-  // registrations follow the new area
+  // radius 40, tolerance empty = half: a house 84 m away with ±30 m is outside; 50 m with ±15 m inside
+  assert.throws(() => W('gabbaiSetShulRadius', k, s, 10, ''), /בין 20 ל-1000/);
+  assert.throws(() => W('gabbaiSetShulRadius', k, s, 40, -3), /סטיית ה-GPS/);
+  info = W('gabbaiSetShulRadius', k, s, 40, '');
+  assert.equal(info.radius, 40); assert.equal(info.tol, null); assert.equal(info.tolUsed, 20);
+  let c = W('gabbaiCheckLocation', k, s, Object.assign(at(SH0, 84), { acc: 30 }));
+  assert.equal(c.inside, false); assert.equal(c.distance, 84); assert.equal(c.tol, 20);
+  assert.equal(W('gabbaiCheckLocation', k, s, Object.assign(at(SH0, 50), { acc: 15 })).inside, true);
+  // an explicit tolerance
+  info = W('gabbaiSetShulRadius', k, s, 40, 50);
+  assert.equal(info.tol, 50); assert.equal(cell('סטיית GPS מותרת (מטרים)'), 50);
+  assert.equal(W('gabbaiCheckLocation', k, s, Object.assign(at(SH0, 84), { acc: 60 })).inside, true, '84 ≤ 40 + min(60, 50)');
+  info = W('gabbaiSetShulRadius', k, s, 40, 0);
+  assert.equal(W('gabbaiCheckLocation', k, s, Object.assign(at(SH0, 45), { acc: 30 })).inside, false, 'tolerance 0: the radius only');
+  // registrations follow the sheet
   envS.userEdit('הגדרות', 'B6', 0); envS.userEdit('הגדרות', 'B7', 24);
-  const r = S2.kioskSubmit(k, { phone: '0521111111', first: 'משה', last: 'כהן', device: 'mobile', loc: Object.assign(at(NEW, 84), { acc: 30 }) });
+  const r = S2.kioskSubmit(k, { phone: '0521111111', first: 'משה', last: 'כהן', device: 'mobile', loc: Object.assign(at(SH0, 84), { acc: 30 }) });
   assert.equal(r.where, 'outside');
-  // back to Secrets.gs
-  info = W('gabbaiResetShulLocation', k, s);
-  assert.equal(info.source, 'secrets'); assert.equal(info.lat, SH0.lat); assert.equal(info.radius, 150);
-  // without Secrets.gs: no check until the gabbai sets a point; the first radius is 50 m
-  const envN = makeEnv(); const N = envN.ctx; N.setup();
-  const kn = envN.props.KIOSK_KEY, sn = N.kioskLogin(kn, String(envN.ss.getSheetByName('הגדרות').getRange('B8').getValue())).token;
-  assert.equal(N.gabbaiShulInfo(kn, sn).configured, false);
-  assert.throws(() => N.gabbaiSetShulRadius(kn, sn, 60), /קודם קובעים/);
-  assert.equal(N.gabbaiSetShulLocation(kn, sn, Object.assign({}, SH0, { acc: 12 })).radius, 50);
-  assert.equal(N.kioskInit(kn).locationCheck, true);
-  assert.equal(N.gabbaiResetShulLocation(kn, sn).configured, false);
+  // a manual edit of the sheet counts too
+  envS.userEdit('הגדרות', 'B10', 200);
+  assert.equal(W('gabbaiShulInfo', k, s).radius, 200);
+  // turning the check off
+  info = W('gabbaiClearShulLocation', k, s);
+  assert.equal(info.configured, false); assert.equal(cell('מיקום בית הכנסת — קו רוחב'), '');
+  assert.equal(W('kioskInit', k).locationCheck, false);
   console.log('shul location OK');
+}
+
+// ---------- setup() moves settings from older versions ----------
+{
+  // An older installation: code and address rows in the sheet, the shul in Secrets.gs, a threshold there too.
+  const envM = makeEnv({ secrets: { gabbaiPin: 'oldcode77', shulLat: '31.9857703', shulLng: '34.8582831', shulRadius: 150, lotteryThreshold: '80' } });
+  const M = envM.ctx;
+  const st = envM.ss.insertSheet('הגדרות');
+  const today = M.todayKey_('Asia/Jerusalem');
+  [['הגדרה', 'ערך', 'הסבר', '', 'ימים ללא מניין (תאריך אחד בכל תא)'],
+   ['שם המניין', 'מניין סטיינבך', 'מוצג בראש דף הרישום', '', M.keyToDate_(M.addDays_(today, 3), 'Asia/Jerusalem')],
+   ['תחילת התקופה', M.keyToDate_(today, 'Asia/Jerusalem'), ''], ['סוף התקופה', M.keyToDate_(M.addDays_(today, 20), 'Asia/Jerusalem'), ''],
+   ['אחוז נוכחות מינימלי להגרלה', 75, ''], ['רישום עצמי פתוח משעה', 8, ''], ['רישום עצמי פתוח עד שעה', 11, ''],
+   ['קוד גבאי', '4567', 'old'], ['כתובת דף הרישום (Web app)', 'https://script.google.com/macros/s/OLD/exec', ''],
+   ['הערה שלי', 'משהו', 'שורה שהוספתי']].forEach((row, i) => row.forEach((v, j) => st.set(i + 1, j + 1, v)));
+  // before setup: the old places still work
+  let s0 = M.readSettings_(envM.ss, 'Asia/Jerusalem');
+  assert.equal(s0.pin, 'oldcode77'); assert.equal(M.shulArea_().radius, 150);
+  M.setup();
+  M.shulArea_.v = undefined;
+  const s1 = M.readSettings_(envM.ss, 'Asia/Jerusalem');
+  assert.equal(M.gabbaiPin_(), 'oldcode77', 'the code moves (Secrets.gs wins over the old row) and stays the same');
+  assert.equal(s1.name, 'מניין סטיינבך'); assert.equal(s1.from, 8); assert.equal(s1.to, 11); assert.equal(s1.threshold, 80);
+  assert.equal(s1.start, today); assert.equal(s1.excluded.size, 1, 'no-minyan dates kept');
+  const a = M.shulArea_(); assert.equal(a.lat, 31.9857703); assert.equal(a.radius, 150);
+  const labels = st.data.map(r => r[0]).filter(Boolean);
+  assert(!labels.includes('קוד גבאי') && !labels.includes('כתובת דף הרישום (Web app)'), 'old rows removed');
+  assert(labels.includes('הערה שלי'), 'the user\'s own rows are kept');
+  assert(!JSON.stringify(st.data).includes('oldcode77') && !JSON.stringify(st.data).includes('4567'), 'no code in the Sheet');
+  assert(/Secrets\.gs/.test(envM.log.filter(l => l[0] === 'alert').slice(-1)[0][1]), 'the closing message says what moved');
+  // running setup again changes nothing — not even a threshold the gabbai changed since
+  envM.userEdit('הגדרות', 'B5', 70);
+  const before = JSON.stringify(st.data);
+  M.setup();
+  assert.equal(JSON.stringify(st.data), before);
+  assert.equal(M.readSettings_(envM.ss, 'Asia/Jerusalem').threshold, 70);
+  // the gabbai's own measurement (older version: script properties) wins over Secrets.gs
+  const envP = makeEnv({ secrets: { shulLat: '31.9', shulLng: '34.8' } }); const P = envP.ctx;
+  envP.props.SHUL_AREA = JSON.stringify({ lat: 31.98577, lng: 34.85828, radius: 45, acc: 6, setAt: '21/10/2026' });
+  P.setup(); P.shulArea_.v = undefined;
+  assert.equal(P.shulArea_().radius, 45); assert(/21\/10\/2026/.test(P.shulArea_().note));
+  assert.equal(envP.props.SHUL_AREA, undefined, 'the old property is removed');
+  console.log('settings migration OK');
+}
+
+// ---------- Gabbai settings screen: name, hours, period, threshold, no-minyan days ----------
+{
+  const envG = makeEnv(); const Q = envG.ctx; Q.setup();
+  const k = envG.props.KIOSK_KEY;
+  const W = (fn, ...a) => { Q.__webContext = true; try { return noDates(Q[fn](...a)); } finally { Q.__webContext = false; } };
+  const s = W('kioskLogin', k, Q.gabbaiPin_()).token;
+  assert.throws(() => W('gabbaiSettings', k, 'x'), /כניסה מחדש/);
+  let g = W('gabbaiSettings', k, s);
+  assert.equal(g.from, 5); assert.equal(g.to, 11); assert.equal(g.threshold, 75); assert.equal(g.name, 'מניין שחרית');
+  const base = { name: 'מניין סטיינבך', from: 8, to: 11, start: g.start, end: g.end, threshold: 70 };
+  assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { from: 11, to: 8 })), /שעות הרישום/);
+  assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { start: g.end, end: g.start })), /אחרי סופה/);
+  assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { threshold: 0 })), /בין 1 ל-100/);
+  assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { name: ' ' })), /חסר שם/);
+  g = W('gabbaiSaveSettings', k, s, base);
+  assert.equal(g.from, 8); assert.equal(g.threshold, 70); assert.equal(g.name, 'מניין סטיינבך');
+  assert.equal(W('kioskInit', k).name, 'מניין סטיינבך');
+  const d1 = Q.addDays_(g.today, 2), d2 = Q.addDays_(g.today, -3);
+  g = W('gabbaiSetNoMinyan', k, s, [d1, d2]);
+  assert.deepEqual(g.excluded, [d2, d1].sort());
+  assert.throws(() => W('gabbaiSetNoMinyan', k, s, ['not a date']), /אינו תקין/);
+  g = W('gabbaiSetNoMinyan', k, s, [d1]);
+  assert.deepEqual(g.excluded, [d1]);
+  assert(Q.loadCtx_(envG.ss).excluded.has(d1));
+  console.log('gabbai settings OK');
 }
 
 console.log('\nALL OK');

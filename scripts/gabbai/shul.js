@@ -18,17 +18,19 @@ function renderShul(r) {
   } else {
     var at = r.lat.toFixed(6) + ',' + r.lng.toFixed(6);
     h = '<b>המיקום הנוכחי</b><p class="lead" style="margin-top:6px">מרכז: <a href="https://www.google.com/maps?q=' + at + '" target="_blank" rel="noopener" class="ph">' + at + '</a>' +
-        ' · רדיוס: <b>' + r.radius + ' מ׳</b><br>' +
-        (r.source === 'gabbai' ? 'נקבע בכלי הגבאי' + (r.setAt ? ' ב-' + esc(r.setAt) : '') + (r.acc ? ' (דיוק המדידה ±' + r.acc + ' מ׳)' : '')
-                               : 'מתוך הקובץ Secrets.gs') + '</p>';
-    if (r.source === 'gabbai') {
-      h += '<button class="btn" id="shulReset" type="button">' + (r.secrets ? 'חזרה למיקום מ-Secrets.gs' : 'מחיקת המיקום (כיבוי הבדיקה)') + '</button>';
-    }
+        ' · רדיוס: <b>' + r.radius + ' מ׳</b> · סטיית GPS: <b>' + r.tolUsed + ' מ׳</b>' + (r.tol == null ? ' (חצי רדיוס)' : '') +
+        (r.note ? '<br>' + esc(r.note) : '') + '</p>' +
+        '<button class="btn" id="shulClear" type="button">כיבוי בדיקת המיקום</button>';
   }
   $('shulBox').innerHTML = h;
-  if ($('shulReset')) $('shulReset').onclick = function () { twoTaps(this, function () { call('ResetShulLocation', [], function (x) { flash('shulNote', 'ok', 'בוצע.'); renderShul(x); }); }); };
+  if ($('shulClear')) $('shulClear').onclick = function () {
+    twoTaps(this, function () { call('ClearShulLocation', [], function (x) { flash('shulNote', 'ok', 'בדיקת המיקום כובתה. אפשר להפעיל שוב במדידה.'); renderShul(x); }); });
+  };
   show('shulRadiusCard', r.configured);
-  if (r.configured) { $('shulRadius').value = r.radius; $('shulRadius').min = r.minR; $('shulRadius').max = r.maxR; }
+  if (r.configured) {
+    $('shulRadius').value = r.radius; $('shulRadius').min = r.minR; $('shulRadius').max = r.maxR;
+    $('shulTol').value = r.tol == null ? '' : r.tol; $('shulTol').max = r.maxTol;
+  }
 }
 
 /** A button that needs a second tap within 6 seconds. */
@@ -51,7 +53,7 @@ function testShulDistance() {
     call('CheckLocation', [{ lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy }], function (r) {
       unwait();
       if (!r.configured) return ($('shulTestOut').textContent = 'לא נקבע מיקום לבית הכנסת.');
-      $('shulTestOut').innerHTML = 'מרחק: <b>' + r.distance + ' מ׳</b> · דיוק: ±' + r.accuracy + ' מ׳ · רדיוס: ' + r.radius + ' מ׳ — ' +
+      $('shulTestOut').innerHTML = 'מרחק: <b>' + r.distance + ' מ׳</b> · דיוק: ±' + r.accuracy + ' מ׳ · רדיוס: ' + r.radius + ' מ׳ + עד ' + r.tol + ' מ׳ סטייה — ' +
         (r.inside ? '<span style="color:var(--ok);font-weight:700">ייחשב בתוך בית הכנסת ✓</span>' : '<span class="e">ייחשב מחוץ לבית הכנסת</span>');
     });
   }, function (err) { unwait(); $('shulTestOut').textContent = geoError(err); },
@@ -105,8 +107,9 @@ function setShul() {
 }
 function saveShulRadius() {
   wait('shulRadiusSave');
-  call('SetShulRadius', [Number($('shulRadius').value)], function (r) {
-    unwait(); flash('shulNote', 'ok', 'הרדיוס נשמר: ' + r.radius + ' מ׳.'); renderShul(r);
+  var tol = $('shulTol').value.trim();
+  call('SetShulRadius', [Number($('shulRadius').value), tol === '' ? '' : Number(tol)], function (r) {
+    unwait(); flash('shulNote', 'ok', 'נשמר: רדיוס ' + r.radius + ' מ׳, סטיית GPS ' + r.tolUsed + ' מ׳.'); renderShul(r);
   });
 }
 /** Metres between two {lat, lng} (for the "how far from the current centre" hint only). */

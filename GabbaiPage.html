@@ -90,6 +90,7 @@ window.onerror = function (msg) {
     <button class="tile" type="button" data-go="dups">כפילויות<small>אנשים שנרשמו פעמיים</small></button>
     <button class="tile" type="button" data-go="link">קישור ו-QR<small>הקישור לדף הרישום</small></button>
     <button class="tile" type="button" data-go="shul">מיקום בית הכנסת<small>מרכז, רדיוס ובדיקת מרחק</small></button>
+    <button class="tile" type="button" data-go="settings">הגדרות<small>שם, שעות רישום, תקופה, אחוז, ימים ללא מניין</small></button>
     <button class="tile" type="button" data-go="pin">שינוי קוד גבאי<small>ויציאה מכל המכשירים</small></button>
   </div>
   <p class="foot"><a class="toKiosk" href="__HOME__" target="_top">לדף הרישום</a> <span id="period"></span></p>
@@ -162,10 +163,11 @@ window.onerror = function (msg) {
     <div id="shulTestOut" class="g-meta" style="margin-top:8px;font-size:15px"></div>
   </div>
   <div class="card" id="shulRadiusCard" hidden>
-    <b>רדיוס</b>
-    <div class="row"><label><input type="number" id="shulRadius" min="20" max="1000" step="5" style="width:100px"> מטרים</label>
+    <b>רדיוס וסטיית GPS</b>
+    <div class="row"><label>רדיוס מותר <input type="number" id="shulRadius" min="20" max="1000" step="5" style="width:90px"> מ׳</label></div>
+    <div class="row"><label>סטיית GPS מותרת <input type="number" id="shulTol" min="0" max="500" step="5" style="width:90px" placeholder="אוטומטי"> מ׳</label>
       <button class="btn" id="shulRadiusSave" type="button">שמירה</button></div>
-    <p class="g-meta">מומלץ 40–60 מ׳: מספיק לאולם ולחצר. מעבר לרדיוס נסלחת גם סטיית ה-GPS, עד חצי רדיוס.</p>
+    <p class="g-meta">רדיוס: מומלץ 40–60 מ׳, מספיק לאולם ולחצר. סטיית GPS: כמה אי-דיוק של הטלפון נסלח מעבר לרדיוס; ריק = חצי רדיוס, 0 = בלי סליחה.</p>
   </div>
   <div class="card">
     <b>קביעת מיקום בית הכנסת</b>
@@ -175,6 +177,30 @@ window.onerror = function (msg) {
       <button class="btn primary" id="shulSet" type="button" hidden>קביעה כמיקום בית הכנסת</button>
     </div>
     <div id="shulMeasureOut" class="g-meta" style="margin-top:8px;font-size:15px"></div>
+  </div>
+</section>
+
+<section class="view" id="v-settings" hidden>
+  <div id="settingsNote"></div>
+  <div class="card">
+    <label class="field"><span>שם המניין</span><input id="setName" type="text" maxlength="60"></label>
+    <div class="row">
+      <label>רישום עצמי משעה <select id="setFrom"></select></label>
+      <label>עד שעה <select id="setTo"></select></label>
+    </div>
+    <div class="row">
+      <label>תחילת התקופה <input type="date" id="setStart"></label>
+      <label>סוף התקופה <input type="date" id="setEnd"></label>
+    </div>
+    <div class="row"><label>אחוז נוכחות להגרלה <input type="number" id="setPct" min="1" max="100" step="1" style="width:80px">%</label></div>
+    <button class="btn primary" id="setSave" type="button">שמירה</button>
+    <p class="g-meta" style="margin-top:10px">מחוץ לשעות הרישום אפשר לרשום רק במצב גבאי. השינויים נשמרים בגיליון "הגדרות".</p>
+  </div>
+  <div class="card">
+    <b>ימים ללא מניין</b>
+    <p class="lead">ימים שבהם אין מניין (למשל יום טוב) לא נספרים בחישוב האחוזים. שבתות לא נספרות ממילא.</p>
+    <div id="noMinyanList"></div>
+    <div class="row"><input type="date" id="noMinyanDate"><button class="btn" id="noMinyanAdd" type="button">הוספה</button></div>
   </div>
 </section>
 
@@ -211,6 +237,7 @@ var API = { prefix: 'gabbai', auth: function () { return [KEY, S.session]; } };
 <script data-include="scripts/gabbai/link.js"></script>
 <script data-include="scripts/gabbai/pin.js"></script>
 <script data-include="scripts/gabbai/shul.js"></script>
+<script data-include="scripts/gabbai/settings.js"></script>
 <script data-include="scripts/gabbai/main.js"></script>
 <script>startGabbai();</script>
 </body>

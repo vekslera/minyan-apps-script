@@ -74,27 +74,7 @@ function setup() {
   writeHelp_(ensureSheet_(ss, SH.HELP, null));
 
   const st = ensureSheet_(ss, SH.SETTINGS, null);
-  if (st.getLastRow() === 0) {
-    const today = todayKey_(tz);
-    st.getRange('B3:B4').setNumberFormat('dd/mm/yyyy');
-    st.getRange('B8').setNumberFormat('@');
-    st.getRange('E2:E').setNumberFormat('dd/mm/yyyy');
-    const rows = [
-      ['הגדרה', 'ערך', 'הסבר'],
-      [SET.NAME, 'מניין שחרית', 'מוצג בראש דף הרישום'],
-      [SET.START, keyToDate_(today, tz), 'היום הראשון שנספר'],
-      [SET.END, keyToDate_(addDays_(today, 29), tz), 'היום האחרון שנספר'],
-      [SET.PCT, 75, '75 = משתתפים בהגרלה מי שהגיע ל-75% מימי המניין ומעלה'],
-      [SET.FROM, 5, 'שעה עגולה (0–23). מחוץ לשעות אפשר לרשום רק במצב גבאי'],
-      [SET.TO, 11, ''],
-      [SET.PIN, String(1000 + Math.floor(Math.random() * 9000)), 'לכניסה ל"מצב גבאי" בדף הרישום — רישום אחרים ותאריכים קודמים'],
-      [SET.URL, '', 'אחרי הפריסה (Deploy) הדביקו כאן את כתובת ה-Web app'],
-    ];
-    st.getRange(1, 1, rows.length, 3).setValues(rows);
-    st.getRange('E1').setValue('ימים ללא מניין (תאריך אחד בכל תא)');
-    st.getRange('A1:E1').setFontWeight('bold').setBackground(HDR_BG);
-    st.setColumnWidth(1, 230); st.setColumnWidth(2, 260); st.setColumnWidth(3, 420); st.setColumnWidth(5, 220);
-  }
+  const moved = migrateSettings_(st, tz);
 
   const people = ensureSheet_(ss, SH.PEOPLE, PEOPLE_HDR);
   people.getRange('D:D').setNumberFormat('@');
@@ -123,12 +103,91 @@ function setup() {
   onOpen();
 
   ui.alert('ההגדרה הושלמה',
+    (moved.length ? 'עודכן:\n• ' + moved.join('\n• ') + '\n\n' : '') +
+    (webAppUrlFromSecrets_() ? 'תפריט מניין ← קישור לדף הרישום.' :
     'השלב הבא — פרסום דף הרישום:\n\n' +
     '1. בעורך הסקריפט: פריסה (Deploy) ← פריסה חדשה (New deployment) ← סוג: אפליקציית אינטרנט (Web app).\n' +
     '2. הפעלה בתור (Execute as): אני (Me).  גישה (Who has access): כל אחד (Anyone).\n' +
-    '3. לחצו "פריסה" והעתיקו את הכתובת לגיליון "הגדרות", בשורה "' + SET.URL + '".\n' +
-    '4. תפריט מניין ← קישור לדף הרישום.',
+    '3. לחצו "פריסה", העתיקו את מזהה הפריסה (Deployment ID) לקובץ Secrets.gs, בשורה deploymentId.\n' +
+    '4. תפריט מניין ← קישור לדף הרישום.'),
     ui.ButtonSet.OK);
+}
+
+/**
+ * Puts the הגדרות sheet in the current layout (SET_ROWS order), keeping every value and note already
+ * there, and moves settings from older versions:
+ *  - the gabbai code → script properties (from Secrets.gs gabbaiPin or the old "קוד גבאי" row; a new
+ *    installation gets a random 6-digit code);
+ *  - the shul's location → the sheet (from the gabbai's measurement in script properties, or Secrets.gs);
+ *  - the lottery threshold → the sheet (from Secrets.gs lotteryThreshold);
+ *  - the old "כתובת דף הרישום" row is dropped: the address comes from Secrets.gs deploymentId.
+ * Safe to run again. Returns what it changed, in Hebrew, for the closing message.
+ */
+function migrateSettings_(st, tz) {
+  const moved = [];
+  const props = PropertiesService.getDocumentProperties();
+  const lastA = Math.max(st.getLastRow(), 1);
+  const old = {};
+  const extra = [];
+  st.getRange(1, 1, lastA, 3).getValues().forEach((r, i) => {
+    const k = String(r[0]).trim();
+    if (!k || i === 0) return;
+    old[k] = { b: r[1], c: r[2] };
+    if (!SET_ROWS.some(x => x[0] === k) && k !== OLD_SET.PIN && k !== OLD_SET.URL) extra.push([k, r[1], r[2]]);
+  });
+  const fresh = !Object.keys(old).length;
+
+  // The gabbai code → out of sight.
+  if (!gabbaiPin_()) {
+    const fromOld = secret_('gabbaiPin') || String(old[OLD_SET.PIN] ? old[OLD_SET.PIN].b : '').trim();
+    const pin = fromOld || newPin_();
+    props.setProperty('GABBAI_PIN', pin);
+    gabbaiPin_.v = pin;
+    moved.push(fromOld ? 'קוד הגבאי הועבר למקום מוסתר (לא בגיליון). הקוד עצמו לא השתנה.'
+                       : 'קוד הגבאי הראשוני: ' + pin + ' — לשינוי: מניין ← שינוי קוד גבאי.');
+  }
+  if (old[OLD_SET.URL]) moved.push('השורה "' + OLD_SET.URL + '" הוסרה: הכתובת נלקחת מ-deploymentId בקובץ Secrets.gs.');
+
+  const value = {}, note = {};
+  const today = todayKey_(tz);
+  const defaults = {};
+  defaults[SET.NAME] = 'מניין שחרית'; defaults[SET.START] = keyToDate_(today, tz); defaults[SET.END] = keyToDate_(addDays_(today, 29), tz);
+  defaults[SET.PCT] = 75; defaults[SET.FROM] = 5; defaults[SET.TO] = 11;
+  defaults[SET.LAT] = ''; defaults[SET.LNG] = ''; defaults[SET.RADIUS] = SHUL_SET.NEW_RADIUS; defaults[SET.TOL] = '';
+  SET_ROWS.forEach(r => { value[r[0]] = old[r[0]] ? old[r[0]].b : defaults[r[0]]; note[r[0]] = old[r[0]] && String(old[r[0]].c) ? old[r[0]].c : r[1]; });
+
+  // The shul's location → the sheet.
+  if (!old[SET.LAT]) {
+    const a = oldShulArea_();
+    if (a) {
+      value[SET.LAT] = a.lat; value[SET.LNG] = a.lng; value[SET.RADIUS] = a.radius;
+      if (a.note) note[SET.LAT] = a.note;
+      moved.push('מיקום בית הכנסת והרדיוס (' + a.radius + ' מ׳) הועברו לגיליון.');
+    }
+    props.deleteProperty('SHUL_AREA');
+  }
+  // The lottery threshold → the sheet, once (afterwards the gabbai's value in the sheet is the only one).
+  const thr = props.getProperty('SETTINGS_MOVED') ? 0 : secretPercent_('lotteryThreshold');
+  if (thr && Number(value[SET.PCT]) !== thr) {
+    value[SET.PCT] = thr;
+    moved.push('אחוז הנוכחות להגרלה (' + thr + '%) הועבר מ-Secrets.gs לגיליון.');
+  }
+
+  props.setProperty('SETTINGS_MOVED', '1');
+  const rows = [['הגדרה', 'ערך', 'הסבר']].concat(SET_ROWS.map(r => [r[0], value[r[0]], note[r[0]]])).concat(extra);
+  st.getRange(1, 1, lastA, 3).clearContent();
+  st.getRange(1, 1, rows.length, 3).setValues(rows);
+  const row = label => SET_ROWS.findIndex(r => r[0] === label) + 2;
+  st.getRange(row(SET.START), 2, 2, 1).setNumberFormat('dd/mm/yyyy');
+  st.getRange(row(SET.LAT), 2, 2, 1).setNumberFormat('0.0000000');
+  st.getRange(row(SET.RADIUS), 2, 2, 1).setNumberFormat('0');
+  if (!st.getRange('E1').getValue()) {
+    st.getRange('E1').setValue('ימים ללא מניין (תאריך אחד בכל תא)');
+    st.getRange('E2:E').setNumberFormat('dd/mm/yyyy');
+  }
+  st.getRange('A1:E1').setFontWeight('bold').setBackground(HDR_BG);
+  if (fresh) { st.setColumnWidth(1, 230); st.setColumnWidth(2, 260); st.setColumnWidth(3, 420); st.setColumnWidth(5, 220); }
+  return moved;
 }
 
 function writeHelp_(sh) {
@@ -145,9 +204,9 @@ function writeHelp_(sh) {
     [''],
     ['מצב גבאי'],
     ['בתחתית דף הרישום: "מצב גבאי" + קוד הגבאי. מאפשר לרשום אחרים, גם לתאריכים קודמים ומחוץ לשעות הרישום.'],
-    ['הקוד: לפחות 6 תווים. אפשר להחליף אותו (בכלי הגבאי, או כאן: מניין ← שינוי קוד גבאי). 3 קודים שגויים נועלים את הכניסה לדקה. "יציאה" מנתקת; אחרי 30 דקות ללא פעילות הניתוק אוטומטי.'],
-    ['כלי גבאי בדפדפן ובטלפון: במצב גבאי לוחצים "כלי גבאי". שם: רישומים לבדיקה, ייבוא מוואטסאפ, דוחות עם טקסט לוואטסאפ, הגרלה, כפילויות, קישור ו-QR, שינוי קוד. אותם כלים גם בתפריט "מניין" כאן.'],
-    ['מיקום בית הכנסת (בכלי הגבאי): עומדים באמצע האולם עם טלפון, "מדידה", ואז "קביעה כמיקום בית הכנסת". שם גם קובעים את הרדיוס (מומלץ 40–60 מ׳) ובודקים מרחק.'],
+    ['הקוד: לפחות 6 תווים. הוא שמור במקום מוסתר (לא בגיליון); בעל הגיליון רואה אותו בתפריט מניין ← קישור לדף הרישום. אפשר להחליף אותו (בכלי הגבאי, או כאן: מניין ← שינוי קוד גבאי). 3 קודים שגויים נועלים את הכניסה לדקה. "יציאה" מנתקת; אחרי 30 דקות ללא פעילות הניתוק אוטומטי.'],
+    ['כלי גבאי בדפדפן ובטלפון: במצב גבאי לוחצים "כלי גבאי". שם: רישומים לבדיקה, ייבוא מוואטסאפ, דוחות עם טקסט לוואטסאפ, הגרלה, כפילויות, קישור ו-QR, מיקום בית הכנסת, הגדרות (שם, שעות רישום, תקופה, אחוז, ימים ללא מניין), שינוי קוד. אותם כלים גם בתפריט "מניין" כאן.'],
+    ['מיקום בית הכנסת (בכלי הגבאי): עומדים באמצע האולם עם טלפון, "מדידה", ואז "קביעה כמיקום בית הכנסת". שם גם קובעים את הרדיוס (מומלץ 40–60 מ׳) ואת סטיית ה-GPS המותרת, ובודקים מרחק. הכול נשמר בגיליון "הגדרות".'],
     ['במצב גבאי יש כפתור "בדיקת מיקום": מראה את המרחק מבית הכנסת ואת דיוק המיקום. שימושי כדי לבדוק שהרדיוס מתאים.'],
     [''],
     ['רישומים לבדיקה'],
@@ -161,7 +220,8 @@ function writeHelp_(sh) {
     ['דוחות והגרלה'],
     ['דוח שבועי: נוכחות כל אחד ב-7 הימים האחרונים, וגם טקסט מוכן להדבקה בוואטסאפ.'],
     ['דוח סופי: נוכחות לכל התקופה, וגם סיכום קצר להדבקה בוואטסאפ. משתתפים בהגרלה מי שהגיע ל-75% מימי המניין ומעלה (ניתן לשנות בהגדרות).'],
-    ['ימי מניין: ראשון עד שישי. ימים שבהם אין רישום (למשל יום טוב) — רשמו בעמודה E בגיליון הגדרות.'],
+    ['ימי מניין: ראשון עד שישי. ימים שבהם אין רישום (למשל יום טוב) — בכלי הגבאי ← הגדרות, או בעמודה E בגיליון הגדרות.'],
+    ['הגדרות: כל ההגדרות שהגבאי משנה (שם, שעות, תקופה, אחוז, מיקום) נמצאות בגיליון "הגדרות" ובכלי הגבאי ← הגדרות. אחרי עדכון גרסה מריצים פעם אחת: מניין ← הגדרה ראשונית.'],
     [''],
     ['כפילויות'],
     ['אם אותו אדם נרשם פעמיים בשמות שונים: תפריט מניין ← איתור כפילויות, מסמנים "למזג?" ← מיזוג הכפילויות המסומנות.'],

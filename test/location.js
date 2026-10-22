@@ -4,10 +4,11 @@ const { chromium } = require('playwright');
 const { makeEnv } = require('./mock');
 const SHUL = { latitude: 31.9857703, longitude: 34.8582831 };
 const north = m => ({ latitude: SHUL.latitude + m / 111320, longitude: SHUL.longitude });
-const env = makeEnv({ secrets: { shulLat: String(SHUL.latitude), shulLng: String(SHUL.longitude), shulRadius: 150 } });
-const G = env.ctx; G.setup();
+const env = makeEnv(); const G = env.ctx; G.setup();
+// The shul's point in the הגדרות sheet, as the gabbai's "מיקום בית הכנסת" screen would write it.
+G.setSettings_({ 'מיקום בית הכנסת — קו רוחב': SHUL.latitude, 'מיקום בית הכנסת — קו אורך': SHUL.longitude, 'רדיוס מותר (מטרים)': 150 });
 env.userEdit('הגדרות', 'B6', 0); env.userEdit('הגדרות', 'B7', 24);
-const key = env.props.KIOSK_KEY, pin = String(env.ss.getSheetByName('הגדרות').getRange('B8').getValue());
+const key = env.props.KIOSK_KEY, pin = env.ctx.gabbaiPin_();
 G.kioskSubmit(key, { phone: '0521111111', first: 'משה', last: 'כהן', device: 'kiosk' });
 const shim = `(function(){function r(h){return new Proxy({},{get:function(_,p){if(p==='withSuccessHandler')return function(f){return r(Object.assign({},h,{ok:f}))};if(p==='withFailureHandler')return function(f){return r(Object.assign({},h,{fail:f}))};return function(){var a=[].slice.call(arguments);window.__gs(p,JSON.stringify(a)).then(function(x){var o=JSON.parse(x);if(o.err){h.fail&&h.fail({message:o.err})}else{h.ok&&h.ok(o.val)}})}}})}window.google={script:{run:r({})}}})();`;
 const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
@@ -83,7 +84,7 @@ const sent = [];
 
   // the coordinates went to the server only with self-registrations, and were never stored
   assert(sent.filter(s => s.loc && s.loc.lat).length >= 3);
-  assert(!/31\.98|34\.85/.test(JSON.stringify(env.ss.getSheets().map(s => s.data))));
+  assert(!/31\.98|34\.85/.test(JSON.stringify(env.ss.getSheets().filter(s => s.name !== 'הגדרות').map(s => s.data))), 'no registrant position stored');
   await browser.close();
   console.log('location flow OK');
 })().catch(e => { console.error(e); process.exit(1); });

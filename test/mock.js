@@ -80,6 +80,7 @@ function makeEnv(opts) {
     showModalDialog(h, title) { log.push(['dialog', title]); ui.lastDialog = h.html; },
     createMenu() { const m = { addItem: () => m, addSeparator: () => m, addToUi: () => m }; return m; },
   };
+  const web = { url: '' };
   const now = { offsetMs: 0 };
   const fmt = (d, tz, f) => {
     const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hour12: false }).formatToParts(d).map(p => [p.type, p.value]));
@@ -108,7 +109,7 @@ function makeEnv(opts) {
     PropertiesService: { getDocumentProperties: () => ({ getProperty: k => props[k] || null, setProperty: (k, v) => { props[k] = String(v); }, deleteProperty: k => { delete props[k]; } }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     HtmlService: { createHtmlOutput: htmlOut },
-    ScriptApp: { getService: () => ({ getUrl: () => '' }) },
+    ScriptApp: { getService: () => ({ getUrl: () => web.url }) },     // set env.web.url = what Google would return
     Logger: { log: m => log.push(['log', m]) },
     Session: { getEffectiveUser: () => ({ getEmail: () => 'test@example.com' }) },
     CacheService: { getScriptCache: () => ({
@@ -154,7 +155,7 @@ function makeEnv(opts) {
     r.setValue(value);
     if (typeof ctx.onEdit === 'function') ctx.onEdit({ range: r, value });
   };
-  return { ctx, ss, ui, log, props, now, cacheStore, userEdit };
+  return { ctx, ss, ui, log, props, now, cacheStore, userEdit, web };
 }
 
 module.exports = { makeEnv };

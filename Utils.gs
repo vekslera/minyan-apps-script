@@ -14,26 +14,65 @@ function ensureSheet_(ss, name, header) {
 }
 
 function readSettings_(ss, tz) {
-  // The sheet part is cached (cleared by onEdit of the הגדרות sheet); Secrets.gs is applied on top every time.
+  // The sheet part is cached (cleared by onEdit of the הגדרות sheet and by setSettings_).
   let raw = cacheGetJson_(CACHE_KEYS.SETTINGS);
   if (!raw) {
     const sh = sheet_(ss, SH.SETTINGS);
     if (!sh) throw new Error('המערכת עדיין לא הוגדרה — הריצו את "הגדרה ראשונית"');
     const v = sh.getRange(1, 1, Math.max(sh.getLastRow(), 2), 5).getValues();
-    const map = {};
-    v.forEach(r => { const k = String(r[0]).trim(); if (k) map[k] = r[1] instanceof Date ? toKey_(r[1], tz) : r[1]; });
-    raw = { map: map, excluded: v.slice(1).map(r => toKey_(r[4], tz)).filter(Boolean) };
+    const map = {}, notes = {};
+    v.forEach(r => {
+      const k = String(r[0]).trim();
+      if (k) { map[k] = r[1] instanceof Date ? toKey_(r[1], tz) : r[1]; notes[k] = String(r[2] || ''); }
+    });
+    raw = { map: map, notes: notes, excluded: v.slice(1).map(r => toKey_(r[4], tz)).filter(Boolean) };
     cachePutJson_(CACHE_KEYS.SETTINGS, raw);
   }
   const map = raw.map;
   const num = (x, d) => (x === '' || x == null || isNaN(Number(x))) ? d : Number(x);
   const excluded = new Set(raw.excluded);
   return { name: String(map[SET.NAME] || 'מניין שחרית').trim(), start: toKey_(map[SET.START], tz), end: toKey_(map[SET.END], tz),
-           threshold: secretPercent_('lotteryThreshold') || num(map[SET.PCT], 75), from: num(map[SET.FROM], 5), to: num(map[SET.TO], 11),
-           // Values in Secrets.gs (not in git) win over the sheet.
-           pin: changedPin_() || secret_('gabbaiPin') || String(map[SET.PIN] == null ? '' : map[SET.PIN]).trim(),
-           url: webAppUrlFromSecrets_() || String(map[SET.URL] || '').trim(),
+           threshold: num(map[SET.PCT], 75), from: num(map[SET.FROM], 5), to: num(map[SET.TO], 11),
+           // The gabbai code is kept out of sight (script properties). Until setup() moves it there,
+           // the old places still work: Secrets.gs, then the old "קוד גבאי" row.
+           pin: gabbaiPin_() || secret_('gabbaiPin') || String(map[OLD_SET.PIN] == null ? '' : map[OLD_SET.PIN]).trim(),
+           // The web-app address comes from Secrets.gs (deploymentId) only; the old sheet row until setup() removes it.
+           url: webAppUrlFromSecrets_() || String(map[OLD_SET.URL] || '').trim(),
+           shul: shulFromSheet_(map, raw.notes || {}),
            excluded: excluded };
+}
+
+/**
+ * The shul area from the sheet: {lat, lng, radius, tol, note}, null when the rows are empty (no check),
+ * or undefined when the sheet is from an older version without these rows (Location.gs then looks elsewhere).
+ */
+function shulFromSheet_(map, notes) {
+  if (!(SET.LAT in map)) return undefined;
+  const lat = Number(map[SET.LAT]), lng = Number(map[SET.LNG]);
+  if (map[SET.LAT] === '' || map[SET.LNG] === '' || !isFinite(lat) || !isFinite(lng) || (!lat && !lng)) return null;
+  const radius = Number(map[SET.RADIUS]) > 0 ? Number(map[SET.RADIUS]) : 50;
+  const t = map[SET.TOL];
+  const tol = t === '' || t == null || isNaN(Number(t)) || Number(t) < 0 ? null : Number(t);
+  return { lat: lat, lng: lng, radius: radius, tol: tol, note: notes[SET.LAT] || '' };
+}
+
+/**
+ * Writes settings by label: values = {label: value}, notes = {label: text for column C}. A missing row is
+ * added at the end. Clears the cached copy.
+ */
+function setSettings_(values, notes) {
+  const sh = sheet_(SpreadsheetApp.getActive(), SH.SETTINGS);
+  const n = Math.max(sh.getLastRow(), 1);
+  const labels = sh.getRange(1, 1, n, 1).getValues().map(r => String(r[0]).trim());
+  let last = labels.reduce((m, l, i) => (l ? i + 1 : m), 0);      // last row used in column A (column E may be longer)
+  const rowOf = label => {
+    let i = labels.indexOf(label);
+    if (i < 0) { i = last++; labels[i] = label; sh.getRange(i + 1, 1).setValue(label); }
+    return i + 1;
+  };
+  Object.keys(values || {}).forEach(k => sh.getRange(rowOf(k), 2).setValue(values[k]));
+  Object.keys(notes || {}).forEach(k => sh.getRange(rowOf(k), 3).setValue(notes[k]));
+  cacheClear_();
 }
 
 function isOpenHour_(s, tz) {
@@ -62,6 +101,7 @@ function cachePutJson_(k, v) {
 function cacheClear_() {
   const c = cache_();
   if (c) { try { c.removeAll([CACHE_KEYS.PEOPLE, CACHE_KEYS.SETTINGS]); } catch (e) {} }
+  if (typeof shulArea_ === 'function') shulArea_.v = undefined;           // derived from the settings
 }
 
 function countPending_(ss) {

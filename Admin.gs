@@ -209,7 +209,7 @@ function menuKioskLink() {
   if (!link) {
     ui.alert('דף הרישום עדיין לא פורסם',
       'בעורך הסקריפט: פריסה (Deploy) ← פריסה חדשה ← אפליקציית אינטרנט (Web app), הפעלה בתור "אני", גישה "כל אחד".\n' +
-      'אחר כך הדביקו את הכתובת (שמסתיימת ב-exec/) בגיליון "הגדרות", בשורה "' + SET.URL + '".',
+      'אחר כך העתיקו את מזהה הפריסה (Deployment ID) לקובץ Secrets.gs, בשורה deploymentId, ועדכנו את הקוד (clasp push).',
       ui.ButtonSet.OK);
     return;
   }

@@ -6,7 +6,7 @@ const st = env.ss.getSheetByName('הגדרות');
 env.userEdit('הגדרות', 'B6', 0); env.userEdit('הגדרות', 'B7', 24);
 const today = G.todayKey_('Asia/Jerusalem');
 env.userEdit('הגדרות', 'B3', G.keyToDate_(G.addDays_(today, -9), 'Asia/Jerusalem'));
-const key = env.props.KIOSK_KEY, tok = env.props.ADMIN_TOKEN, pin = String(st.getRange('B8').getValue());
+const key = env.props.KIOSK_KEY, tok = env.props.ADMIN_TOKEN, pin = G.gabbaiPin_();
 const sess = G.kioskLogin(key, pin).token;
 const sub = d => G.kioskSubmit(key, Object.assign({ device: 'tablet' }, d));
 sub({ phone: '0521111111', first: 'משה', last: 'כהן' });
@@ -136,7 +136,7 @@ const shim = `
   await a.close();
 
   // ---------- Other dialogs ----------
-  env.userEdit('הגדרות', 'B9', 'https://script.google.com/macros/s/AKfyc_EXAMPLE/exec');
+  env.web.url = 'https://script.google.com/macros/s/AKfyc_EXAMPLE/exec';
   G.menuKioskLink();
   a = await page(env.ui.lastDialog, { width: 560, height: 470 }, false); await a.screenshot({ path: 'shots/d1-link.png' }); await a.close();
   env.ui.nextPrompt = ''; G.menuWeekly();

@@ -16,7 +16,7 @@ const st = ss.getSheetByName('הגדרות');
 env.userEdit('הגדרות', 'B6', 0); env.userEdit('הגדרות', 'B7', 24);
 const today = G.todayKey_('Asia/Jerusalem');
 env.userEdit('הגדרות', 'B3', G.keyToDate_(G.addDays_(today, -30), 'Asia/Jerusalem'));
-const key = env.props.KIOSK_KEY, tok = env.props.ADMIN_TOKEN, pin = String(st.getRange('B8').getValue());
+const key = env.props.KIOSK_KEY, tok = env.props.ADMIN_TOKEN, pin = G.gabbaiPin_();
 const sess = G.kioskLogin(key, pin).token;
 const LAST = ['כהן','לוי','פרידמן','גולדשטיין','רבינוביץ','שניאורסון','מזרחי','ביטון','אברגל','קאופמן','מרגולין','הניג','ברנדלר','אנגלמן','טלוצינסקי','ריבקין','חימי','מנדלסון','קוביטשעק','ציקושווילי','בקשי','קטאשווילי','מיכלשווילי','בן דוד','שוורץ','וייס','קליין','רוזנברג','גרינברג','הורוביץ'];
 const FIRST = ['משה','יוסף','דוד','אברהם','יצחק','יעקב','מנחם','שמואל','חיים','לוי'];

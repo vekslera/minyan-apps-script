@@ -4,19 +4,19 @@
 //  Logging in returns a session token; the code itself is never kept in the browser.
 //  3 wrong codes in a row lock gabbai login for 60 seconds (for everyone — it is a guessing brake).
 //  The code can be changed by the gabbai (tools page) or in the Sheet menu; a change logs everyone out.
-//  Where the code comes from, first match wins: changed by the gabbai (script properties) →
-//  Secrets.gs gabbaiPin → the הגדרות sheet.
+//  The code is kept out of sight in the document properties (GABBAI_PIN) — not in the Sheet, not in git.
+//  setup() puts it there from older versions (Secrets.gs gabbaiPin, or the old "קוד גבאי" row).
 // ======================================================================================
 
 const AUTH = { SESSION_SECONDS: 1800, LOCK_SECONDS: 60, MAX_FAILS: 3, MIN_LENGTH: 6 };
 const SESSION_EXPIRED = 'נדרשת כניסה מחדש למצב גבאי';
 
-/** The gabbai code as changed by the gabbai, if it ever was ('' otherwise). */
-function changedPin_() {
-  if (changedPin_.v === undefined) {
-    changedPin_.v = PropertiesService.getDocumentProperties().getProperty('GABBAI_PIN') || '';
+/** The gabbai code ('' until setup() has stored one). */
+function gabbaiPin_() {
+  if (gabbaiPin_.v === undefined) {
+    gabbaiPin_.v = PropertiesService.getDocumentProperties().getProperty('GABBAI_PIN') || '';
   }
-  return changedPin_.v;
+  return gabbaiPin_.v;
 }
 function sessionGen_() { return PropertiesService.getDocumentProperties().getProperty('SESSION_GEN') || '1'; }
 
@@ -73,20 +73,17 @@ function pinProblem_(next) {
   return '';
 }
 
-/** Stores a new code, logs everyone out, and notes the change next to the old value in the sheet. */
+/** Stores a new code and logs everyone out. */
 function setPin_(next) {
   const props = PropertiesService.getDocumentProperties();
   props.setProperty('GABBAI_PIN', next);
   props.setProperty('SESSION_GEN', String(Number(props.getProperty('SESSION_GEN') || '1') + 1));
-  changedPin_.v = next;
+  gabbaiPin_.v = next;
   cacheClear_();
-  try {
-    const sh = sheet_(SpreadsheetApp.getActive(), SH.SETTINGS);
-    const v = sh.getRange(1, 1, Math.max(sh.getLastRow(), 2), 1).getValues();
-    const row = v.findIndex(r => String(r[0]).trim() === SET.PIN);
-    if (row >= 0) sh.getRange(row + 1, 3).setValue('הקוד שונה על ידי הגבאי ב-' + fmtKey_(todayKey_(SpreadsheetApp.getActive().getSpreadsheetTimeZone())) + ' — הערך בעמודה B כבר לא בשימוש');
-  } catch (e) {}
 }
+
+/** A random first code for a new installation: 6 digits. */
+function newPin_() { return String(100000 + Math.floor(Math.random() * 900000)); }
 
 /**
  * Gabbai tools page: change the code (the current code is asked again). Everyone else is logged out;

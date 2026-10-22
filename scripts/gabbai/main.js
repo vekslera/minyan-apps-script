@@ -9,9 +9,9 @@ var S = { view: '', session: '', info: null, seen: 0,
 var IDLE_MS = 30 * 60 * 1000;
 var TITLES = { login: 'כלי גבאי', home: 'כלי גבאי', review: 'רישומים לבדיקה', import: 'ייבוא מוואטסאפ',
                weekly: 'דוח שבועי', final: 'סיכום התקופה', draw: 'הגרלה', dups: 'כפילויות',
-               link: 'קישור לדף הרישום', shul: 'מיקום בית הכנסת', pin: 'שינוי קוד גבאי' };
+               link: 'קישור לדף הרישום', shul: 'מיקום בית הכנסת', settings: 'הגדרות', pin: 'שינוי קוד גבאי' };
 var NOTES = { login: 'loginNote', home: 'homeNote', review: 'revNote', import: 'importNote', weekly: 'weeklyNote',
-              final: 'finalNote', draw: 'drawNote', dups: 'dupsNote', link: 'linkNote', shul: 'shulNote', pin: 'pinNote' };
+              final: 'finalNote', draw: 'drawNote', dups: 'dupsNote', link: 'linkNote', shul: 'shulNote', settings: 'settingsNote', pin: 'pinNote' };
 
 function store(name, val) { try { if (val == null) sessionStorage.removeItem(name); else sessionStorage.setItem(name, val); } catch (e) {} }
 function load(name) { try { return sessionStorage.getItem(name); } catch (e) { return null; } }
@@ -50,6 +50,7 @@ function go(v) {
   else if (v === 'dups') loadDups();
   else if (v === 'link') loadLink();
   else if (v === 'shul') loadShul();
+  else if (v === 'settings') loadSettings();
   else if (v === 'pin') openPin();
   else if (v === 'login') { $('pin').value = ''; setTimeout(function () { $('pin').focus(); }, 50); }
 }
@@ -109,6 +110,8 @@ function startGabbai() {
   $('shulMeasure').onclick = measureShul;
   $('shulSet').onclick = setShul;
   $('shulRadiusSave').onclick = saveShulRadius;
+  $('setSave').onclick = saveSettings;
+  $('noMinyanAdd').onclick = addNoMinyan;
   ['click', 'keydown', 'touchstart'].forEach(function (ev) { document.addEventListener(ev, function () { S.seen = Date.now(); }, true); });
   setInterval(idleCheck, 60 * 1000);
 

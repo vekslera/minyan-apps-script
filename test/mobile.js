@@ -52,7 +52,7 @@ const TABLET = 'Mozilla/5.0 (Linux; Android 13; SM-X710) AppleWebKit/537.36 (KHT
   // gabbai mode on a phone: nothing required or prefilled
   await phoneCtx.addInitScript(() => localStorage.setItem('minyanMyPhone', '0521111111'));
   p = await open(phoneCtx);
-  const pin = String(env.ss.getSheetByName('הגדרות').getRange('B8').getValue());
+  const pin = env.ctx.gabbaiPin_();
   await p.click('#gabbaiOn'); await p.fill('#pin', pin); await p.click('#pinOk'); await p.waitForTimeout(300);
   assert.equal(await p.inputValue('#phone'), '');
   console.log('gabbai mode on a phone → not prefilled');

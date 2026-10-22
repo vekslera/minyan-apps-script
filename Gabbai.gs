@@ -73,3 +73,49 @@ function gabbaiLink(key, session) {
   const link = kioskLink_(readSettings_(ss, ss.getSpreadsheetTimeZone()));
   return { link: link, tools: link ? link + '&view=gabbai' : '' };
 }
+
+// ---- Settings: name, registration hours, period, lottery threshold, days without a minyan ----
+function settingsForPage_() {
+  const ss = SpreadsheetApp.getActive(), tz = ss.getSpreadsheetTimeZone();
+  const s = readSettings_(ss, tz);
+  return { name: s.name, from: s.from, to: s.to, start: s.start, end: s.end, threshold: s.threshold,
+           excluded: Array.from(s.excluded).sort(), today: todayKey_(tz) };
+}
+function gabbaiSettings(key, session) { checkSession_(key, session); return settingsForPage_(); }
+
+/** d = {name, from, to, start, end, threshold}. Checks everything first; saves all or nothing. */
+function gabbaiSaveSettings(key, session, d) {
+  checkSession_(key, session);
+  d = d || {};
+  const tz = SpreadsheetApp.getActive().getSpreadsheetTimeZone();
+  const name = clean_(d.name);
+  const from = Number(d.from), to = Number(d.to), thr = Number(d.threshold);
+  const start = toKey_(d.start, tz), end = toKey_(d.end, tz);
+  if (!name) throw new Error('חסר שם למניין');
+  if (name.length > 60) throw new Error('שם המניין ארוך מדי');
+  if (!(Number.isInteger(from) && Number.isInteger(to) && from >= 0 && to <= 24 && from < to)) throw new Error('שעות הרישום אינן תקינות: "משעה" צריכה להיות לפני "עד שעה" (0–24)');
+  if (!start || !end) throw new Error('תאריכי התקופה אינם תקינים');
+  if (start > end) throw new Error('תחילת התקופה אחרי סופה');
+  if (!(thr >= 1 && thr <= 100)) throw new Error('אחוז הנוכחות להגרלה צריך להיות בין 1 ל-100');
+  const v = {};
+  v[SET.NAME] = name; v[SET.FROM] = from; v[SET.TO] = to; v[SET.PCT] = Math.round(thr * 10) / 10;
+  v[SET.START] = keyToDate_(start, tz); v[SET.END] = keyToDate_(end, tz);
+  withLock_(() => setSettings_(v));
+  return settingsForPage_();
+}
+
+/** Replaces the list of days without a minyan (column E of הגדרות). dates = ['yyyy-mm-dd', …]. */
+function gabbaiSetNoMinyan(key, session, dates) {
+  checkSession_(key, session);
+  const ss = SpreadsheetApp.getActive(), tz = ss.getSpreadsheetTimeZone();
+  const keys = Array.from(new Set((dates || []).map(x => toKey_(x, tz)))).filter(Boolean).sort();
+  if (keys.length !== new Set(dates || []).size) throw new Error('אחד התאריכים אינו תקין');
+  withLock_(() => {
+    const sh = sheet_(ss, SH.SETTINGS);
+    const n = sh.getLastRow();
+    if (n > 1) sh.getRange(2, 5, n - 1, 1).clearContent();
+    if (keys.length) sh.getRange(2, 5, keys.length, 1).setValues(keys.map(k => [keyToDate_(k, tz)])).setNumberFormat('dd/mm/yyyy');
+    cacheClear_();
+  });
+  return settingsForPage_();
+}

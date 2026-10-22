@@ -3,12 +3,12 @@
 const assert = require('assert');
 const { chromium } = require('playwright');
 const { makeEnv } = require('./mock');
-const env = makeEnv(); const G = env.ctx; G.setup();
+const env = makeEnv(); const G = env.ctx; G.setup(); G.setPin_('1234');   // an old-style short code, to see the "weak code" hint
 env.userEdit('הגדרות', 'B6', 0); env.userEdit('הגדרות', 'B7', 24);
 const today = G.todayKey_('Asia/Jerusalem');
 env.userEdit('הגדרות', 'B3', G.keyToDate_(G.addDays_(today, -9), 'Asia/Jerusalem'));
-env.userEdit('הגדרות', 'B9', 'https://script.google.com/macros/s/AKfyc_EXAMPLE/exec');
-const key = env.props.KIOSK_KEY, pin = String(env.ss.getSheetByName('הגדרות').getRange('B8').getValue());
+env.web.url = 'https://script.google.com/macros/s/AKfyc_EXAMPLE/exec';
+const key = env.props.KIOSK_KEY, pin = env.ctx.gabbaiPin_();
 const sess = G.kioskLogin(key, pin).token;
 const sub = d => G.kioskSubmit(key, Object.assign({ device: 'tablet' }, d));
 const past = [1, 2, 3, 4, 5, 6, 7, 8].map(n => G.addDays_(today, -n)).filter(d => G.dow_(d) !== 6);
@@ -168,6 +168,31 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
   await p.screenshot({ path: 'test/shots/g11-phone-shul.png', fullPage: true });
   await p.close(); await inShul.close();
 
+  // ---------- settings screen ----------
+  const sctx = await browser.newContext({ viewport: { width: 390, height: 780 }, isMobile: true, hasTouch: true, userAgent: IPHONE });
+  p = await open(sctx);
+  await p.fill('#pin', 'testcode9'); await p.click('#loginBtn'); await p.waitForTimeout(400);
+  await tile(p, 'settings');
+  assert.equal(await p.inputValue('#setFrom'), '0'); assert.equal(await p.inputValue('#setTo'), '24');
+  await p.selectOption('#setFrom', '11'); await p.selectOption('#setTo', '8'); await p.click('#setSave'); await p.waitForTimeout(200);
+  assert(/לפני/.test(await p.textContent('#settingsNote')), 'hours checked in the page');
+  await p.fill('#setName', 'מניין סטיינבך'); await p.selectOption('#setFrom', '8'); await p.selectOption('#setTo', '11'); await p.fill('#setPct', '70');
+  await p.click('#setSave'); await p.waitForTimeout(400);
+  console.log('settings:', (await p.textContent('#settingsNote')).trim(), '| header:', await p.textContent('#sub'));
+  const sNow = G.readSettings_(env.ss, 'Asia/Jerusalem');
+  assert.equal(sNow.from, 8); assert.equal(sNow.to, 11); assert.equal(sNow.threshold, 70); assert.equal(sNow.name, 'מניין סטיינבך');
+  const nm = G.addDays_(today, 1);
+  await p.fill('#noMinyanDate', nm); await p.click('#noMinyanAdd'); await p.waitForTimeout(400);
+  assert(G.readSettings_(env.ss, 'Asia/Jerusalem').excluded.has(nm));
+  await p.click('.nmDel'); await p.waitForTimeout(400);
+  assert(!G.readSettings_(env.ss, 'Asia/Jerusalem').excluded.has(nm));
+  assert(!(await overflow(p)), 'settings fit the phone');
+  await p.screenshot({ path: 'test/shots/g12-phone-settings.png', fullPage: true });
+  await p.click('#back'); await p.waitForTimeout(400);
+  assert(/70%/.test(await p.textContent('#period')), 'home shows the new threshold');
+  env.userEdit('הגדרות', 'B6', 0); env.userEdit('הגדרות', 'B7', 24);   // back to "open all day" for the rest
+  await p.close(); await sctx.close();
+
   // ---------- phone ----------
   const phone = await browser.newContext({ userAgent: IPHONE, hasTouch: true, isMobile: true, viewport: { width: 390, height: 780 } });
   p = await open(phone);
@@ -183,7 +208,7 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
   await p.click('#barBtn'); await p.waitForTimeout(500);
   assert(!(await overflow(p)), 'review fits the phone');
   await p.screenshot({ path: 'test/shots/g9-phone-review.png', fullPage: true });
-  for (const v of ['weekly', 'final', 'draw', 'dups', 'link', 'shul', 'pin']) {
+  for (const v of ['weekly', 'final', 'draw', 'dups', 'link', 'shul', 'settings', 'pin']) {
     await p.click('#back'); await p.waitForTimeout(200); await tile(p, v);
     if (v === 'weekly') { await p.click('#weeklyBtn'); await p.waitForTimeout(300); }
     assert(!(await overflow(p)), v + ' fits the phone');

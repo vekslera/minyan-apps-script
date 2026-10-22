@@ -4,36 +4,43 @@
 //  The page sends the browser's position with the registration; it is used here for one comparison and
 //  NEVER stored. Only the outcome may be stored: "inside", or for the review list a rounded distance
 //  ("מחוץ לבית הכנסת, ~850 מ׳") or the reason no position was available.
-//  The shul's point and radius: as set by the gabbai on the tools page ("מיקום בית הכנסת", measured
-//  in the shul), otherwise from Secrets.gs (shulLat, shulLng, shulRadius). Without either the check is off.
+//  The shul's point, the radius and the GPS tolerance are settings in the הגדרות sheet, set by the gabbai on
+//  the tools page ("מיקום בית הכנסת", measured in the shul) or in the sheet. Empty point = no check.
 //  (That point is the shul's, set on purpose; it is not anyone's position.)
 // ======================================================================================
 
-const SHUL_SET = { MAX_ACC: 50, MIN_R: 20, MAX_R: 1000, NEW_RADIUS: 50 };
+const SHUL_SET = { MAX_ACC: 50, MIN_R: 20, MAX_R: 1000, NEW_RADIUS: 50, MAX_TOL: 500 };
 
-/** The shul area from Secrets.gs, or null. */
-function secretsArea_() {
-  const lat = Number(secret_('shulLat')), lng = Number(secret_('shulLng'));
-  if (!lat || !lng || !isFinite(lat) || !isFinite(lng)) return null;
-  const radius = Number(secret_('shulRadius'));
-  return { lat: lat, lng: lng, radius: radius > 0 ? radius : 150, source: 'secrets' };
-}
-
-/** {lat, lng, radius, source, setAt?, acc?} of the shul, or null when the check is not configured. */
+/** {lat, lng, radius, tol, note} of the shul, or null when the check is not configured. */
 function shulArea_() {
   if (shulArea_.v === undefined) {
-    let a = null;
-    try { a = JSON.parse(PropertiesService.getDocumentProperties().getProperty('SHUL_AREA') || 'null'); } catch (e) { a = null; }
-    shulArea_.v = a && isFinite(a.lat) && isFinite(a.lng) && a.radius > 0 ? Object.assign(a, { source: 'gabbai' }) : secretsArea_();
+    const ss = SpreadsheetApp.getActive();
+    const fromSheet = readSettings_(ss, ss.getSpreadsheetTimeZone()).shul;
+    shulArea_.v = fromSheet !== undefined ? fromSheet : oldShulArea_();
   }
   return shulArea_.v;
 }
-function saveShulArea_(a) {
-  const props = PropertiesService.getDocumentProperties();
-  if (a) props.setProperty('SHUL_AREA', JSON.stringify({ lat: a.lat, lng: a.lng, radius: a.radius, acc: a.acc || 0, setAt: a.setAt || '' }));
-  else props.deleteProperty('SHUL_AREA');
-  shulArea_.v = undefined;
+
+/**
+ * Before setup() adds the location rows to the sheet: where older versions kept the shul — the gabbai's
+ * measurement (document property SHUL_AREA), else Secrets.gs (shulLat, shulLng, shulRadius). setup() moves it.
+ */
+function oldShulArea_() {
+  try {
+    const a = JSON.parse(PropertiesService.getDocumentProperties().getProperty('SHUL_AREA') || 'null');
+    if (a && isFinite(a.lat) && isFinite(a.lng) && a.radius > 0) {
+      return { lat: a.lat, lng: a.lng, radius: a.radius, tol: null,
+               note: a.setAt ? 'נמדד בכלי הגבאי ב-' + a.setAt + (a.acc ? ' (±' + a.acc + ' מ׳)' : '') : '' };
+    }
+  } catch (e) {}
+  const lat = Number(secret_('shulLat')), lng = Number(secret_('shulLng'));
+  if (!lat || !lng || !isFinite(lat) || !isFinite(lng)) return null;
+  const radius = Number(secret_('shulRadius'));
+  return { lat: lat, lng: lng, radius: radius > 0 ? radius : 150, tol: null, note: 'מתוך Secrets.gs' };
 }
+
+/** How much GPS inaccuracy is forgiven beyond the radius: the setting, or half the radius. */
+function tolerance_(area) { return area.tol != null ? area.tol : area.radius / 2; }
 
 /** Whether this registration has to come from the shul. */
 function locationRequired_(device, gabbai) {
@@ -52,8 +59,8 @@ function distanceMeters_(a, b) {
 /**
  * loc = {lat, lng, acc} from the browser, or {error: 'denied' | 'unavailable' | 'timeout' | 'unsupported'}.
  * Returns {inside, distance, accuracy} or {inside: false, reason}. GPS indoors is often off by tens of
- * metres, so the reading's accuracy is allowed on top of the radius — but at most half a radius, so that a
- * vague reading from a nearby house doesn't count as inside.
+ * metres, so the reading's accuracy is allowed on top of the radius — but at most the GPS tolerance setting
+ * (default: half the radius), so that a vague reading from a nearby house doesn't count as inside.
  */
 function checkLocation_(loc) {
   const area = shulArea_();
@@ -65,7 +72,7 @@ function checkLocation_(loc) {
   }
   const distance = distanceMeters_(area, { lat: lat, lng: lng });
   const accuracy = Math.max(0, Number(loc.acc) || 0);
-  return { inside: distance <= area.radius + Math.min(accuracy, area.radius / 2),
+  return { inside: distance <= area.radius + Math.min(accuracy, tolerance_(area)),
            distance: Math.round(distance), accuracy: Math.round(accuracy) };
 }
 
@@ -99,18 +106,18 @@ function kioskCheckLocation(key, session, loc) {
   if (!area) return { configured: false };
   const chk = checkLocation_(loc);
   logLocationCheck_({ device: 'gabbai-test', inside: chk.inside, distance: chk.distance, accuracy: chk.accuracy, reason: chk.reason });
-  return { configured: true, radius: area.radius, inside: chk.inside, distance: chk.distance, accuracy: chk.accuracy,
+  return { configured: true, radius: area.radius, tol: Math.round(tolerance_(area)), inside: chk.inside, distance: chk.distance, accuracy: chk.accuracy,
            reason: chk.reason ? LOCATION_REASONS[chk.reason] : '' };
 }
 
 // ---- Gabbai tools page: the shul's location ----
 
 function shulInfo_() {
-  const a = shulArea_(), sec = secretsArea_();
-  const base = { secrets: !!sec, maxAcc: SHUL_SET.MAX_ACC, minR: SHUL_SET.MIN_R, maxR: SHUL_SET.MAX_R };
+  const a = shulArea_();
+  const base = { maxAcc: SHUL_SET.MAX_ACC, minR: SHUL_SET.MIN_R, maxR: SHUL_SET.MAX_R, maxTol: SHUL_SET.MAX_TOL };
   if (!a) return Object.assign(base, { configured: false });
-  return Object.assign(base, { configured: true, lat: a.lat, lng: a.lng, radius: a.radius, source: a.source,
-                               setAt: a.setAt || '', acc: a.acc || 0 });
+  return Object.assign(base, { configured: true, lat: a.lat, lng: a.lng, radius: a.radius, tol: a.tol,
+                               tolUsed: Math.round(tolerance_(a)), note: a.note || '' });
 }
 function gabbaiShulInfo(key, session) { checkSession_(key, session); return shulInfo_(); }
 
@@ -122,22 +129,35 @@ function gabbaiSetShulLocation(key, session, loc) {
   if (!(acc > 0) || acc > SHUL_SET.MAX_ACC) throw new Error('המדידה לא מדויקת מספיק (±' + Math.round(acc || 0) + ' מ׳). נדרש ±' + SHUL_SET.MAX_ACC + ' מ׳ או פחות.');
   const cur = shulArea_();
   const tz = SpreadsheetApp.getActive().getSpreadsheetTimeZone();
-  saveShulArea_({ lat: lat, lng: lng, radius: cur ? cur.radius : SHUL_SET.NEW_RADIUS, acc: Math.round(acc), setAt: fmtKey_(todayKey_(tz)) });
+  const values = {};
+  values[SET.LAT] = Math.round(lat * 1e7) / 1e7;
+  values[SET.LNG] = Math.round(lng * 1e7) / 1e7;
+  values[SET.RADIUS] = cur ? cur.radius : SHUL_SET.NEW_RADIUS;
+  const notes = {};
+  notes[SET.LAT] = 'נמדד בכלי הגבאי ב-' + fmtKey_(todayKey_(tz)) + ' (±' + Math.round(acc) + ' מ׳)';
+  withLock_(() => setSettings_(values, notes));
   return shulInfo_();
 }
-function gabbaiSetShulRadius(key, session, radius) {
+/** Radius (metres) and GPS tolerance (metres; '' = half the radius). */
+function gabbaiSetShulRadius(key, session, radius, tol) {
   checkSession_(key, session);
   const r = Math.round(Number(radius));
   if (!(r >= SHUL_SET.MIN_R && r <= SHUL_SET.MAX_R)) throw new Error('הרדיוס צריך להיות בין ' + SHUL_SET.MIN_R + ' ל-' + SHUL_SET.MAX_R + ' מטרים');
-  const cur = shulArea_();
-  if (!cur) throw new Error('קודם קובעים את מיקום בית הכנסת');
-  saveShulArea_(Object.assign({}, cur, { radius: r }));
+  const empty = tol === '' || tol == null;
+  const t = empty ? '' : Math.round(Number(tol));
+  if (!empty && !(t >= 0 && t <= SHUL_SET.MAX_TOL)) throw new Error('סטיית ה-GPS צריכה להיות בין 0 ל-' + SHUL_SET.MAX_TOL + ' מטרים (או ריק = חצי רדיוס)');
+  if (!shulArea_()) throw new Error('קודם קובעים את מיקום בית הכנסת');
+  const values = {};
+  values[SET.RADIUS] = r; values[SET.TOL] = t;
+  withLock_(() => setSettings_(values));
   return shulInfo_();
 }
-/** Back to Secrets.gs (or no check, if it has no point). */
-function gabbaiResetShulLocation(key, session) {
+/** Turns the location check off (clears the point; radius and tolerance stay for next time). */
+function gabbaiClearShulLocation(key, session) {
   checkSession_(key, session);
-  saveShulArea_(null);
+  const values = {}, notes = {};
+  values[SET.LAT] = ''; values[SET.LNG] = ''; notes[SET.LAT] = SET_ROWS.find(r => r[0] === SET.LAT)[1];
+  withLock_(() => setSettings_(values, notes));
   return shulInfo_();
 }
 /** The same check a registration gets; nothing is stored. */

@@ -94,7 +94,7 @@ clasp login                # opens a browser: choose the minyan account and allo
 **Push:**
 
 ```bash
-clasp status      # lists what will be uploaded: 15 .gs files + Secrets.gs, 7 .html files (one in styles/), 24 scripts/…/*.js files, appsscript.json
+clasp status      # lists what will be uploaded: 15 .gs files + Secrets.gs, 7 .html files (one in styles/), 25 scripts/…/*.js files, appsscript.json
 clasp push -f     # -f overwrites the project's manifest without asking
 ```
 
@@ -108,13 +108,13 @@ In the script editor:
 1. Click the default file **`Code.gs`** → ⋮ → **Rename / שינוי שם** → `Setup`. Replace its content with the content of `Setup.gs`.
 2. For each of the other `.gs` files (`Admin`, `Auth`, `Config`, `Data`, `Duplicates`, `Gabbai`, `HebrewCalendar`, `Kiosk`, `Location`, `Matching`, `Names`, `Reports`, `Utils`, `WhatsApp`): **Files / קבצים → + → Script / סקריפט**. Type the name **without `.gs`** and paste the content.
 3. For each `.html` file: **+ → HTML**. Type the name **exactly**, without `.html`: `KioskPage`, `GabbaiPage`, `AdminPage`, `LinkDialog`, `ReportTextDialog`, `BadLinkPage`, then paste. Also `styles/tools` (from `styles/tools.html`, slash included).
-4. For each file in the `scripts` folder: also **+ → HTML** (not Script). Type its path **without `.js`**, slashes included, e.g. `scripts/kiosk/main`. Paste the file's content as it is. All 24 files:
+4. For each file in the `scripts` folder: also **+ → HTML** (not Script). Type its path **without `.js`**, slashes included, e.g. `scripts/kiosk/main`. Paste the file's content as it is. All 25 files:
    `scripts/common/dom`, `scripts/common/clipboard`,
    `scripts/kiosk/helpers`, `scripts/kiosk/deviceDetection`, `scripts/kiosk/hebrewDate`, `scripts/kiosk/lookup`, `scripts/kiosk/registration`, `scripts/kiosk/gabbaiMode`, `scripts/kiosk/myPhone`, `scripts/kiosk/location`, `scripts/kiosk/main`,
    `scripts/admin/helpers`, `scripts/admin/import`, `scripts/admin/review`, `scripts/admin/main`,
-   `scripts/gabbai/main`, `scripts/gabbai/reports`, `scripts/gabbai/draw`, `scripts/gabbai/duplicates`, `scripts/gabbai/link`, `scripts/gabbai/shul`, `scripts/gabbai/pin`,
+   `scripts/gabbai/main`, `scripts/gabbai/reports`, `scripts/gabbai/draw`, `scripts/gabbai/duplicates`, `scripts/gabbai/link`, `scripts/gabbai/shul`, `scripts/gabbai/settings`, `scripts/gabbai/pin`,
    `scripts/dialogs/linkDialog`, `scripts/dialogs/reportText`.
-5. **Optional:** create `Secrets` (+ → Script) from `Secrets.gs.example`. Without it, everything is configured in the הגדרות sheet.
+5. **Recommended:** create `Secrets` (+ → Script) from `Secrets.gs.example`, for `deploymentId`. Everything else is configured in the הגדרות sheet and on the gabbai tools page.
 6. Save (Ctrl+S).
 
 **File names must be unique, ignoring the extension.** Apps Script treats `Admin.gs` and `Admin.html` as the same name, so the HTML files carry `Page`/`Dialog` suffixes.
@@ -156,17 +156,17 @@ Route A alternative: `clasp create-deployment -d "registration page"` prints the
 
 ## 6. Fill in the settings
 
-**Option 1: `Secrets.gs`** (route A, or route B if you created the Secrets file). Fill in:
+Settings come in two kinds:
+
+- **Set once, by whoever installs the project** → `Secrets.gs`.
+- **Things the gabbai may change** → the **הגדרות** sheet, or more simply the gabbai tools page (**הגדרות** and **מיקום בית הכנסת**, [§8](#gabbai-tools-page)). The gabbai code is the exception: it is kept hidden, see [Gabbai code and login](#gabbai-code-and-login).
+
+**`Secrets.gs`** (route A, or route B if you created the Secrets file):
 
 ```js
 const SECRETS = {
   ownerAccount: 'minyan.yourshul@gmail.com',
-  deploymentId: 'AKfycb…',         // from step 5
-  gabbaiPin: '',                   // initial gabbai code, 6+ characters; the gabbai can change it later
-  lotteryThreshold: 75,            // % of minyan days needed for the lottery; empty = use the הגדרות sheet
-  shulLat: 31.9857703,             // the shul's point (Google Maps → right-click → coordinates);
-  shulLng: 34.8582831,             //   empty = no location check
-  shulRadius: 150,                 // metres
+  deploymentId: 'AKfycb…',         // from step 5: the only source of the page address
   locationLog: false,              // reserved, not implemented yet
   kioskKey: '',                    // leave empty
 };
@@ -174,20 +174,22 @@ const SECRETS = {
 
 Then upload it with `clasp push` (route B: just save the file).
 
-**Option 2: the הגדרות sheet.** In the Sheet, open the **הגדרות** tab. The sheet is right-to-left, so column A is on the right.
+**The הגדרות sheet.** The sheet is right-to-left, so column A is on the right. Rows are found by their label in column A, so their order doesn't matter, but `setup` keeps them in this order:
 
-| Row | Column A (setting) | What to put in **column B** |
+| Row | Column A (setting) | Column B |
 |---|---|---|
-| 2 | שם המניין | Shown at the top of the page, e.g. `מניין שחרית` |
+| 2 | שם המניין | Shown at the top of the page and in the reports |
 | 3 | תחילת התקופה | First day of the lottery period |
 | 4 | סוף התקופה | Last day of the period |
-| 5 | אחוז נוכחות מינימלי להגרלה | `75` means 75% or more — ignored when `lotteryThreshold` is set in `Secrets.gs` |
-| 6–7 | רישום עצמי פתוח משעה / עד שעה | Self-registration hours, e.g. `5` and `11`. The gabbai can register at any time |
-| 8 | קוד גבאי | The initial gabbai code, if not set in `Secrets.gs`. Once the gabbai changes the code, this cell is no longer used (column C then says so) |
-| 9 | כתובת דף הרישום (Web app) | The web-app URL from step 5, if `deploymentId` is not set in `Secrets.gs` |
+| 5 | אחוז נוכחות מינימלי להגרלה | `75` means 75% or more |
+| 6–7 | רישום עצמי פתוח משעה / עד שעה | Self-registration hours, e.g. `8` and `11`. The gabbai can register at any time |
+| 8–9 | מיקום בית הכנסת — קו רוחב / קו אורך | The shul's point. Empty = no location check. Best set by measuring in the shul ([below](#location-check-registering-from-the-shul)) |
+| 10 | רדיוס מותר (מטרים) | Self-registration only within this distance; 40–60 is usually right |
+| 11 | סטיית GPS מותרת (מטרים) | How much GPS inaccuracy is forgiven beyond the radius. Empty = half the radius |
 
 - **Values go in column B.** Column C is only an explanation, and a value typed there is ignored.
 - **Days with no minyan.** Column **E**, one date per cell, for weekdays with no registration (e.g. Yom Tov). They don't count toward the percentage.
+- **The gabbai code is not in this sheet.** A new installation gets a random 6-digit code; `setup` shows it once. Change it with **מניין → שינוי קוד גבאי**.
 
 ---
 
@@ -217,21 +219,21 @@ Outside gabbai mode, the page detects what it runs on: **טלפון נייד** (
 
 ### Location check: registering from the shul
 
-Once the shul's location is known, a **self-registration** must come from within a radius of it. The location comes from the gabbai tools page (**מיקום בית הכנסת**, below) or, if the gabbai never set one there, from `shulLat`, `shulLng` and `shulRadius` in `Secrets.gs` (150 m by default). With neither, there is no location check.
+Once the shul's location is set, a **self-registration** must come from within a radius of it. The point, the radius and the GPS tolerance are rows of the **הגדרות** sheet, set on the gabbai tools page (**מיקום בית הכנסת**, below). With no point, there is no location check.
 
 - **Who is checked.** Phones and tablets registering themselves. Gabbai mode and the shul's own tablet (`&device=kiosk`) are not checked. A **computer cannot self-register at all**: it shows "רישום עצמי — מטלפון נייד או מטאבלט" and works only in gabbai mode.
 - **How it works.** When the person taps "רישום נוכחות", the browser asks for location permission (the first time), takes a fresh reading and sends it with the registration. The server compares it with the shul's point.
-- **Indoor tolerance.** GPS indoors is often off by tens of metres, so the reading's accuracy is added to the radius, but at most **half the radius**. With a 40 m radius, someone 50 m away with ±15 m accuracy counts as inside, while a house 84 m away with ±30 m does not (40 + 20 = 60 m).
+- **GPS tolerance.** GPS indoors is often off by tens of metres, so the reading's accuracy is added to the radius, but at most the **GPS tolerance** setting (empty = half the radius; 0 = the radius only). With a 40 m radius and the default 20 m, someone 50 m away with ±15 m accuracy counts as inside, while a house 84 m away with ±30 m does not (40 + 20 = 60 m).
 - **Outside the shul, or no position** (permission refused, GPS off): the person sees "נראה שאתה מחוץ לבית הכנסת" with the approximate distance, or "לא התקבל מיקום" with what to fix. Nothing is refused outright; there are two choices:
   - **"נסה שוב"** takes a new reading, for someone who has just walked in.
   - **"שלח לאישור הגבאי"** puts the registration on the **רישומים לבדיקה** list. The note there says only `מחוץ לבית הכנסת (~850 מ׳)` or `ללא מיקום (…)`.
 - **Privacy.** The coordinates are used once on the server for that comparison and are **never stored** anywhere. Only the outcome is kept, and only for entries sent for approval. A test checks that no coordinate ever reaches the spreadsheet.
 - **Setting the location and the radius** — gabbai tools page → **מיקום בית הכנסת**:
   - **Measure in the shul.** Stand in the middle of the hall with a phone and tap **"מדידה"**. The page watches the GPS for up to 20 seconds and keeps the most precise reading; a reading worse than ±50 m is refused (typical of computers). Then **"קביעה כמיקום בית הכנסת"** (tap twice). The radius stays as it was, or 50 m the first time.
-  - **Radius**, 20–1000 m. 40–60 m is usually right: the hall and the yard.
+  - **Radius**, 20–1000 m. 40–60 m is usually right: the hall and the yard. **GPS tolerance**, 0–500 m, or empty for half the radius.
   - **"בדיקה"** shows your distance, the accuracy, and whether a registration from here would count as inside — exactly as a registration is judged. Nothing is stored.
-  - **Back to `Secrets.gs`** (or turning the check off, if it has no point) — one button.
-  - The point is kept in the script's properties, not in the Sheet or in git. It's the shul's point, set on purpose; registrants' positions are still never stored.
+  - **"כיבוי בדיקת המיקום"** (tap twice) clears the point; radius and tolerance stay for next time.
+  - Everything is written to the הגדרות sheet, with the measurement's date and accuracy in column C. It's the shul's point, set on purpose; registrants' positions are still never stored.
 - **Quick check in gabbai mode.** On the registration page, **"בדיקת מיקום"** shows the same distance test.
 - **Reserved, not implemented yet:** `locationLog` in `Secrets.gs` and `logLocationCheck_()` in `Location.gs`. This is a hook for a future log of check *outcomes*, to investigate poor readings. Today it does nothing.
 
@@ -280,19 +282,17 @@ A web page with the gabbai's work, for when the Sheet isn't at hand. It needs th
   - **הגרלה** — shows who takes part, warns about entries still waiting for review and about an earlier draw, and asks for a second tap before drawing. The draw is logged in **הגרלות**.
   - **כפילויות** — pairs that look like one person. Tick "למזג" and choose which record to keep (the one with more days is preselected); attendance moves to it.
   - **קישור ו-QR** — the registration link with a QR code, copy and share.
+  - **הגדרות** — the minyan's name, the self-registration hours, the period, the lottery threshold, and the days without a minyan (add or remove dates). Saved to the הגדרות sheet.
   - **שינוי קוד גבאי** — asks for the current code; everyone else is logged out of gabbai mode, you stay in.
   - **יציאה** — logs out. After 30 minutes without activity the page logs out by itself.
-- **What stays in the Sheet only:** the settings (הגדרות) and editing the tabs by hand.
+- **What stays in the Sheet only:** editing the tabs by hand. Every setting can be changed on the tools page.
 
 ---
 
 ### Gabbai code and login
 
 - **One code for everything in gabbai mode.** Use at least 6 characters. Letters and digits are fine; spaces are not.
-- **Where the code comes from**, first match wins:
-  1. the code the gabbai changed;
-  2. `gabbaiPin` in `Secrets.gs`;
-  3. row 8 of the הגדרות sheet.
+- **Where it is kept:** hidden, in the script's properties — not in the Sheet (anyone who can open the Sheet would see it) and not in git. **מניין → קישור לדף הרישום** shows it to the Sheet's owner.
 - **Changing it.** The gabbai can change it on the gabbai tools page (**שינוי קוד גבאי**), which asks for the current code again, or the owner via **מניין → שינוי קוד גבאי** in the Sheet. A change logs everyone out of gabbai mode.
 - **Logging in and out.** Logging in gives the browser a session for 30 minutes after the last activity; the code itself is never kept in the browser. **"יציאה"** logs out at once. After 30 minutes without activity the page leaves gabbai mode by itself.
 - **Wrong codes.** 3 wrong codes in a row lock gabbai login for **60 seconds**, for every device. This is a brake on guessing, since anyone with the page link could try.
@@ -319,6 +319,15 @@ Both run `clasp push -f`, then `clasp update-deployment <deploymentId from Secre
 
 Don't create a new deployment for an update: it gets a new address.
 
+**After an update that changes the settings layout, run `setup` once** (**מניין → הגדרה ראשונית**). It is safe to run any time: it puts the הגדרות sheet in the current layout and keeps every value. Coming from a version that kept settings in `Secrets.gs`, it also moves them:
+
+- the gabbai code → hidden in the script's properties (the code itself doesn't change);
+- the shul's location and radius → the sheet (your measurement on the tools page, else `shulLat`/`shulLng`/`shulRadius`);
+- the lottery threshold → the sheet;
+- the old "כתובת דף הרישום" row is dropped — the address comes from `deploymentId`.
+
+Its closing message lists what moved. After that, `gabbaiPin`, `lotteryThreshold`, `shulLat`, `shulLng` and `shulRadius` can be deleted from your `Secrets.gs`; they are no longer read.
+
 ---
 
 ## 10. Troubleshooting
@@ -330,7 +339,7 @@ Don't create a new deployment for an update: it gets a new address.
 | `clasp push`: "User has not enabled the Apps Script API" | Turn it on at <https://script.google.com/home/usersettings>, wait a minute, retry. |
 | setup() "Exceeded maximum execution time" | The "ההגדרה הושלמה" popup in the Sheet tab wasn't clicked. Run it again and click OK in the Sheet. |
 | No **מניין** menu | Reload the Sheet. If it's still missing, setup() hasn't run successfully ([§4](#4-run-setup-and-grant-permissions)). |
-| "דף הרישום עדיין לא פורסם" when opening the link dialog | No web-app address is known. Set `deploymentId` in `Secrets.gs`, or paste the URL into **column B, row 9** of הגדרות. |
+| "דף הרישום עדיין לא פורסם" when opening the link dialog | No web-app address is known. Set `deploymentId` in `Secrets.gs` and push the code ([§9](#9-updating-the-code-later)). |
 | Page says "הקישור אינו תקין" | You opened the bare `/exec` address. Use the full link from **מניין → קישור לדף הרישום**. |
 | Google page: "Sorry, unable to open the file at this time / מצטערים, לא ניתן לפתוח את הקובץ כרגע" | The address doesn't belong to an *active* deployment (an old or archived one, or a typo), or several Google accounts are signed in. Check **Deploy → Manage deployments** and compare the deployment ID with yours. Try a private window. In the editor, **Executions / ביצועים** shows a `doGet` row for every request that actually reached the script. |
 | A registration shows "הרישום התקבל ויאושר על ידי הגבאי" | The system wasn't sure who it was, or the person sent it for approval from outside the shul. The entry waits in **מניין → רישומים לבדיקה**; its note says why. |
@@ -349,10 +358,10 @@ Don't create a new deployment for an update: it gets a new address.
 
 | File | What it holds |
 |---|---|
-| `Setup.gs` | The מניין menu, first-time `setup()`, the הוראות (help) sheet |
+| `Setup.gs` | The מניין menu, `setup()` (first-time setup, and moving settings after an update), the הוראות (help) sheet |
 | `Config.gs` | Sheet names, column layouts, settings labels, matching thresholds |
 | `Kiosk.gs` | Server side of the registration page (`doGet`, `kiosk*`); `doGet` also serves the gabbai tools page |
-| `Gabbai.gs` | Server side of the gabbai tools page (`gabbai*`, each needs a gabbai session) |
+| `Gabbai.gs` | Server side of the gabbai tools page (`gabbai*`, each needs a gabbai session), including the settings screen |
 | `Admin.gs` | WhatsApp import and review (shared by the Sheet dialog and the tools page), registration-link dialog |
 | `Auth.gs` | Gabbai code, login sessions, lockout after 3 wrong codes, changing the code |
 | `Location.gs` | Location check for self-registration: distance to the shul, never storing registrants' coordinates; the gabbai's shul-location tools |
@@ -372,7 +381,7 @@ Don't create a new deployment for an update: it gets a new address.
 | `scripts/common/dom.js`, `clipboard.js` | Browser helpers shared by the pages |
 | `scripts/kiosk/*.js` | Registration page: `helpers`, `deviceDetection`, `hebrewDate`, `lookup` (live suggestions), `registration` (submit/confirmation), `gabbaiMode`, `myPhone` (remembered number on a phone), `location` (location check, "outside the shul" panel, gabbai test), `main` (state + `startKiosk()`) |
 | `scripts/admin/*.js` | Import and review screens: `helpers`, `import`, `review` (used by both pages), `main` (the Sheet dialog's tabs + `startAdmin()`) |
-| `scripts/gabbai/*.js` | Gabbai tools page: `main` (login, navigation + `startGabbai()`), `reports`, `draw`, `duplicates`, `link`, `shul` (the shul's location), `pin` |
+| `scripts/gabbai/*.js` | Gabbai tools page: `main` (login, navigation + `startGabbai()`), `reports`, `draw`, `duplicates`, `link`, `shul` (the shul's location), `settings`, `pin` |
 | `scripts/dialogs/*.js` | `linkDialog` (QR + copy), `reportText` (copy) |
 | `appsscript.json` | Manifest (time zone, V8, web-app access) |
 | `Secrets.gs.example` | Template for your private `Secrets.gs` |
@@ -398,8 +407,8 @@ Apps Script cannot serve a `.js` file to the browser: a page is one HTML documen
 ## 12. Private settings (`Secrets.gs`)
 
 - **Where they live.** Private values live in `Secrets.gs`. It is in `.gitignore`, so it never reaches git, but `clasp push` uploads it and the script reads it at run time.
-- **What it holds.** The owner account, the web-app deployment ID (the page address is built from it), the gabbai code, the lottery threshold, the shul's location and radius and, optionally, a fixed link key.
-- **Every value is optional.** An empty value falls back to the הגדרות sheet or to an automatically generated key.
+- **What it holds.** Only values set once: the owner account, the web-app deployment ID (the single source of the page address) and, optionally, a fixed link key. What the gabbai may change is in the הגדרות sheet; the gabbai code is in the script's properties.
+- **Every value is optional.** An empty `deploymentId` falls back to the address Google reports; an empty `kioskKey` to an automatically generated key.
 - **Other private files.** `.clasp.json` (your Script ID) is also git-ignored.
 - **No passwords.** None are stored anywhere in the project. `clasp login` keeps its token in your user folder (`~/.clasprc.json`), outside the repo.
 
