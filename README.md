@@ -1,5 +1,7 @@
 # Minyan attendance tracker (מעקב נוכחות במניין)
 
+Built by: Alex Veksler · [vekslera@gmail.com](mailto:vekslera@gmail.com) · +972-52-8353205
+
 A Google Sheet plus Apps Script that tracks attendance at a weekday minyan and runs a lottery for regular attendees.
 
 - **Registration page.** A Hebrew page that people open on their own phone or tablet, by scanning a QR code at the shul (or on a shul tablet, if there is one). A person types a phone number (or a surname) and taps "רישום נוכחות".

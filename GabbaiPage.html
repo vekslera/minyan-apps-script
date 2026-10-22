@@ -23,6 +23,8 @@ main{max-width:980px;margin:0 auto}
 .tile small{font-weight:600;font-size:13px;color:var(--muted)}
 .tile .count{font-size:14px}
 .foot{color:var(--muted);font-size:14px;margin:16px 2px}
+.credit{color:var(--muted);font-size:12px;line-height:1.6;margin-top:18px;text-align:center;opacity:.85}
+.credit a{color:inherit;text-decoration:none}
 .foot a{color:var(--accent);font-weight:700}
 .field{display:block;margin:0 0 12px}
 .field span{display:block;font-weight:700;margin-bottom:4px}
@@ -76,6 +78,7 @@ window.onerror = function (msg) {
       <input id="pin" type="password" maxlength="32" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
     <button class="btn primary" id="loginBtn" type="button" style="width:100%;padding:11px">כניסה</button>
     <p class="foot"><a class="toKiosk" href="__HOME__" target="_top">לדף הרישום</a></p>
+    <div class="credit" dir="ltr">Built by: Alex Veksler<br><a href="mailto:vekslera@gmail.com" target="_blank">vekslera@gmail.com</a><br><a href="tel:+972528353205" target="_top">+972-52-8353205</a></div>
   </div>
 </section>
 
@@ -94,6 +97,7 @@ window.onerror = function (msg) {
     <button class="tile" type="button" data-go="pin">שינוי קוד גבאי<small>ויציאה מכל המכשירים</small></button>
   </div>
   <p class="foot"><a class="toKiosk" href="__HOME__" target="_top">לדף הרישום</a> <span id="period"></span></p>
+  <div class="credit" dir="ltr">Built by: Alex Veksler<br><a href="mailto:vekslera@gmail.com" target="_blank">vekslera@gmail.com</a><br><a href="tel:+972528353205" target="_top">+972-52-8353205</a></div>
 </section>
 
 <section class="view" id="v-import" hidden>
