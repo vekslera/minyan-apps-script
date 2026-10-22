@@ -62,8 +62,41 @@ const sent = [];
   await p.fill('#last', 'כהן'); await p.click('#submit'); await p.waitForTimeout(800);
   console.log('no permission →', (await p.textContent('#whereTitle')).trim(), '|', (await p.textContent('#whereText')).trim().slice(0, 50));
   assert.equal((await p.textContent('#whereTitle')).trim(), 'לא התקבל מיקום');
-  await p.screenshot({ path: 'test/shots/l2-no-permission.png' });
+  assert(await p.isVisible('#whereAllow')); assert(await p.isHidden('#whereRetry'));
+  assert(/שירותי מיקום/.test(await p.textContent('#whereText')) && /אתרי Safari/.test(await p.textContent('#whereText')), 'iPhone steps');
+  await p.screenshot({ path: 'test/shots/l2-no-permission.png', fullPage: true });
+  // still refused → the steps again; then the person allows it → "אפשר מיקום" registers
+  await p.click('#whereAllow'); await p.waitForTimeout(500);
+  assert(/עדיין/.test(await p.textContent('#whereText')));
+  await ctx.grantPermissions(['geolocation'], { origin: 'https://kiosk.test' });
+  await ctx.setGeolocation(Object.assign(north(25), { accuracy: 12 }));
+  await p.click('#whereAllow'); await p.waitForTimeout(600);
+  console.log('after allowing →', (await p.textContent('#doneTitle')).trim());
+  assert(/כהן/.test(await p.textContent('#doneTitle')));
   await ctx.close();
+
+  // 4b. Android with location switched off (the browser reports "position unavailable") → Android steps
+  const ANDROID = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36';
+  const ctxA = await browser.newContext({ viewport: { width: 390, height: 760 }, userAgent: ANDROID, hasTouch: true, isMobile: true });
+  await ctxA.addInitScript(() => {
+    window.__gpsOff = true;
+    const real = navigator.geolocation;
+    Object.defineProperty(navigator, 'geolocation', { value: {
+      getCurrentPosition(ok, fail, o) { if (window.__gpsOff) setTimeout(() => fail({ code: 2 }), 50); else setTimeout(() => ok({ coords: { latitude: 31.9859, longitude: 34.85828, accuracy: 10 } }), 50); },
+      watchPosition() { return 0; }, clearWatch() {} } });
+  });
+  ({ p } = await (async () => { const pg = await ctxA.newPage(); pg.on('pageerror', e => { throw e; });
+    await pg.exposeFunction('__gs', (fn, a) => { G.__webContext = true; try { return JSON.stringify({ val: G[fn](...JSON.parse(a)) }); } catch (e) { return JSON.stringify({ err: e.message }); } finally { G.__webContext = false; } });
+    const html = G.doGet({ parameter: { k: key } }).html.replace('<head>', '<head><script>' + shim + '</script>');
+    await pg.route('https://kiosk.test/', r => r.fulfill({ contentType: 'text/html', body: html })); await pg.route(/fonts\.g/, r => r.abort());
+    await pg.goto('https://kiosk.test/'); await pg.waitForTimeout(400); return { p: pg }; })());
+  await p.fill('#last', 'כהן'); await p.click('#submit'); await p.waitForTimeout(600);
+  console.log('Android, location off →', (await p.textContent('#whereText')).replace(/\s+/g, ' ').trim().slice(0, 90));
+  assert(/כבוי/.test(await p.textContent('#whereText')) && /מושכים את המסך/.test(await p.textContent('#whereText')));
+  await p.evaluate(() => { window.__gpsOff = false; });                // the person switches location on
+  await p.click('#whereAllow'); await p.waitForTimeout(600);
+  assert(/כהן/.test(await p.textContent('#doneTitle')), 'registered after switching location on');
+  await ctxA.close();
 
   // 5. a computer: self-registration closed, gabbai mode works, with the location test
   ({ ctx, p } = await open({ permissions: ['geolocation'], geolocation: Object.assign(north(60), { accuracy: 12 }) }));

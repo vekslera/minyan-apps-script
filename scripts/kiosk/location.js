@@ -25,17 +25,70 @@ function getLocation(cb) {
   } catch (e) { finish({ error: 'unavailable' }); }
 }
 
-/** Outside the shul, or no position: say so, and offer "נסה שוב" / "שלח לאישור הגבאי". */
+/**
+ * Outside the shul: say so, and offer "נסה שוב" / "שלח לאישור הגבאי".
+ * No position: explain why, with steps for this kind of phone, and offer "אפשר מיקום" / "שלח לאישור הגבאי".
+ */
 function showWhere(res) {
   var outside = res.where === 'outside';
   $('whereTitle').textContent = outside ? 'נראה שאתה מחוץ לבית הכנסת' : 'לא התקבל מיקום';
   $('whereText').innerHTML = outside
     ? 'המרחק המשוער מבית הכנסת: כ-' + esc(res.distance) + ' מ׳.<br>אם אתה בבית הכנסת — המתן רגע ונסה שוב; לפעמים המיקום מתעדכן לאט.'
-    : esc(res.message) + '.<br>' + (res.message === 'לא ניתנה הרשאת מיקום'
-        ? 'יש לאשר לדפדפן גישה למיקום (בהגדרות האתר ← מיקום) ואז ללחוץ "נסה שוב".'
-        : 'כדאי לוודא שהמיקום (GPS) פועל בטלפון ולנסות שוב.');
+    : locationHelp(S.loc && S.loc.error);
+  show('whereRetry', outside);
+  show('whereAllow', !outside);
   show('form', false);
   show('where', true);
+}
+
+/** "אפשר מיקום": asks the browser again (this shows its permission prompt when it still can), then registers. */
+function allowLocation() {
+  var b = $('whereAllow');
+  b.disabled = true; b.textContent = 'מבקש מיקום…';
+  getLocation(function (loc) {
+    b.disabled = false; b.textContent = 'אפשר מיקום';
+    S.loc = loc;
+    if (loc.error) { $('whereText').innerHTML = locationHelp(loc.error, true); return; }
+    hideWhere();
+    send(false);
+  });
+}
+
+function phoneKind() {
+  var ua = navigator.userAgent || '';
+  if (/iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 0)) return 'ios';
+  return /Android/i.test(ua) ? 'android' : '';
+}
+
+/**
+ * Why there is no position, and what to do on this phone. A web page cannot switch the phone's location on;
+ * it can only ask again once the person has. iPhone reports "location off" as "denied", so both steps are given.
+ */
+function locationHelp(err, again) {
+  var kind = phoneKind(), steps = [], lead;
+  var turnOn = kind === 'ios' ? 'הגדרות ← פרטיות ואבטחה ← שירותי מיקום ← להפעיל.'
+             : kind === 'android' ? 'מושכים את המסך מלמעלה למטה ומפעילים "מיקום" (Location).'
+             : 'להפעיל את המיקום (GPS) בהגדרות הטלפון.';
+  var allowSite = kind === 'ios' ? 'באותו מסך: "אתרי Safari" (או הדפדפן שבו פתחתם את הדף) ← "בזמן השימוש ביישום".'
+                : kind === 'android' ? 'בדפדפן: לוחצים על הסמל שליד כתובת האתר (מנעול או הגדרות) ← הרשאות ← מיקום ← "אפשר".'
+                : 'בהגדרות הדפדפן לאתר הזה: מיקום ← "אפשר".';
+  if (err === 'denied') {
+    lead = again ? 'הדפדפן עדיין לא מקבל מיקום.' : 'הדפדפן לא קיבל רשות להשתמש במיקום.';
+    steps = kind === 'ios' ? [turnOn, allowSite] : [allowSite, turnOn];
+  } else if (err === 'unavailable') {
+    lead = 'נראה שהמיקום בטלפון כבוי.';
+    steps = [turnOn];
+  } else if (err === 'timeout') {
+    lead = 'המיקום לא התקבל בזמן.';
+    steps = ['לוודא שהמיקום בטלפון מופעל.', 'לעמוד רגע ליד חלון או בחצר.'];
+  } else if (err === 'unsupported') {
+    return 'הדפדפן הזה לא תומך במיקום. אפשר לשלוח את הרישום לאישור הגבאי, או לפתוח את הדף בדפדפן אחר.';
+  } else {
+    lead = 'לא התקבל מיקום.';
+    steps = [turnOn];
+  }
+  steps.push('ללחוץ "אפשר מיקום" כאן ולאשר אם הטלפון שואל.');
+  return esc(lead) + ' מה עושים:<ol>' + steps.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol>';
 }
 function hideWhere() { show('where', false); show('form', true); }
 function retryWhere() { hideWhere(); resubmit(false); }

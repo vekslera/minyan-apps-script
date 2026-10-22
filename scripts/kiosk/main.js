@@ -18,6 +18,7 @@ function startKiosk() {
   $('pinCancel').addEventListener('click', function () { show('pinDlg', false); });
   $('notMe').addEventListener('click', notMe);
   $('whereRetry').addEventListener('click', retryWhere);
+  $('whereAllow').addEventListener('click', allowLocation);
   $('whereSend').addEventListener('click', sendForApproval);
   $('whereCancel').addEventListener('click', cancelWhere);
   $('locTest').addEventListener('click', testLocation);

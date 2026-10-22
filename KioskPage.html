@@ -40,6 +40,9 @@ input.tel{direction:ltr;text-align:right;letter-spacing:.5px}
 .primary{width:100%;font:inherit;font-size:24px;font-weight:800;padding:16px;border:0;border-radius:14px;background:var(--accent);color:#fff;cursor:pointer;margin-top:4px}
 .primary:disabled{opacity:.55;cursor:default}
 .msg{padding:10px 14px;border-radius:12px;margin:0 0 12px;font-weight:700}
+.where-text{margin:0 0 16px;line-height:1.5}
+.where-text ol{text-align:right;margin:10px 0 0;padding:0 22px 0 0;font-size:17px}
+.where-text li{margin:4px 0}
 .msg.err{background:var(--err-bg);color:var(--err)}
 .done{text-align:center;padding:26px 8px 10px}
 .mark{width:96px;height:96px;border-radius:50%;margin:0 auto 14px;display:grid;place-items:center;font-size:56px;font-weight:800}
@@ -126,7 +129,8 @@ window.onerror = function (msg) {
     <div class="where" id="where" hidden>
       <div class="mark wait">!</div>
       <h2 id="whereTitle"></h2>
-      <p id="whereText"></p>
+      <div id="whereText" class="where-text"></div>
+      <button class="primary" id="whereAllow" type="button" hidden>אפשר מיקום</button>
       <button class="primary" id="whereRetry" type="button">נסה שוב</button>
       <button class="secondary" id="whereSend" type="button">שלח לאישור הגבאי</button>
       <button class="link" id="whereCancel" type="button">ביטול</button>
