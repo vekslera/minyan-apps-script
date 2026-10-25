@@ -74,7 +74,7 @@ function pendingGroups_() {
   readPending_(ss).forEach(r => {
     if (String(r[PQ.STATUS]) !== ST.WAIT) return;
     const e = pendingEntry_(r, ctx.tz);
-    const key = norm_(e.raw) + '|' + e.phone;
+    const key = pendingGroupKey_(e);              // one card per same name + same phone (countPendingNames_ agrees)
     let g = groups.get(key);
     if (!g) {
       g = { gid: key, raw: e.raw, first: e.first, last: e.last, phone: e.phone, isWA: e.source === SRC.WA,

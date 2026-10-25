@@ -125,9 +125,21 @@ function cacheClear_() {
   if (typeof shulArea_ === 'function') shulArea_.v = undefined;           // derived from the settings
 }
 
+/** Entries waiting for review (each day of each person counts). Used by the reports' warnings. */
 function countPending_(ss) {
   return readPending_(ss).filter(r => String(r[PQ.STATUS]) === ST.WAIT).length;
 }
+/** Names waiting for review, counted like the review screen: one card per same name + same phone. */
+function countPendingNames_(ss) {
+  const tz = ss.getSpreadsheetTimeZone(), keys = new Set();
+  readPending_(ss).forEach(r => {
+    if (String(r[PQ.STATUS]) !== ST.WAIT) return;
+    const e = pendingEntry_(r, tz);
+    keys.add(pendingGroupKey_(e));
+  });
+  return keys.size;
+}
+function pendingGroupKey_(e) { return norm_(e.raw) + '|' + e.phone; }
 
 function appendRows_(sh, rows) {
   if (!rows.length) return;

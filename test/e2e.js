@@ -385,6 +385,11 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   assert.equal(parsed.rows.length, 2);
   assert.equal(W('gabbaiQueueImport', k, s, parsed.rows).added, 2);
   assert.equal(W('gabbaiInit', k, s).pending, 2);
+  // the same name on another day: one more entry, but still 2 cards — the tile counts as the list does
+  assert.equal(W('gabbaiQueueImport', k, s, [{ date: days[1], name: 'שניאורסון' }]).added, 1);
+  assert.equal(W('gabbaiGetPending', k, s).groups.length, 2);
+  assert.equal(W('gabbaiInit', k, s).pending, 2, 'tile = cards, not entries');
+  assert.equal(T.countPending_(envT.ss), 3, 'the reports still count entries');
   const pend = W('gabbaiGetPending', k, s);
   const cohen = pend.groups.find(g => g.raw === 'כהן משה'), sch = pend.groups.find(g => g.raw === 'שניאורסון');
   assert.equal(cohen.bestId, 'P001');

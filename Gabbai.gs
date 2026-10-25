@@ -20,7 +20,8 @@ function gabbaiInit(key, session) {
   const base = { name: s.name, today: todayKey_(tz) };
   if (!sessionValid_(key, session)) return Object.assign(base, { session: false });
   return Object.assign(base, {
-    session: true, pending: countPending_(ss), minutes: AUTH.SESSION_SECONDS / 60,
+    // The tile counts names, as the review screen shows them (not entries: one person may wait for several days).
+    session: true, pending: countPendingNames_(ss), minutes: AUTH.SESSION_SECONDS / 60,
     period: s.start && s.end ? { start: fmtKey_(s.start), end: fmtKey_(s.end), threshold: s.threshold } : null,
   });
 }
