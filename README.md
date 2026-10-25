@@ -1,6 +1,6 @@
 # Minyan attendance tracker (מעקב נוכחות במניין)
 
-Built by: Alex Veksler · [vekslera@gmail.com](mailto:vekslera@gmail.com) · +972-52-8353205
+Built with Google Scripts · By **Alex Veksler** · [vekslera@gmail.com](mailto:vekslera@gmail.com) · +972-52-8353205
 
 A Google Sheet plus Apps Script that tracks attendance at a weekday minyan and runs a lottery for regular attendees.
 
