@@ -188,6 +188,7 @@ Then upload it with `clasp push` (route B: just save the file).
 | 8–9 | מיקום בית הכנסת — קו רוחב / קו אורך | The shul's point. Empty = no location check. Best set by measuring in the shul ([below](#location-check-registering-from-the-shul)) |
 | 10 | רדיוס מותר (מטרים) | Self-registration only within this distance; 40–60 is usually right |
 | 11 | סטיית GPS מותרת (מטרים) | How much GPS inaccuracy is forgiven beyond the radius. Empty = half the radius |
+| 12 | אחוז נוכחות מינימלי לדוח לרבי | Who is included in the report to the Rebbe, e.g. `25` = 25% or more of the minyan days (usually much lower than the lottery threshold) |
 
 - **Values go in column B.** Column C is only an explanation, and a value typed there is ignored.
 - **Days with no minyan.** Column **E**, one date per cell, for weekdays with no registration (e.g. Yom Tov). They don't count toward the percentage.
@@ -269,6 +270,7 @@ The same tools are in the Sheet's **מניין** menu:
 - **מניין → ייבוא רשימה מוואטסאפ.** Paste the lists from WhatsApp; a date line such as `19/10` or `ח׳ חשוון` starts each day. Check the dates, then confirm the names in the review screen.
 - **מניין → רישומים לבדיקה.** Entries the system wasn't sure about. Pick the right person, confirm or add the phone, and save.
 - **מניין → דוח שבועי / דוח סופי לתקופה.** Each report opens as a new tab, together with a text to paste into WhatsApp: everyone who came, with days out of the minyan days (e.g. `משה כהן — 17/20`). In the period summary, ✓ marks those in the lottery, and the top line says how many days that takes.
+- **מניין → דוח לרבי.** The names of everyone at or above the report threshold (default 25%), by surname, as text for WhatsApp. No new tab. (The exact contents and sending it by e-mail are still to come.)
 - **מניין → הגרלה.** Draws one winner among those at or above the threshold, and logs the draw in the **הגרלות** tab.
 - **מניין → איתור כפילויות** finds people entered twice. Tick "למזג?" next to the real duplicates, then use **מיזוג הכפילויות המסומנות**.
 
@@ -282,10 +284,11 @@ A web page with the gabbai's work, for when the Sheet isn't at hand. It needs th
 - **What's on it:**
   - **רישומים לבדיקה** and **ייבוא מוואטסאפ** — the same screens as in the Sheet. On a phone the import works too; a long list is easier on a computer.
   - **דוח שבועי** (choose the last day) and **סיכום התקופה** — the report tab is written in the Sheet, and the page shows the WhatsApp text with **העתקה** and **שליחה בוואטסאפ**.
+  - **דוח לרבי** — the name list for the report to the Rebbe, with **העתקה** and **שליחה בוואטסאפ**. Its threshold is set on the **הגדרות** screen.
   - **הגרלה** — shows who takes part, warns about entries still waiting for review and about an earlier draw, and asks for a second tap before drawing. The draw is logged in **הגרלות**.
   - **כפילויות** — pairs that look like one person. Tick "למזג" and choose which record to keep (the one with more days is preselected); attendance moves to it.
   - **קישור ו-QR** — the registration link with a QR code, copy and share.
-  - **הגדרות** — the minyan's name, the self-registration hours (half-hour steps: 8:00, 8:30, 9:00 …), the period, the lottery threshold, and the days without a minyan (add or remove dates). Saved to the הגדרות sheet.
+  - **הגדרות** — the minyan's name, the self-registration hours (half-hour steps: 8:00, 8:30, 9:00 …), the period, the lottery threshold, the report-to-the-Rebbe threshold, and the days without a minyan (add or remove dates). Saved to the הגדרות sheet.
   - **שינוי קוד גבאי** — asks for the current code; everyone else is logged out of gabbai mode, you stay in.
   - **יציאה** — logs out. After 30 minutes without activity the page logs out by itself.
 - **What stays in the Sheet only:** editing the tabs by hand. Every setting can be changed on the tools page.

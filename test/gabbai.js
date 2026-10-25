@@ -82,6 +82,16 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
   const ftext = await p.inputValue('#finalOutText');
   assert(/משה כהן — \d+\/\d+ ✓/.test(ftext) && /דוד לוי — \d+\/\d+$/m.test(ftext), ftext);
 
+  // report to the Rebbe
+  await p.click('#back'); await tile(p, 'rebbe');
+  console.log('rebbe lead:', await p.textContent('#rebbeLead'));
+  await p.click('#rebbeBtn'); await p.waitForTimeout(400);
+  const rtext = await p.inputValue('#rebbeOutText');
+  assert(rtext.startsWith('*דוח לרבי') && /^1\. משה כהן$/m.test(rtext) && /^2\. דוד לוי$/m.test(rtext), 'by surname: כהן before לוי\n' + rtext);
+  assert(!/בגיליון/.test(await p.textContent('#rebbeOut')));
+  assert((await p.getAttribute('#rebbeOutWa', 'href')).startsWith('https://wa.me/?text='));
+  await p.screenshot({ path: 'test/shots/g13-rebbe.png', fullPage: true });
+
   // lottery: two taps
   await p.click('#back'); await tile(p, 'draw');
   console.log('draw list:', (await p.$$eval('#drawBox li', l => l.map(x => x.textContent))).join(' | '));
@@ -177,11 +187,11 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
   await p.selectOption('#setFrom', '11'); await p.selectOption('#setTo', '8'); await p.click('#setSave'); await p.waitForTimeout(200);
   assert(/לפני/.test(await p.textContent('#settingsNote')), 'hours checked in the page');
   assert.equal(await p.$eval('#setFrom', s => s.options[17].text), '8:30', 'half-hour steps');
-  await p.fill('#setName', 'מניין סטיינבך'); await p.selectOption('#setFrom', '8.5'); await p.selectOption('#setTo', '11'); await p.fill('#setPct', '70');
+  await p.fill('#setName', 'מניין סטיינבך'); await p.selectOption('#setFrom', '8.5'); await p.selectOption('#setTo', '11'); await p.fill('#setPct', '70'); await p.fill('#setRebbe', '30');
   await p.click('#setSave'); await p.waitForTimeout(400);
   console.log('settings:', (await p.textContent('#settingsNote')).trim(), '| header:', await p.textContent('#sub'));
   const sNow = G.readSettings_(env.ss, 'Asia/Jerusalem');
-  assert.equal(sNow.from, 8.5); assert.equal(sNow.to, 11);
+  assert.equal(sNow.from, 8.5); assert.equal(sNow.to, 11); assert.equal(sNow.rebbe, 30);
   assert(/8:30–11:00/.test(await p.textContent('#settingsNote'))); assert.equal(sNow.threshold, 70); assert.equal(sNow.name, 'מניין סטיינבך');
   const nm = G.addDays_(today, 1);
   await p.fill('#noMinyanDate', nm); await p.click('#noMinyanAdd'); await p.waitForTimeout(400);
@@ -210,7 +220,7 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
   await p.click('#barBtn'); await p.waitForTimeout(500);
   assert(!(await overflow(p)), 'review fits the phone');
   await p.screenshot({ path: 'test/shots/g9-phone-review.png', fullPage: true });
-  for (const v of ['weekly', 'final', 'draw', 'dups', 'link', 'shul', 'settings', 'pin']) {
+  for (const v of ['weekly', 'final', 'rebbe', 'draw', 'dups', 'link', 'shul', 'settings', 'pin']) {
     await p.click('#back'); await p.waitForTimeout(200); await tile(p, v);
     if (v === 'weekly') { await p.click('#weeklyBtn'); await p.waitForTimeout(300); }
     assert(!(await overflow(p)), v + ' fits the phone');

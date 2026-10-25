@@ -90,6 +90,7 @@ window.onerror = function (msg) {
     <button class="tile" type="button" data-go="import">ייבוא מוואטסאפ<small>הדבקת רשימות הנוכחים</small></button>
     <button class="tile" type="button" data-go="weekly">דוח שבועי<small>טבלה בגיליון + טקסט לוואטסאפ</small></button>
     <button class="tile" type="button" data-go="final">סיכום התקופה<small>מי משתתף בהגרלה</small></button>
+    <button class="tile" type="button" data-go="rebbe">דוח לרבי<small>רשימת השמות לדוח</small></button>
     <button class="tile" type="button" data-go="draw">הגרלה<small>הגרלת זוכה בין המשתתפים</small></button>
     <button class="tile" type="button" data-go="dups">כפילויות<small>אנשים שנרשמו פעמיים</small></button>
     <button class="tile" type="button" data-go="link">קישור ו-QR<small>הקישור לדף הרישום</small></button>
@@ -139,6 +140,15 @@ window.onerror = function (msg) {
     <p class="lead" id="finalLead"></p>
     <button class="btn primary" id="finalBtn" type="button">הפקת הסיכום</button>
     <div id="finalOut"></div>
+  </div>
+</section>
+
+<section class="view" id="v-rebbe" hidden>
+  <div id="rebbeNote"></div>
+  <div class="card">
+    <p class="lead" id="rebbeLead"></p>
+    <button class="btn primary" id="rebbeBtn" type="button">הכנת הרשימה</button>
+    <div id="rebbeOut"></div>
   </div>
 </section>
 
@@ -198,6 +208,7 @@ window.onerror = function (msg) {
       <label>סוף התקופה <input type="date" id="setEnd"></label>
     </div>
     <div class="row"><label>אחוז נוכחות להגרלה <input type="number" id="setPct" min="1" max="100" step="1" style="width:80px">%</label></div>
+    <div class="row"><label>אחוז נוכחות לדוח לרבי <input type="number" id="setRebbe" min="1" max="100" step="1" style="width:80px">%</label></div>
     <button class="btn primary" id="setSave" type="button">שמירה</button>
     <p class="g-meta" style="margin-top:10px">מחוץ לשעות הרישום אפשר לרשום רק במצב גבאי. השינויים נשמרים בגיליון "הגדרות".</p>
   </div>

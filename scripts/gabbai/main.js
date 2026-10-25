@@ -8,10 +8,10 @@ var S = { view: '', session: '', info: null, seen: 0,
           dups: [], drawArmed: false };
 var IDLE_MS = 30 * 60 * 1000;
 var TITLES = { login: 'כלי גבאי', home: 'כלי גבאי', review: 'רישומים לבדיקה', import: 'ייבוא מוואטסאפ',
-               weekly: 'דוח שבועי', final: 'סיכום התקופה', draw: 'הגרלה', dups: 'כפילויות',
+               weekly: 'דוח שבועי', final: 'סיכום התקופה', rebbe: 'דוח לרבי', draw: 'הגרלה', dups: 'כפילויות',
                link: 'קישור לדף הרישום', shul: 'מיקום בית הכנסת', settings: 'הגדרות', pin: 'שינוי קוד גבאי' };
 var NOTES = { login: 'loginNote', home: 'homeNote', review: 'revNote', import: 'importNote', weekly: 'weeklyNote',
-              final: 'finalNote', draw: 'drawNote', dups: 'dupsNote', link: 'linkNote', shul: 'shulNote', settings: 'settingsNote', pin: 'pinNote' };
+              final: 'finalNote', rebbe: 'rebbeNote', draw: 'drawNote', dups: 'dupsNote', link: 'linkNote', shul: 'shulNote', settings: 'settingsNote', pin: 'pinNote' };
 
 function store(name, val) { try { if (val == null) sessionStorage.removeItem(name); else sessionStorage.setItem(name, val); } catch (e) {} }
 function load(name) { try { return sessionStorage.getItem(name); } catch (e) { return null; } }
@@ -46,6 +46,7 @@ function go(v) {
   else if (v === 'import') renderImportBar();
   else if (v === 'weekly') openWeekly();
   else if (v === 'final') openFinal();
+  else if (v === 'rebbe') openRebbe();
   else if (v === 'draw') loadDraw();
   else if (v === 'dups') loadDups();
   else if (v === 'link') loadLink();
@@ -105,6 +106,7 @@ function startGabbai() {
   $('confirmAll').onclick = confirmCertainMatches;
   $('weeklyBtn').onclick = runWeekly;
   $('finalBtn').onclick = runFinal;
+  $('rebbeBtn').onclick = runRebbe;
   $('pinSave').onclick = savePin;
   $('shulTest').onclick = testShulDistance;
   $('shulMeasure').onclick = measureShul;

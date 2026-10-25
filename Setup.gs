@@ -38,6 +38,7 @@ function onOpen() {
     .addSeparator()
     .addItem('דוח שבועי', 'menuWeekly')
     .addItem('דוח סופי לתקופה', 'menuFinal')
+    .addItem('דוח לרבי', 'menuRebbe')
     .addItem('הגרלה', 'menuDraw')
     .addSeparator()
     .addItem('איתור כפילויות', 'menuFindDuplicates')
@@ -152,7 +153,7 @@ function migrateSettings_(st, tz) {
   const today = todayKey_(tz);
   const defaults = {};
   defaults[SET.NAME] = 'מניין שחרית'; defaults[SET.START] = keyToDate_(today, tz); defaults[SET.END] = keyToDate_(addDays_(today, 29), tz);
-  defaults[SET.PCT] = 75; defaults[SET.FROM] = 5; defaults[SET.TO] = 11;
+  defaults[SET.PCT] = 75; defaults[SET.REBBE] = 25; defaults[SET.FROM] = 5; defaults[SET.TO] = 11;
   defaults[SET.LAT] = ''; defaults[SET.LNG] = ''; defaults[SET.RADIUS] = SHUL_SET.NEW_RADIUS; defaults[SET.TOL] = '';
   SET_ROWS.forEach(r => { value[r[0]] = old[r[0]] ? old[r[0]].b : defaults[r[0]]; note[r[0]] = old[r[0]] && String(old[r[0]].c) ? old[r[0]].c : r[1]; });
   if (/שעה עגולה/.test(String(note[SET.FROM]))) note[SET.FROM] = SET_ROWS.find(r => r[0] === SET.FROM)[1];   // older wording
@@ -224,6 +225,7 @@ function writeHelp_(sh) {
     ['דוחות והגרלה'],
     ['דוח שבועי: נוכחות כל אחד ב-7 הימים האחרונים, וגם טקסט מוכן להדבקה בוואטסאפ.'],
     ['דוח סופי: נוכחות לכל התקופה, וגם סיכום קצר להדבקה בוואטסאפ. משתתפים בהגרלה מי שהגיע ל-75% מימי המניין ומעלה (ניתן לשנות בהגדרות).'],
+    ['דוח לרבי: רשימת השמות של מי שהגיע ל-25% מימי המניין ומעלה (ניתן לשנות בהגדרות), לפי שם משפחה, להדבקה בוואטסאפ. בכלי הגבאי או בתפריט מניין ← דוח לרבי.'],
     ['ימי מניין: ראשון עד שישי. ימים שבהם אין רישום (למשל יום טוב) — בכלי הגבאי ← הגדרות, או בעמודה E בגיליון הגדרות.'],
     ['הגדרות: כל ההגדרות שהגבאי משנה (שם, שעות, תקופה, אחוז, מיקום) נמצאות בגיליון "הגדרות" ובכלי הגבאי ← הגדרות. אחרי עדכון גרסה מריצים פעם אחת: מניין ← הגדרה ראשונית.'],
     [''],

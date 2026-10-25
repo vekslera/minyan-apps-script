@@ -22,6 +22,7 @@ function renderSettings(g) {
   $('setFrom').value = String(g.from); $('setTo').value = String(g.to);
   $('setStart').value = g.start || ''; $('setEnd').value = g.end || '';
   $('setPct').value = g.threshold;
+  $('setRebbe').value = g.rebbe;
   var list = g.excluded;
   $('noMinyanList').innerHTML = list.length
     ? list.map(function (k, i) { return '<span class="nm">' + esc(dlabel(k)) + '/' + k.slice(0, 4) + '<button type="button" title="הסרה" data-i="' + i + '" class="nmDel">×</button></span>'; }).join('')
@@ -35,7 +36,8 @@ function renderSettings(g) {
 }
 function saveSettings() {
   var d = { name: $('setName').value.trim(), from: Number($('setFrom').value), to: Number($('setTo').value),
-            start: $('setStart').value, end: $('setEnd').value, threshold: Number($('setPct').value) };
+            start: $('setStart').value, end: $('setEnd').value, threshold: Number($('setPct').value),
+            rebbe: Number($('setRebbe').value) };
   if (d.from >= d.to) return flash('settingsNote', 'err', '"משעה" צריכה להיות לפני "עד שעה"');
   if (d.start && d.end && d.start > d.end) return flash('settingsNote', 'err', 'תחילת התקופה אחרי סופה');
   wait('setSave');

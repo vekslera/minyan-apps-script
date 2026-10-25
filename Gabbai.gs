@@ -22,7 +22,7 @@ function gabbaiInit(key, session) {
   return Object.assign(base, {
     // The tile counts names, as the review screen shows them (not entries: one person may wait for several days).
     session: true, pending: countPendingNames_(ss), minutes: AUTH.SESSION_SECONDS / 60,
-    period: s.start && s.end ? { start: fmtKey_(s.start), end: fmtKey_(s.end), threshold: s.threshold } : null,
+    period: s.start && s.end ? { start: fmtKey_(s.start), end: fmtKey_(s.end), threshold: s.threshold, rebbe: s.rebbe } : null,
   });
 }
 
@@ -44,6 +44,12 @@ function gabbaiWeekly(key, session, endDate) {
 function gabbaiFinal(key, session) {
   checkSession_(key, session);
   return withLock_(() => finalReport_(loadCtx_(SpreadsheetApp.getActive()), true));
+}
+
+// ---- Report to the Rebbe ----
+function gabbaiRebbe(key, session) {
+  checkSession_(key, session);
+  return rebbeReport_(loadCtx_(SpreadsheetApp.getActive()));
 }
 
 // ---- Lottery ----
@@ -79,7 +85,7 @@ function gabbaiLink(key, session) {
 function settingsForPage_() {
   const ss = SpreadsheetApp.getActive(), tz = ss.getSpreadsheetTimeZone();
   const s = readSettings_(ss, tz);
-  return { name: s.name, from: s.from, to: s.to, start: s.start, end: s.end, threshold: s.threshold,
+  return { name: s.name, from: s.from, to: s.to, start: s.start, end: s.end, threshold: s.threshold, rebbe: s.rebbe,
            excluded: Array.from(s.excluded).sort(), today: todayKey_(tz) };
 }
 function gabbaiSettings(key, session) { checkSession_(key, session); return settingsForPage_(); }
@@ -90,7 +96,7 @@ function gabbaiSaveSettings(key, session, d) {
   d = d || {};
   const tz = SpreadsheetApp.getActive().getSpreadsheetTimeZone();
   const name = clean_(d.name);
-  const from = Number(d.from), to = Number(d.to), thr = Number(d.threshold);
+  const from = Number(d.from), to = Number(d.to), thr = Number(d.threshold), reb = Number(d.rebbe);
   const start = toKey_(d.start, tz), end = toKey_(d.end, tz);
   if (!name) throw new Error('חסר שם למניין');
   if (name.length > 60) throw new Error('שם המניין ארוך מדי');
@@ -99,8 +105,9 @@ function gabbaiSaveSettings(key, session, d) {
   if (!start || !end) throw new Error('תאריכי התקופה אינם תקינים');
   if (start > end) throw new Error('תחילת התקופה אחרי סופה');
   if (!(thr >= 1 && thr <= 100)) throw new Error('אחוז הנוכחות להגרלה צריך להיות בין 1 ל-100');
+  if (!(reb >= 1 && reb <= 100)) throw new Error('אחוז הנוכחות לדוח לרבי צריך להיות בין 1 ל-100');
   const v = {};
-  v[SET.NAME] = name; v[SET.FROM] = fmtHour_(from); v[SET.TO] = fmtHour_(to); v[SET.PCT] = Math.round(thr * 10) / 10;
+  v[SET.NAME] = name; v[SET.FROM] = fmtHour_(from); v[SET.TO] = fmtHour_(to); v[SET.PCT] = Math.round(thr * 10) / 10; v[SET.REBBE] = Math.round(reb * 10) / 10;
   v[SET.START] = keyToDate_(start, tz); v[SET.END] = keyToDate_(end, tz);
   withLock_(() => { textFormatHours_(); setSettings_(v); });
   return settingsForPage_();

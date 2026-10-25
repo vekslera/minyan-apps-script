@@ -27,10 +27,11 @@ function weeklyReport_(ctx, endKey, fromWeb) {
 }
 
 /** The dialog with a ready-to-paste text; warns when entries are still waiting for review. */
-function showReportText_(ctx, text, title) {
+function showReportText_(ctx, text, title, noSheet) {
   const pending = countPending_(ctx.ss);
   const note = pending ? '<p class="warn">שימו לב: ' + pending + ' רישומים ממתינים בבדיקה ועדיין לא נספרו.</p>' : '';
-  const html = page_('ReportTextDialog').replace('__TEXT__', () => escHtml_(text)).replace('__NOTE__', () => note);
+  const lead = noSheet ? 'אפשר לערוך את הטקסט לפני ההעתקה.' : 'הדוח המלא נמצא בגיליון החדש. אפשר לערוך את הטקסט לפני ההעתקה.';
+  const html = page_('ReportTextDialog').replace('__TEXT__', () => escHtml_(text)).replace('__NOTE__', () => note).replace('__LEAD__', () => lead);
   SpreadsheetApp.getUi().showModalDialog(HtmlService.createHtmlOutput(html).setWidth(520).setHeight(560), title);
 }
 
@@ -79,6 +80,35 @@ function finalText_(ctx, stats, soFar) {
   lines.push('', eligible ? '✓ = משתתף בהגרלה (' + eligible + ')' : 'עדיין אין מי שהגיע ל-' + stats.threshold + '% מימי המניין.');
   lines.push('', 'יישר כח לכל המתפללים!');
   return lines.join('\n');
+}
+
+// ---- Report to the Rebbe (דוח לרבי) ----
+// For now: the list of names at or above its own (lower) threshold, as WhatsApp text. The exact contents are
+// still to be decided; a later version will send it by e-mail.
+
+/** {text, names, days, threshold, start, end, pending} for the period in הגדרות. */
+function rebbeReport_(ctx) {
+  const s = ctx.settings;
+  if (!s.start || !s.end) throw new Error(NO_PERIOD);
+  const stats = computeStats_(ctx, s.start, s.end);
+  const n = stats.days.length, thr = s.rebbe;
+  const sortKey = p => (p.last || '') + ' ' + (p.first || '');                 // by surname, then first name
+  const rows = stats.rows.filter(r => n > 0 && r.count * 100 >= thr * n)
+    .sort((a, b) => sortKey(a.person).localeCompare(sortKey(b.person), 'he'));
+  const soFar = s.end > todayKey_(ctx.tz);
+  const lines = ['*דוח לרבי — ' + s.name + '*',
+                 fmtShort_(stats.start) + ' עד ' + fmtShort_(stats.end) + (soFar ? ' (עד היום)' : '') + ' · ' + n + ' ימי מניין', ''];
+  rows.forEach((r, i) => lines.push((i + 1) + '. ' + displayName_(r.person)));
+  if (!rows.length) lines.push('(עדיין אין מי שהגיע ל-' + thr + '% מימי המניין)');
+  return { text: lines.join('\n'), names: rows.length, days: n, threshold: thr, start: fmtKey_(stats.start), end: fmtKey_(stats.end),
+           missing: stats.missing.map(fmtShort_), pending: countPending_(ctx.ss) };
+}
+
+function menuRebbe() {
+  SpreadsheetApp.getUi();
+  const ctx = loadCtx_(SpreadsheetApp.getActive());
+  if (!ctx.settings.start || !ctx.settings.end) { SpreadsheetApp.getUi().alert(NO_PERIOD); return; }
+  showReportText_(ctx, rebbeReport_(ctx).text, 'דוח לרבי — טקסט להדבקה בוואטסאפ', true);
 }
 
 /** Minyan days = Sunday–Friday in the range, up to today, minus the "no minyan" dates. */

@@ -35,7 +35,7 @@ function readSettings_(ss, tz) {
   const num = (x, d) => (x === '' || x == null || isNaN(Number(x))) ? d : Number(x);
   const excluded = new Set(raw.excluded);
   return { name: String(map[SET.NAME] || 'מניין שחרית').trim(), start: toKey_(map[SET.START], tz), end: toKey_(map[SET.END], tz),
-           threshold: num(map[SET.PCT], 75), from: num(map[SET.FROM], 5), to: num(map[SET.TO], 11),   // hours; 8.5 = 8:30
+           threshold: num(map[SET.PCT], 75), rebbe: num(map[SET.REBBE], 25), from: num(map[SET.FROM], 5), to: num(map[SET.TO], 11),   // hours; 8.5 = 8:30
            // The gabbai code is kept out of sight (script properties). Until setup() moves it there,
            // the old places still work: Secrets.gs, then the old "קוד גבאי" row.
            pin: gabbaiPin_() || secret_('gabbaiPin') || String(map[OLD_SET.PIN] == null ? '' : map[OLD_SET.PIN]).trim(),

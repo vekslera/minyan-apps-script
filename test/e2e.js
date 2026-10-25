@@ -203,6 +203,9 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   const listed = text.split('\n').filter(l => /^\d+\. /.test(l)).length;
   assert.equal(listed, G.computeStats_(G.loadCtx_(env.ss), G.readSettings_(env.ss, 'Asia/Jerusalem').start, G.readSettings_(env.ss, 'Asia/Jerusalem').end).rows.length, 'everyone who came is listed');
   assert.equal(env.log.filter(l => l[0] === 'dialog').slice(-1)[0][1], 'סיכום התקופה — טקסט להדבקה בוואטסאפ');
+  G.menuRebbe();
+  assert.equal(env.log.filter(l => l[0] === 'dialog').slice(-1)[0][1], 'דוח לרבי — טקסט להדבקה בוואטסאפ');
+  assert(/דוח לרבי/.test(env.ui.lastDialog) && !/בגיליון החדש/.test(env.ui.lastDialog), 'no sheet for this one');
   console.log('final text OK');
 }
 
@@ -407,6 +410,14 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   const fin = W('gabbaiFinal', k, s);
   assert(fin.text.includes('(עד היום)') && fin.eligible === 1, JSON.stringify(fin));
   assert.equal(W('gabbaiInit', k, s).period.threshold, 75);
+  // report to the Rebbe: names at or above 25% (default), alphabetical, as WhatsApp text
+  const reb = W('gabbaiRebbe', k, s);
+  const rebNames = reb.text.split('\n').filter(l => /^\d+\. /.test(l)).map(l => l.replace(/^\d+\. /, ''));
+  const st = T.computeStats_(T.loadCtx_(envT.ss), T.readSettings_(envT.ss, 'Asia/Jerusalem').start, T.readSettings_(envT.ss, 'Asia/Jerusalem').end);
+  const expect = st.rows.filter(r => r.count * 100 >= 25 * st.days.length).sort((a, b) => (a.person.last + ' ' + a.person.first).localeCompare(b.person.last + ' ' + b.person.first, 'he')).map(r => T.displayName_(r.person));
+  assert.deepEqual(rebNames, expect); assert.equal(reb.names, expect.length); assert.equal(reb.threshold, 25);
+  assert(reb.text.startsWith('*דוח לרבי — ') && rebNames.includes('משה כהן'), reb.text);
+  assert(st.rows.some(r => r.count * 100 < 25 * st.days.length && !rebNames.includes(T.displayName_(r.person))), 'someone below 25% is left out');
   // lottery
   const info = W('gabbaiDrawInfo', k, s);
   assert.equal(info.eligible.length, 1); assert.equal(info.eligible[0].name, 'משה כהן'); assert.equal(info.last, null);
@@ -537,13 +548,16 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   assert.throws(() => W('gabbaiSettings', k, 'x'), /כניסה מחדש/);
   let g = W('gabbaiSettings', k, s);
   assert.equal(g.from, 5); assert.equal(g.to, 11); assert.equal(g.threshold, 75); assert.equal(g.name, 'מניין שחרית');
-  const base = { name: 'מניין סטיינבך', from: 8, to: 11, start: g.start, end: g.end, threshold: 70 };
+  assert.equal(g.rebbe, 25, 'report to the Rebbe: 25% by default');
+  const base = { name: 'מניין סטיינבך', from: 8, to: 11, start: g.start, end: g.end, threshold: 70, rebbe: 30 };
+  assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { rebbe: 101 })), /לדוח לרבי/);
   assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { from: 11, to: 8 })), /שעות הרישום/);
   assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { start: g.end, end: g.start })), /אחרי סופה/);
   assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { threshold: 0 })), /בין 1 ל-100/);
   assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { name: ' ' })), /חסר שם/);
   g = W('gabbaiSaveSettings', k, s, base);
   assert.equal(g.from, 8); assert.equal(g.threshold, 70); assert.equal(g.name, 'מניין סטיינבך');
+  assert.equal(g.rebbe, 30); assert.equal(Q.readSettings_(envG.ss, 'Asia/Jerusalem').rebbe, 30);
   assert.equal(W('kioskInit', k).name, 'מניין סטיינבך');
   const d1 = Q.addDays_(g.today, 2), d2 = Q.addDays_(g.today, -3);
   g = W('gabbaiSetNoMinyan', k, s, [d1, d2]);
