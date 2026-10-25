@@ -13,6 +13,7 @@ function init() {
     show('sep', !!h);
     $('gregDate').textContent = gregDate(info.today);
     show('loading', false);
+    tmark('form ready');
     if (saved && info.session && !S.session) { S.session = saved; gabbaiActive(); gabbaiUi(true); reset(); }   // back in gabbai mode
     else if (saved && !info.session) store('minyanSession', null);
     refreshClosed();
@@ -45,6 +46,7 @@ function submit(ev) {
   S.lastPhone = phone;
   if (!pid && !last) { $('last').focus(); return showMsg('נא למלא שם משפחה'); }
   S.form = { phone: phone, first: first, last: last, personId: pid };
+  tmark('tap: register');
   resubmit(false);
 }
 /** Sends the registration — with a fresh position first when this device must be in the shul. */
@@ -90,6 +92,7 @@ function done(res) {
   show('doneStats', !!st);
   show('form', false);
   show('done', true);
+  tmark('confirmation shown');
   clearTimeout(S.resetTimer);
   S.resetTimer = setTimeout(reset, g ? 2000 : 6000);
 }

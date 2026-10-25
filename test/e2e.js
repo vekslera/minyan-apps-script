@@ -445,6 +445,11 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   const ch = W('gabbaiChangePin', k, s, code, 'testcode9');
   assert.equal(W('gabbaiInit', k, ch.token).session, true);
   assert.equal(W('gabbaiInit', k, other).session, false);
+  // &debug=1: the page gets the server's build time; the timed calls report their server share
+  assert(/var DEBUG_MS = '\d+';/.test(W('doGet', { parameter: { k: k, debug: '1' } }).html));
+  assert(/var DEBUG_MS = '';/.test(W('doGet', { parameter: { k: k } }).html), 'off without &debug=1');
+  assert(/DEBUG_MS = '\d+'/.test(W('doGet', { parameter: { k: k, view: 'gabbai', debug: '1' } }).html));
+  assert.equal(typeof W('kioskInit', k)._ms, 'number'); assert.equal(typeof W('gabbaiInit', k, '')._ms, 'number');
   console.log('gabbai tools OK');
 }
 

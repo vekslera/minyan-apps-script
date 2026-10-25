@@ -39,6 +39,19 @@ const sent = [];
   assert(/משה כהן/.test(await p.textContent('#doneTitle')));
   await ctx.close();
 
+  // 1b. the &debug=1 timing panel: every step of a registration, with the server's share
+  ({ ctx, p } = await open(Object.assign({ geolocation: Object.assign(north(30), { accuracy: 15 }) }, phone), { debug: '1' }));
+  await p.fill('#phone', '0521111111'); await p.waitForTimeout(300); await p.click('#submit'); await p.waitForTimeout(500);
+  const rows = await p.$$eval('#timingRows > div', d => d.map(x => x.textContent));
+  console.log('timing panel:\n  ' + rows.join('\n  '));
+  ['server built the page', 'page code running', 'kioskInit (server ', 'form ready', 'tap: register', 'GPS', 'kioskSubmit (server ', 'confirmation shown']
+    .forEach(l => assert(rows.some(r => r.includes(l)), 'timing row: ' + l));
+  await p.screenshot({ path: 'test/shots/l0-timing.png' });
+  await ctx.close();
+  ({ ctx, p } = await open(Object.assign({ geolocation: north(30) }, phone)));
+  assert.equal(await p.$('#timing'), null, 'no panel without &debug=1');
+  await ctx.close();
+
   // 2. outside → told so; walks in and retries → registered
   ({ ctx, p } = await open(Object.assign({ geolocation: Object.assign(north(850), { accuracy: 20 }) }, phone)));
   await p.fill('#last', 'לוי'); await p.fill('#first', 'דוד'); await p.click('#submit'); await p.waitForTimeout(500);

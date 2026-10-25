@@ -13,7 +13,8 @@ function withLock_(fn) {
 }
 
 /** First call of the page: is the session alive, and the numbers for the home screen. */
-function gabbaiInit(key, session) {
+function gabbaiInit(key, session) { return withMs_(Date.now(), gabbaiInit_(key, session)); }
+function gabbaiInit_(key, session) {
   checkKey_(key);
   const ss = SpreadsheetApp.getActive(), tz = ss.getSpreadsheetTimeZone();
   const s = readSettings_(ss, tz);

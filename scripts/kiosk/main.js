@@ -5,6 +5,7 @@ var S = { info: null, roster: [], session: '', selectedId: '', phoneId: '', from
 var DEVICE = 'desktop';
 
 function startKiosk() {
+  timingStart(DEBUG_MS);
   DEVICE = detectDevice();
   $('phone').addEventListener('input', onPhone);
   $('last').addEventListener('input', onName);

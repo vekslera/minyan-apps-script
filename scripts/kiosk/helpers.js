@@ -3,11 +3,14 @@
 // Declarations only — nothing runs when the file loads; the page calls the start function.
 
 function call(fn, args, ok, fail) {
-  var r = google.script.run.withSuccessHandler(ok).withFailureHandler(fail || function (e) {
+  var done = ttime(fn);                                       // the &debug=1 timing panel (no-op otherwise)
+  var onFail = fail || function (e) {
     setBusy(false);
     if (typeof sessionEnded === 'function' && sessionEnded(e)) return;
     showMsg(errText(e));
-  });
+  };
+  var r = google.script.run.withSuccessHandler(function (res) { done(res); ok(res); })
+                           .withFailureHandler(function (e) { done(null, 'failed'); onFail(e); });
   r[fn].apply(r, args);
 }
 function errText(e) { return (e && e.message) ? e.message : 'אירעה תקלה, נסו שוב'; }

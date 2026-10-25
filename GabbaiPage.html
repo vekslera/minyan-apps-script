@@ -243,10 +243,11 @@ window.onerror = function (msg) {
 
 <script data-shared></script>
 <script>
-var KEY = '__KEY__', HOME_URL = '__HOME__';
+var KEY = '__KEY__', HOME_URL = '__HOME__', DEBUG_MS = '__DEBUG__';
 var API = { prefix: 'gabbai', auth: function () { return [KEY, S.session]; } };
 </script>
 <script data-include="scripts/common/dom.js"></script>
+<script data-include="scripts/common/timing.js"></script>
 <script data-include="scripts/common/clipboard.js"></script>
 <script data-include="scripts/admin/helpers.js"></script>
 <script data-include="scripts/admin/import.js"></script>

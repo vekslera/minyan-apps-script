@@ -7,7 +7,9 @@
 
 /** call('GetPending', [], ok) → google.script.run.adminGetPending(TOKEN) or gabbaiGetPending(KEY, session). */
 function call(fn, args, ok) {
-  var r = google.script.run.withSuccessHandler(ok).withFailureHandler(function (e) { busy(false); callFailed(e); });
+  var done = ttime(API.prefix + fn);                          // the &debug=1 timing panel (no-op otherwise)
+  var r = google.script.run.withSuccessHandler(function (res) { done(res); ok(res); })
+                           .withFailureHandler(function (e) { done(null, 'failed'); busy(false); callFailed(e); });
   r[API.prefix + fn].apply(r, API.auth().concat(args));
 }
 function errText(e) { return (e && e.message) || 'אירעה תקלה'; }

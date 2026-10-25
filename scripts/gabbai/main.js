@@ -58,10 +58,10 @@ function go(v) {
 
 function refreshHome() {
   if (S.info && Date.now() - S.info.at < 3000) return;          // just loaded
-  google.script.run.withSuccessHandler(function (info) {
+  google.script.run.withSuccessHandler(timed('gabbaiInit', function (info) {
     if (!info.session) return loggedOut('');
     setInfo(info);
-  }).withFailureHandler(callFailed).gabbaiInit(KEY, S.session);
+  })).withFailureHandler(callFailed).gabbaiInit(KEY, S.session);
 }
 function setInfo(info) {
   S.info = info; info.at = Date.now();
@@ -87,12 +87,12 @@ function login() {
   var pin = $('pin').value.trim();
   if (!pin) return;
   wait('loginBtn');
-  google.script.run.withSuccessHandler(function (r) {
+  google.script.run.withSuccessHandler(timed('kioskLogin', function (r) {
     unwait();
     S.session = r.token; store('minyanSession', r.token);
     go('home');
     if (r.weakCode) flash('homeNote', 'err', 'מומלץ להחליף לקוד ארוך יותר (לפחות 6 תווים) — "שינוי קוד גבאי".');
-  }).withFailureHandler(function (e) { unwait(); flash('loginNote', 'err', errText(e)); }).kioskLogin(KEY, pin);
+  })).withFailureHandler(function (e) { unwait(); flash('loginNote', 'err', errText(e)); }).kioskLogin(KEY, pin);
 }
 function logout() {
   if (S.session) google.script.run.withFailureHandler(function () {}).kioskLogout(KEY, S.session);
@@ -109,6 +109,7 @@ function loggedOut(note) {
 function idleCheck() { if (S.session && Date.now() - S.seen > IDLE_MS) logout(); }
 
 function startGabbai() {
+  timingStart(DEBUG_MS);
   $('loginBtn').onclick = login;
   $('pin').addEventListener('keydown', function (e) { if (e.key === 'Enter') login(); });
   $('back').onclick = function () { go('home'); };
@@ -133,9 +134,9 @@ function startGabbai() {
   // A session from the registration page's gabbai mode (same browser tab) is used as it is.
   S.session = load('minyanSession') || '';
   if (!S.session) return go('login');
-  google.script.run.withSuccessHandler(function (info) {
+  google.script.run.withSuccessHandler(timed('gabbaiInit', function (info) {
     if (!info.session) return loggedOut('');
     setInfo(info);
     go('home');
-  }).withFailureHandler(function (e) { S.session = ''; go('login'); flash('loginNote', 'err', errText(e)); }).gabbaiInit(KEY, S.session);
+  })).withFailureHandler(function (e) { S.session = ''; go('login'); flash('loginNote', 'err', errText(e)); }).gabbaiInit(KEY, S.session);
 }

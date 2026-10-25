@@ -12,8 +12,8 @@ function needsLocation() { return !!(S.info && S.info.locationCheck) && !S.sessi
  * Always a fresh reading (maximumAge 0): an earlier one may be from before the person walked in — or out.
  */
 function getLocation(cb) {
-  var called = false;
-  function finish(x) { if (!called) { called = true; cb(x); } }
+  var called = false, done = ttime('GPS');
+  function finish(x) { if (!called) { called = true; done(null, x.error ? x.error : '±' + Math.round(x.acc) + ' m'); cb(x); } }
   if (!navigator.geolocation) return finish({ error: 'unsupported' });
   setTimeout(function () { finish({ error: 'timeout' }); }, LOC_TIMEOUT + 3000);
   try {

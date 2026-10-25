@@ -4,6 +4,7 @@
 // ======================================================================================
 
 function doGet(e) {
+  const t0 = Date.now();
   const key = kioskKey_();
   const ok = e && e.parameter && e.parameter.k === key;
   // "&device=kiosk" on the link marks the shul's own tablet, whatever the browser reports (see README).
@@ -12,16 +13,20 @@ function doGet(e) {
   const tools = ok && e.parameter.view === 'gabbai';
   let link = '';
   if (ok) { const ss = SpreadsheetApp.getActive(); link = kioskLink_(readSettings_(ss, ss.getSpreadsheetTimeZone())); }
-  const html = !ok ? page_('BadLinkPage')
+  // "&debug=1": the page shows a timing panel (scripts/common/timing.js); DEBUG_MS = the time spent here.
+  const debug = ok && e.parameter.debug === '1';
+  let html = !ok ? page_('BadLinkPage')
     : tools ? page_('GabbaiPage').replace('__KEY__', () => key).replace(/__HOME__/g, () => link)
     : page_('KioskPage').replace('__KEY__', () => key).replace('__DEVICE__', () => forced)
                         .replace('__TOOLS__', () => link ? link + '&view=gabbai' : '');
+  html = html.replace('__DEBUG__', () => debug ? String(Date.now() - t0) : '');
   return HtmlService.createHtmlOutput(html)
     .setTitle(tools ? 'כלי גבאי — מניין' : 'רישום נוכחות במניין')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
-function kioskInit(key, session) {
+function kioskInit(key, session) { return withMs_(Date.now(), kioskInit_(key, session)); }
+function kioskInit_(key, session) {
   checkKey_(key);
   const ss = SpreadsheetApp.getActive(), tz = ss.getSpreadsheetTimeZone();
   const s = readSettings_(ss, tz);
@@ -50,7 +55,8 @@ function kioskLookup(key, q) {
   return { byPhone: owner ? pub_(owner) : null, phoneKnown: !!owner, cands: cands };
 }
 
-function kioskSubmit(key, d) {
+function kioskSubmit(key, d) { return withMs_(Date.now(), kioskSubmit_(key, d)); }
+function kioskSubmit_(key, d) {
   checkKey_(key);
   d = d || {};
   const lock = LockService.getScriptLock();

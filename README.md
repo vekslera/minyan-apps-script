@@ -96,7 +96,7 @@ clasp login                # opens a browser: choose the minyan account and allo
 **Push:**
 
 ```bash
-clasp status      # lists what will be uploaded: 15 .gs files + Secrets.gs, 7 .html files (one in styles/), 25 scripts/…/*.js files, appsscript.json
+clasp status      # lists what will be uploaded: 15 .gs files + Secrets.gs, 7 .html files (one in styles/), 26 scripts/…/*.js files, appsscript.json
 clasp push -f     # -f overwrites the project's manifest without asking
 ```
 
@@ -110,8 +110,8 @@ In the script editor:
 1. Click the default file **`Code.gs`** → ⋮ → **Rename / שינוי שם** → `Setup`. Replace its content with the content of `Setup.gs`.
 2. For each of the other `.gs` files (`Admin`, `Auth`, `Config`, `Data`, `Duplicates`, `Gabbai`, `HebrewCalendar`, `Kiosk`, `Location`, `Matching`, `Names`, `Reports`, `Utils`, `WhatsApp`): **Files / קבצים → + → Script / סקריפט**. Type the name **without `.gs`** and paste the content.
 3. For each `.html` file: **+ → HTML**. Type the name **exactly**, without `.html`: `KioskPage`, `GabbaiPage`, `AdminPage`, `LinkDialog`, `ReportTextDialog`, `BadLinkPage`, then paste. Also `styles/tools` (from `styles/tools.html`, slash included).
-4. For each file in the `scripts` folder: also **+ → HTML** (not Script). Type its path **without `.js`**, slashes included, e.g. `scripts/kiosk/main`. Paste the file's content as it is. All 25 files:
-   `scripts/common/dom`, `scripts/common/clipboard`,
+4. For each file in the `scripts` folder: also **+ → HTML** (not Script). Type its path **without `.js`**, slashes included, e.g. `scripts/kiosk/main`. Paste the file's content as it is. All 26 files:
+   `scripts/common/dom`, `scripts/common/clipboard`, `scripts/common/timing`,
    `scripts/kiosk/helpers`, `scripts/kiosk/deviceDetection`, `scripts/kiosk/hebrewDate`, `scripts/kiosk/lookup`, `scripts/kiosk/registration`, `scripts/kiosk/gabbaiMode`, `scripts/kiosk/myPhone`, `scripts/kiosk/location`, `scripts/kiosk/main`,
    `scripts/admin/helpers`, `scripts/admin/import`, `scripts/admin/review`, `scripts/admin/main`,
    `scripts/gabbai/main`, `scripts/gabbai/reports`, `scripts/gabbai/draw`, `scripts/gabbai/duplicates`, `scripts/gabbai/link`, `scripts/gabbai/shul`, `scripts/gabbai/settings`, `scripts/gabbai/pin`,
@@ -387,7 +387,7 @@ Its closing message lists what moved. After that, `gabbaiPin`, `lotteryThreshold
 | `AdminPage.html` | Import + review dialog in the Sheet: markup |
 | `styles/tools.html` | Styles of the import and review screens, shared by `AdminPage` and `GabbaiPage` |
 | `LinkDialog.html`, `ReportTextDialog.html`, `BadLinkPage.html` | Small dialogs/pages |
-| `scripts/common/dom.js`, `clipboard.js` | Browser helpers shared by the pages |
+| `scripts/common/dom.js`, `clipboard.js`, `timing.js` | Browser helpers shared by the pages; `timing.js` = the `&debug=1` timing panel |
 | `scripts/kiosk/*.js` | Registration page: `helpers`, `deviceDetection`, `hebrewDate`, `lookup` (live suggestions), `registration` (submit/confirmation), `gabbaiMode`, `myPhone` (remembered number on a phone), `location` (location check, "outside the shul" panel, gabbai test), `main` (state + `startKiosk()`) |
 | `scripts/admin/*.js` | Import and review screens: `helpers`, `import`, `review` (used by both pages), `main` (the Sheet dialog's tabs + `startAdmin()`) |
 | `scripts/gabbai/*.js` | Gabbai tools page: `main` (login, navigation + `startGabbai()`), `reports`, `draw`, `duplicates`, `link`, `shul` (the shul's location), `settings`, `pin` |
@@ -439,6 +439,12 @@ node test/profile.js       # counts Google-service calls per action on a month o
 
 ## 14. Performance notes
 
+- **Measuring on a real phone: add `&debug=1` to the link** (registration page or gabbai tools). A small panel in the corner lists, in milliseconds from the moment the page frame started:
+  - **server built the page** — the time `doGet` spent;
+  - every **server call** (`kioskInit`, `kioskSubmit`, `gabbai…`), its total and, in brackets, the server's own share — the rest is Google's overhead and the network;
+  - **GPS** and its accuracy, **form ready**, **tap: register**, **confirmation shown**.
+
+  **copy** puts the list on the clipboard (to send it on). Without `&debug=1` nothing is shown or recorded. Not covered: the time before the page frame starts (Google's outer page loading).
 - **Each call to a Google service is the main cost**, roughly 30–150 ms on Google's servers. `test/profile.js` counts them per action.
 - **Name suggestions run in the page.** The registration page matches names itself, against the list of names it gets once on load and refreshes every 5 minutes. That list never includes phone numbers. Typing never waits for the server; only a complete phone number is checked there.
 - **Cache for read-only lookups.** People and settings are kept in the script cache for up to 10 minutes. The cache is cleared whenever the script writes, and by the `onEdit` trigger whenever someone edits the אנשים or הגדרות sheet by hand. Every write reads the sheet fresh, so the cache can never overwrite data.
