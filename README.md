@@ -394,6 +394,7 @@ Its closing message lists what moved. After that, `gabbaiPin`, `lotteryThreshold
 | `scripts/dialogs/*.js` | `linkDialog` (QR + copy), `reportText` (copy) |
 | `appsscript.json` | Manifest (time zone, V8, web-app access) |
 | `Secrets.gs.example` | Template for your private `Secrets.gs` |
+| `CLAUDE.md` | Notes for AI coding sessions (Claude): how the owner works, the Apps Script traps, tests, privacy rules |
 | `deploy.ps1`, `deploy.sh` | Push + update the existing web-app deployment |
 | `.claspignore` | Keeps docs, tests and scripts out of `clasp push` |
 | `test/` | Local tests against a simulated Sheet (not uploaded) |
