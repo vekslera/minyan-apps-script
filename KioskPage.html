@@ -57,6 +57,10 @@ input.tel{direction:ltr;text-align:right;letter-spacing:.5px}
 .closed{text-align:center;padding:30px 10px;font-size:23px;font-weight:700}
 .closed small{display:block;font-weight:400;color:var(--muted);font-size:17px;margin-top:8px}
 footer{text-align:center;margin-top:20px}
+/* "מצב גבאי": a link, not a filled button — but big and easy to tap */
+.gabbai-link{font:inherit;font-size:20px;font-weight:700;color:var(--accent);background:none;border:0;text-decoration:underline;
+  text-decoration-thickness:2px;text-underline-offset:5px;padding:12px 26px;min-height:48px;cursor:pointer;border-radius:12px}
+.gabbai-link:hover,.gabbai-link:focus-visible{background:var(--accent-soft)}
 .link{background:none;border:0;color:var(--muted);text-decoration:underline;font:inherit;font-size:15px;cursor:pointer;padding:6px}
 .gabbai{background:var(--ink);color:#fff;border-radius:14px;padding:10px 14px;margin-bottom:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between;font-weight:700}
 .gabbai label{display:flex;gap:8px;align-items:center;font-weight:400}
@@ -150,7 +154,7 @@ window.onerror = function (msg) {
     </div>
   </div>
 
-  <footer><button class="link" id="gabbaiOn" type="button">מצב גבאי</button><div class="device" id="deviceLabel"></div>
+  <footer><button class="gabbai-link" id="gabbaiOn" type="button">מצב גבאי</button><div class="device" id="deviceLabel"></div>
     <div class="credit" dir="ltr">Built with Google Scripts<br>By <b>Alex Veksler</b><br><a href="mailto:vekslera@gmail.com" target="_blank">vekslera@gmail.com</a><br><a href="tel:+972528353205" target="_top">+972-52-8353205</a></div></footer>
 </div>
 
