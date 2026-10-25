@@ -183,15 +183,16 @@ Then upload it with `clasp push` (route B: just save the file).
 | 2 | שם המניין | Shown at the top of the page and in the reports |
 | 3 | תחילת התקופה | First day of the lottery period |
 | 4 | סוף התקופה | Last day of the period |
-| 5 | אחוז נוכחות מינימלי להגרלה | `75` means 75% or more |
+| 5 | אחוז נוכחות מינימלי להגרלה | `75` means 75% or more. **`0` = no lottery** (switched off) |
 | 6–7 | רישום עצמי פתוח משעה / עד שעה | Self-registration hours in half-hour steps, e.g. `8:30` and `11:00` (`8`, `8.5` also work). Kept as text. The gabbai can register at any time |
 | 8–9 | מיקום בית הכנסת — קו רוחב / קו אורך | The shul's point. Empty = no location check. Best set by measuring in the shul ([below](#location-check-registering-from-the-shul)) |
 | 10 | רדיוס מותר (מטרים) | Self-registration only within this distance; 40–60 is usually right |
 | 11 | סטיית GPS מותרת (מטרים) | How much GPS inaccuracy is forgiven beyond the radius. Empty = half the radius |
-| 12 | אחוז נוכחות מינימלי לדוח לרבי | Who is included in the report to the Rebbe, e.g. `25` = 25% or more of the minyan days (usually much lower than the lottery threshold) |
+| 12 | אחוז נוכחות מינימלי לדוח לרבי | Who is included in the report to the Rebbe, e.g. `25` = 25% or more of the minyan days (usually much lower than the lottery threshold). **`0` = no report** (switched off) |
 
 - **Values go in column B.** Column C is only an explanation, and a value typed there is ignored.
 - **Days with no minyan.** Column **E**, one date per cell, for weekdays with no registration (e.g. Yom Tov). They don't count toward the percentage.
+- **Switching the lottery or the report off.** A threshold of `0` switches it off. The tool stays in the gabbai tools (greyed out, marked **כבוי**) and in the מניין menu (marked "(כבוי)"); choosing it explains how to switch it on again. With the lottery off, the period summary lists attendance without ✓ marks.
 - **The gabbai code is not in this sheet.** A new installation gets a random 6-digit code; `setup` shows it once. Change it with **מניין → שינוי קוד גבאי**.
 
 ---

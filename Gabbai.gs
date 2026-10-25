@@ -17,7 +17,7 @@ function gabbaiInit(key, session) {
   checkKey_(key);
   const ss = SpreadsheetApp.getActive(), tz = ss.getSpreadsheetTimeZone();
   const s = readSettings_(ss, tz);
-  const base = { name: s.name, today: todayKey_(tz) };
+  const base = { name: s.name, today: todayKey_(tz), lotteryOn: s.threshold > 0, rebbeOn: s.rebbe > 0 };
   if (!sessionValid_(key, session)) return Object.assign(base, { session: false });
   return Object.assign(base, {
     // The tile counts names, as the review screen shows them (not entries: one person may wait for several days).
@@ -104,8 +104,8 @@ function gabbaiSaveSettings(key, session, d) {
   if (!(half(from) && half(to) && from >= 0 && to <= 24 && from < to)) throw new Error('שעות הרישום אינן תקינות: "משעה" צריכה להיות לפני "עד שעה", בקפיצות של חצי שעה');
   if (!start || !end) throw new Error('תאריכי התקופה אינם תקינים');
   if (start > end) throw new Error('תחילת התקופה אחרי סופה');
-  if (!(thr >= 1 && thr <= 100)) throw new Error('אחוז הנוכחות להגרלה צריך להיות בין 1 ל-100');
-  if (!(reb >= 1 && reb <= 100)) throw new Error('אחוז הנוכחות לדוח לרבי צריך להיות בין 1 ל-100');
+  if (!(thr >= 0 && thr <= 100)) throw new Error('אחוז הנוכחות להגרלה צריך להיות בין 0 (כבוי) ל-100');
+  if (!(reb >= 0 && reb <= 100)) throw new Error('אחוז הנוכחות לדוח לרבי צריך להיות בין 0 (כבוי) ל-100');
   const v = {};
   v[SET.NAME] = name; v[SET.FROM] = fmtHour_(from); v[SET.TO] = fmtHour_(to); v[SET.PCT] = Math.round(thr * 10) / 10; v[SET.REBBE] = Math.round(reb * 10) / 10;
   v[SET.START] = keyToDate_(start, tz); v[SET.END] = keyToDate_(end, tz);

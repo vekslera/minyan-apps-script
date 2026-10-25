@@ -31,6 +31,9 @@
 // ======================================================================================
 
 function onOpen() {
+  // A switched-off tool (threshold 0) stays in the menu, marked "(כבוי)"; choosing it explains how to switch it on.
+  let lotteryOn = true, rebbeOn = true;
+  try { const ss = SpreadsheetApp.getActive(), s = readSettings_(ss, ss.getSpreadsheetTimeZone()); lotteryOn = s.threshold > 0; rebbeOn = s.rebbe > 0; } catch (e) {}
   SpreadsheetApp.getUi().createMenu('מניין')
     .addItem('קישור לדף הרישום', 'menuKioskLink')
     .addItem('רישומים לבדיקה', 'menuReview')
@@ -38,8 +41,8 @@ function onOpen() {
     .addSeparator()
     .addItem('דוח שבועי', 'menuWeekly')
     .addItem('דוח סופי לתקופה', 'menuFinal')
-    .addItem('דוח לרבי', 'menuRebbe')
-    .addItem('הגרלה', 'menuDraw')
+    .addItem(rebbeOn ? 'דוח לרבי' : 'דוח לרבי (כבוי)', 'menuRebbe')
+    .addItem(lotteryOn ? 'הגרלה' : 'הגרלה (כבוי)', 'menuDraw')
     .addSeparator()
     .addItem('איתור כפילויות', 'menuFindDuplicates')
     .addItem('מיזוג הכפילויות המסומנות', 'menuMerge')
@@ -54,6 +57,7 @@ function onEdit(e) {
   try {
     const name = e && e.range ? e.range.getSheet().getName() : '';
     if (name === SH.PEOPLE || name === SH.SETTINGS) cacheClear_();
+    if (name === SH.SETTINGS) { try { onOpen(); } catch (err) {} }        // menu labels follow the thresholds
   } catch (err) {}
 }
 
@@ -157,6 +161,7 @@ function migrateSettings_(st, tz) {
   defaults[SET.LAT] = ''; defaults[SET.LNG] = ''; defaults[SET.RADIUS] = SHUL_SET.NEW_RADIUS; defaults[SET.TOL] = '';
   SET_ROWS.forEach(r => { value[r[0]] = old[r[0]] ? old[r[0]].b : defaults[r[0]]; note[r[0]] = old[r[0]] && String(old[r[0]].c) ? old[r[0]].c : r[1]; });
   if (/שעה עגולה/.test(String(note[SET.FROM]))) note[SET.FROM] = SET_ROWS.find(r => r[0] === SET.FROM)[1];   // older wording
+  [SET.PCT, SET.REBBE].forEach(l => { if (!/כבוי/.test(String(note[l]))) note[l] = SET_ROWS.find(r => r[0] === l)[1]; });   // mention "0 = off"
   // Hours as text ("8:30"): a number stays as it is, a time typed into the cell becomes "H:MM".
   [SET.FROM, SET.TO].forEach(l => { const h = parseHour_(value[l], null, tz); if (h != null) value[l] = fmtHour_(h); });
 
@@ -226,6 +231,7 @@ function writeHelp_(sh) {
     ['דוח שבועי: נוכחות כל אחד ב-7 הימים האחרונים, וגם טקסט מוכן להדבקה בוואטסאפ.'],
     ['דוח סופי: נוכחות לכל התקופה, וגם סיכום קצר להדבקה בוואטסאפ. משתתפים בהגרלה מי שהגיע ל-75% מימי המניין ומעלה (ניתן לשנות בהגדרות).'],
     ['דוח לרבי: רשימת השמות של מי שהגיע ל-25% מימי המניין ומעלה (ניתן לשנות בהגדרות), לפי שם משפחה, להדבקה בוואטסאפ. בכלי הגבאי או בתפריט מניין ← דוח לרבי.'],
+    ['אחוז 0 מכבה: אחוז 0 להגרלה = ללא הגרלה; אחוז 0 לדוח לרבי = ללא דוח. הכלי נשאר ברשימה ומסומן "כבוי".'],
     ['ימי מניין: ראשון עד שישי. ימים שבהם אין רישום (למשל יום טוב) — בכלי הגבאי ← הגדרות, או בעמודה E בגיליון הגדרות.'],
     ['הגדרות: כל ההגדרות שהגבאי משנה (שם, שעות, תקופה, אחוז, מיקום) נמצאות בגיליון "הגדרות" ובכלי הגבאי ← הגדרות. אחרי עדכון גרסה מריצים פעם אחת: מניין ← הגדרה ראשונית.'],
     [''],

@@ -160,7 +160,7 @@ function personStats_(ctx, id) {
   const r = st.rows.find(x => x.person.id === id);
   const count = r ? r.count : 0;
   return { count: count, days: st.days.length, pct: Math.round(100 * count / st.days.length),
-           eligible: count * 100 >= s.threshold * st.days.length, threshold: s.threshold };
+           eligible: s.threshold > 0 && count * 100 >= s.threshold * st.days.length, threshold: s.threshold };
 }
 
 /** "דף רישום · נייד" — where a self-registration came from, as the page detected it. */

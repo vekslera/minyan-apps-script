@@ -21,6 +21,9 @@ main{max-width:980px;margin:0 auto}
 .tile{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:right;font:inherit;font-weight:800;font-size:17px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px 16px;cursor:pointer;min-height:84px}
 .tile:hover{border-color:var(--accent)}
 .tile small{font-weight:600;font-size:13px;color:var(--muted)}
+.tile:disabled{opacity:.55;cursor:default;border-style:dashed}
+.tile:disabled:hover{border-color:var(--line)}
+.tile .off{font-size:12px;font-weight:700;color:var(--err);background:var(--err-bg);border-radius:999px;padding:1px 8px}
 .tile .count{font-size:14px}
 .foot{color:var(--muted);font-size:14px;margin:16px 2px}
 .credit{color:var(--muted);font-size:15px;font-weight:600;line-height:1.6;margin-top:22px;text-align:center}
@@ -207,8 +210,9 @@ window.onerror = function (msg) {
       <label>תחילת התקופה <input type="date" id="setStart"></label>
       <label>סוף התקופה <input type="date" id="setEnd"></label>
     </div>
-    <div class="row"><label>אחוז נוכחות להגרלה <input type="number" id="setPct" min="1" max="100" step="1" style="width:80px">%</label></div>
-    <div class="row"><label>אחוז נוכחות לדוח לרבי <input type="number" id="setRebbe" min="1" max="100" step="1" style="width:80px">%</label></div>
+    <div class="row"><label>אחוז נוכחות להגרלה <input type="number" id="setPct" min="0" max="100" step="1" style="width:80px">%</label></div>
+    <div class="row"><label>אחוז נוכחות לדוח לרבי <input type="number" id="setRebbe" min="0" max="100" step="1" style="width:80px">%</label></div>
+    <p class="g-meta"><b>0 = כבוי:</b> אחוז 0 מכבה את ההגרלה או את הדוח לרבי. הכלי נשאר ברשימה ומסומן "כבוי"; כדי להפעיל שוב — כותבים אחוז גדול מ-0.</p>
     <button class="btn primary" id="setSave" type="button">שמירה</button>
     <p class="g-meta" style="margin-top:10px">מחוץ לשעות הרישום אפשר לרשום רק במצב גבאי. השינויים נשמרים בגיליון "הגדרות".</p>
   </div>

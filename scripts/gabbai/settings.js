@@ -43,8 +43,9 @@ function saveSettings() {
   wait('setSave');
   call('SaveSettings', [d], function (g) {
     unwait(); renderSettings(g);
-    if (S.info) { S.info.name = g.name; $('sub').textContent = g.name; S.info.at = 0; }
-    flash('settingsNote', 'ok', 'ההגדרות נשמרו. רישום עצמי: ' + fmtHour_(g.from) + '–' + fmtHour_(g.to) + '.');
+    if (S.info) { S.info.name = g.name; $('sub').textContent = g.name; S.info.at = 0; S.info.lotteryOn = g.threshold > 0; S.info.rebbeOn = g.rebbe > 0; }
+    flash('settingsNote', 'ok', 'ההגדרות נשמרו. רישום עצמי: ' + fmtHour_(g.from) + '–' + fmtHour_(g.to) + '.' +
+          (g.threshold > 0 ? '' : ' ההגרלה כבויה.') + (g.rebbe > 0 ? '' : ' הדוח לרבי כבוי.'));
   });
 }
 function addNoMinyan() {

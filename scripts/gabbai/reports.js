@@ -15,7 +15,8 @@ function runWeekly() {
 
 function openFinal() {
   var p = S.info && S.info.period;
-  $('finalLead').textContent = p ? 'התקופה: ' + p.start + ' – ' + p.end + '. בהגרלה משתתפים מי שהגיעו ל-' + p.threshold + '% מימי המניין ומעלה.'
+  $('finalLead').textContent = p ? 'התקופה: ' + p.start + ' – ' + p.end + '. ' +
+                                   (S.info.lotteryOn ? 'בהגרלה משתתפים מי שהגיעו ל-' + p.threshold + '% מימי המניין ומעלה.' : 'ההגרלה כבויה — הסיכום בלי סימון משתתפים.')
                                  : 'תחילת וסוף התקופה עדיין לא מולאו בגיליון "הגדרות".';
   $('finalBtn').disabled = !p;
 }

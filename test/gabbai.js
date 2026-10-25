@@ -200,8 +200,22 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
   assert(!G.readSettings_(env.ss, 'Asia/Jerusalem').excluded.has(nm));
   assert(!(await overflow(p)), 'settings fit the phone');
   await p.screenshot({ path: 'test/shots/g12-phone-settings.png', fullPage: true });
-  await p.click('#back'); await p.waitForTimeout(400);
-  assert(/70%/.test(await p.textContent('#period')), 'home shows the new threshold');
+  // 0 = off: the tiles stay, disabled and marked "כבוי"
+  await p.fill('#setPct', '0'); await p.fill('#setRebbe', '0'); await p.click('#setSave'); await p.waitForTimeout(400);
+  assert(/ההגרלה כבויה/.test(await p.textContent('#settingsNote')) && /הדוח לרבי כבוי/.test(await p.textContent('#settingsNote')));
+  await p.click('#back'); await p.waitForTimeout(500);
+  for (const v of ['draw', 'rebbe']) {
+    assert(await p.isDisabled('[data-go=' + v + ']'), v + ' disabled');
+    assert(/כבוי/.test(await p.textContent('[data-go=' + v + ']')), v + ' marked');
+  }
+  assert(/הגרלה: כבויה/.test(await p.textContent('#period')));
+  await p.screenshot({ path: 'test/shots/g14-phone-off.png', fullPage: true });
+  await tile(p, 'settings');
+  await p.fill('#setPct', '70'); await p.fill('#setRebbe', '30'); await p.click('#setSave'); await p.waitForTimeout(400);
+  await p.click('#back'); await p.waitForTimeout(500);
+  assert(!(await p.isDisabled('[data-go=draw]')) && !/כבוי/.test(await p.textContent('[data-go=draw]')), 'back on');
+  assert(/הגרלה מ-70%/.test(await p.textContent('#period')), 'home shows the new threshold');
+  await tile(p, 'settings');
   env.userEdit('הגדרות', 'B6', 0); env.userEdit('הגדרות', 'B7', 24);   // back to "open all day" for the rest
   await p.close(); await sctx.close();
 

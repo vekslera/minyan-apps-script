@@ -51,6 +51,9 @@ function menuFinal() {
 }
 
 const NO_PERIOD = 'נא למלא תחילת וסוף התקופה בגיליון הגדרות';
+// A threshold of 0 switches the tool off.
+const LOTTERY_OFF = 'ההגרלה כבויה: אחוז הנוכחות להגרלה הוא 0. להפעלה — כלי גבאי ← הגדרות, או גיליון הגדרות.';
+const REBBE_OFF = 'הדוח לרבי כבוי: אחוז הנוכחות לדוח הוא 0. להפעלה — כלי גבאי ← הגדרות, או גיליון הגדרות.';
 
 /** Writes the final-summary sheet and returns the WhatsApp text. Shared with the web tools. */
 function finalReport_(ctx, fromWeb) {
@@ -58,7 +61,7 @@ function finalReport_(ctx, fromWeb) {
   if (!s.start || !s.end) throw new Error(NO_PERIOD);
   const stats = computeStats_(ctx, s.start, s.end);
   const soFar = s.end > todayKey_(ctx.tz) ? ' (עד היום)' : '';
-  writeReport_(ctx, SH.FINAL, 'נוכחות לתקופה' + soFar, stats, true, fromWeb);
+  writeReport_(ctx, SH.FINAL, 'נוכחות לתקופה' + soFar, stats, s.threshold > 0, fromWeb);
   return { text: finalText_(ctx, stats, !!soFar), sheet: SH.FINAL, days: stats.days.length, people: stats.rows.length,
            eligible: stats.rows.filter(r => r.eligible).length, missing: stats.missing.map(fmtShort_),
            pending: countPending_(ctx.ss) };
@@ -72,12 +75,13 @@ function finalText_(ctx, stats, soFar) {
   const n = stats.days.length;
   const need = Math.ceil(stats.threshold * n / 100);
   const eligible = stats.rows.filter(r => r.eligible).length;
+  const lottery = stats.threshold > 0;                                         // 0 = no lottery: no ✓ and no lottery lines
   const lines = ['*' + ctx.settings.name + ' — סיכום התקופה ' + fmtShort_(stats.start) + ' עד ' + fmtShort_(stats.end) +
                  (soFar ? ' (עד היום)' : '') + '*',
-                 n + ' ימי מניין · בהגרלה: ' + stats.threshold + '% ומעלה' + (n ? ' (לפחות ' + need + ' מתוך ' + n + ')' : ''), ''];
+                 n + ' ימי מניין' + (lottery ? ' · בהגרלה: ' + stats.threshold + '% ומעלה' + (n ? ' (לפחות ' + need + ' מתוך ' + n + ')' : '') : ''), ''];
   stats.rows.forEach((r, i) => lines.push((i + 1) + '. ' + displayName_(r.person) + ' — ' + r.count + '/' + n + (r.eligible ? ' ✓' : '')));
   if (!stats.rows.length) lines.push('(אין רישומים)');
-  lines.push('', eligible ? '✓ = משתתף בהגרלה (' + eligible + ')' : 'עדיין אין מי שהגיע ל-' + stats.threshold + '% מימי המניין.');
+  if (lottery) lines.push('', eligible ? '✓ = משתתף בהגרלה (' + eligible + ')' : 'עדיין אין מי שהגיע ל-' + stats.threshold + '% מימי המניין.');
   lines.push('', 'יישר כח לכל המתפללים!');
   return lines.join('\n');
 }
@@ -89,6 +93,7 @@ function finalText_(ctx, stats, soFar) {
 /** {text, names, days, threshold, start, end, pending} for the period in הגדרות. */
 function rebbeReport_(ctx) {
   const s = ctx.settings;
+  if (!(s.rebbe > 0)) throw new Error(REBBE_OFF);
   if (!s.start || !s.end) throw new Error(NO_PERIOD);
   const stats = computeStats_(ctx, s.start, s.end);
   const n = stats.days.length, thr = s.rebbe;
@@ -107,6 +112,7 @@ function rebbeReport_(ctx) {
 function menuRebbe() {
   SpreadsheetApp.getUi();
   const ctx = loadCtx_(SpreadsheetApp.getActive());
+  if (!(ctx.settings.rebbe > 0)) { SpreadsheetApp.getUi().alert(REBBE_OFF); return; }
   if (!ctx.settings.start || !ctx.settings.end) { SpreadsheetApp.getUi().alert(NO_PERIOD); return; }
   showReportText_(ctx, rebbeReport_(ctx).text, 'דוח לרבי — טקסט להדבקה בוואטסאפ', true);
 }
@@ -132,7 +138,7 @@ function computeStats_(ctx, startKey, endKey) {
     const count = byPerson[id].size;
     return { person: ctx.byId[id], dates: byPerson[id], count: count,
              pct: days.length ? count / days.length : 0,
-             eligible: days.length > 0 && count * 100 >= thr * days.length };
+             eligible: thr > 0 && days.length > 0 && count * 100 >= thr * days.length };   // threshold 0 = no lottery
   }).sort((a, b) => b.pct - a.pct || displayName_(a.person).localeCompare(displayName_(b.person), 'he'));
   return { start: startKey, end: last < startKey ? startKey : last, days: days, rows: rows,
            missing: days.filter(d => !recorded.has(d)), threshold: thr };
@@ -184,6 +190,7 @@ function menuDraw() {
   const ui = SpreadsheetApp.getUi();
   const ctx = loadCtx_(SpreadsheetApp.getActive());
   const s = ctx.settings;
+  if (!(s.threshold > 0)) { ui.alert(LOTTERY_OFF); return; }
   if (!s.start || !s.end) { ui.alert(NO_PERIOD); return; }
   const info = drawInfo_(ctx);
   if (!info.eligible.length) { ui.alert('עדיין אין מי שהגיע ל-' + info.threshold + '% מימי המניין'); return; }
@@ -199,6 +206,7 @@ function menuDraw() {
 /** Who takes part in the lottery for the period in הגדרות. */
 function drawInfo_(ctx) {
   const s = ctx.settings;
+  if (!(s.threshold > 0)) throw new Error(LOTTERY_OFF);
   if (!s.start || !s.end) throw new Error(NO_PERIOD);
   const stats = computeStats_(ctx, s.start, s.end);
   return { start: fmtKey_(stats.start), end: fmtKey_(stats.end), days: stats.days.length, threshold: stats.threshold,
@@ -208,6 +216,7 @@ function drawInfo_(ctx) {
 
 /** Draws one winner among the eligible, logs the draw in the הגרלות sheet and returns the winner. */
 function draw_(ctx) {
+  if (!(ctx.settings.threshold > 0)) throw new Error(LOTTERY_OFF);
   const stats = computeStats_(ctx, ctx.settings.start, ctx.settings.end);
   const eligible = stats.rows.filter(r => r.eligible);
   if (!eligible.length) throw new Error('עדיין אין מי שהגיע ל-' + stats.threshold + '% מימי המניין');

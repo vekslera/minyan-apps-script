@@ -553,7 +553,7 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { rebbe: 101 })), /לדוח לרבי/);
   assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { from: 11, to: 8 })), /שעות הרישום/);
   assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { start: g.end, end: g.start })), /אחרי סופה/);
-  assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { threshold: 0 })), /בין 1 ל-100/);
+  assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { threshold: -1 })), /בין 0 \(כבוי\) ל-100/);
   assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { name: ' ' })), /חסר שם/);
   g = W('gabbaiSaveSettings', k, s, base);
   assert.equal(g.from, 8); assert.equal(g.threshold, 70); assert.equal(g.name, 'מניין סטיינבך');
@@ -592,6 +592,32 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   const closed = Q.kioskSubmit(k, { first: 'א', last: 'ב', device: 'mobile' });
   assert.equal(closed.ok, false); assert(closed.message.includes(Q.fmtHour_(slot + 0.5)), closed.message);
   assert(/:30|:00/.test(closed.message));
+  // ---- 0 = off: lottery and report to the Rebbe ----
+  envG.userEdit('הגדרות', 'B6', '0:00'); envG.userEdit('הגדרות', 'B7', '24:00');
+  Q.kioskSubmit(k, { phone: '0521111111', first: 'משה', last: 'כהן', device: 'tablet' });
+  for (let n = 1; n <= 3; n++) { const d = Q.addDays_(g.today, -n); if (Q.dow_(d) !== 6) Q.kioskSubmit(k, { phone: '0521111111', session: s, date: d }); }
+  g = W('gabbaiSaveSettings', k, s, Object.assign({}, base, { start: Q.addDays_(g.today, -5), threshold: 0, rebbe: 0 }));
+  assert.equal(g.threshold, 0); assert.equal(g.rebbe, 0);
+  let init = W('gabbaiInit', k, s);
+  assert.equal(init.lotteryOn, false); assert.equal(init.rebbeOn, false);
+  assert.throws(() => W('gabbaiDrawInfo', k, s), /ההגרלה כבויה/);
+  assert.throws(() => W('gabbaiDraw', k, s), /ההגרלה כבויה/);
+  assert.throws(() => W('gabbaiRebbe', k, s), /הדוח לרבי כבוי/);
+  const fin = W('gabbaiFinal', k, s);
+  assert(!/✓|בהגרלה|משתתף/.test(fin.text), 'summary without lottery marks:\n' + fin.text);
+  assert(/משה כהן — \d+\/\d+$/m.test(fin.text));
+  const pst = Q.personStats_(Q.loadCtx_(envG.ss), 'P001');
+  assert(pst && pst.count >= 1 && pst.eligible === false, 'no "✓ עומד בתנאי ההגרלה" on the page: ' + JSON.stringify(pst));
+  // the Sheet menu: still there, marked; choosing it explains
+  Q.onOpen();
+  Q.menuDraw(); assert(/ההגרלה כבויה/.test(envG.log.filter(l => l[0] === 'alert').slice(-1)[0][1]));
+  Q.menuRebbe(); assert(/הדוח לרבי כבוי/.test(envG.log.filter(l => l[0] === 'alert').slice(-1)[0][1]));
+  // back on
+  g = W('gabbaiSaveSettings', k, s, Object.assign({}, base, { start: Q.addDays_(g.today, -5), threshold: 50, rebbe: 25 }));
+  init = W('gabbaiInit', k, s);
+  assert.equal(init.lotteryOn, true); assert.equal(init.rebbeOn, true);
+  assert(W('gabbaiDrawInfo', k, s).eligible.length >= 1);
+  assert(/משה כהן/.test(W('gabbaiRebbe', k, s).text));
   console.log('gabbai settings OK');
 }
 

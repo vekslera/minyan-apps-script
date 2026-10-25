@@ -67,7 +67,20 @@ function setInfo(info) {
   S.info = info; info.at = Date.now();
   $('sub').textContent = info.name || '';
   $('cnt').textContent = info.pending; show('cnt', info.pending > 0);
-  $('period').textContent = info.period ? '· תקופה: ' + info.period.start + ' – ' + info.period.end + ' · הגרלה מ-' + info.period.threshold + '%' : '';
+  $('period').textContent = info.period ? '· תקופה: ' + info.period.start + ' – ' + info.period.end + ' · ' +
+    (info.lotteryOn ? 'הגרלה מ-' + info.period.threshold + '%' : 'הגרלה: כבויה') : '';
+  offTile('draw', !info.lotteryOn, 'ההגרלה כבויה (אחוז 0 בהגדרות)');
+  offTile('rebbe', !info.rebbeOn, 'הדוח כבוי (אחוז 0 בהגדרות)');
+}
+/** A switched-off tool stays on the home screen, disabled, with "כבוי" and how to switch it on. */
+function offTile(v, off, why) {
+  var t = document.querySelector('[data-go=' + v + ']');
+  if (!t.getAttribute('data-small')) t.setAttribute('data-small', t.querySelector('small').textContent);
+  t.disabled = off;
+  t.querySelector('small').textContent = off ? why : t.getAttribute('data-small');
+  var badge = t.querySelector('.off');
+  if (off && !badge) t.insertAdjacentHTML('beforeend', '<span class="off">כבוי</span>');
+  if (!off && badge) badge.remove();
 }
 
 function login() {
