@@ -26,6 +26,7 @@ function refreshClosed() {
     else if (!i.open) why = 'הרישום סגור כעת<small>הרישום פתוח בין השעות ' + i.from + ':00 ל-' + i.to + ':00</small>';
     else if (DEVICE === 'desktop') why = 'רישום עצמי — מטלפון נייד או מטאבלט<small>במחשב אפשר לרשום רק במצב גבאי</small>';
   }
+  show('locNote', !why && needsLocation());
   $('closed').innerHTML = why;
   show('closed', !!why);
   if (!$('done').hidden || !$('where').hidden) return;

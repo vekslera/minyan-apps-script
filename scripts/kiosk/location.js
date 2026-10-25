@@ -88,7 +88,8 @@ function locationHelp(err, again) {
     steps = [turnOn];
   }
   steps.push('ללחוץ "אפשר מיקום" כאן ולאשר אם הטלפון שואל.');
-  return esc(lead) + ' מה עושים:<ol>' + steps.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol>';
+  return esc(lead) + ' מה עושים:<ol>' + steps.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol>' +
+         '<p class="privacy">המיקום לא נשמר — הוא משמש רק לבדיקה שאתה בבית הכנסת.</p>';
 }
 function hideWhere() { show('where', false); show('form', true); }
 function retryWhere() { hideWhere(); resubmit(false); }

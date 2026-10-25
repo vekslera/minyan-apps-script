@@ -41,6 +41,7 @@ input.tel{direction:ltr;text-align:right;letter-spacing:.5px}
 .primary:disabled{opacity:.55;cursor:default}
 .msg{padding:10px 14px;border-radius:12px;margin:0 0 12px;font-weight:700}
 .where-text{margin:0 0 16px;line-height:1.5}
+.where-text .privacy,.locnote{color:var(--muted);font-size:15px;margin:10px 0 0;text-align:center}
 .where-text ol{text-align:right;margin:10px 0 0;padding:0 22px 0 0;font-size:17px}
 .where-text li{margin:4px 0}
 .msg.err{background:var(--err-bg);color:var(--err)}
@@ -126,6 +127,7 @@ window.onerror = function (msg) {
 
       <div class="msg err" id="msg" hidden></div>
       <button class="primary" id="submit" type="submit">רישום נוכחות</button>
+      <p class="locnote" id="locNote" hidden>בעת הרישום הטלפון יבקש גישה למיקום. המיקום לא נשמר — הוא משמש רק לבדיקה שאתה בבית הכנסת.</p>
     </form>
 
     <div class="where" id="where" hidden>

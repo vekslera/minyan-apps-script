@@ -33,6 +33,7 @@ const sent = [];
 
   // 1. inside the shul → registered
   let { ctx, p } = await open(Object.assign({ geolocation: Object.assign(north(30), { accuracy: 15 }) }, phone));
+  assert(await p.isVisible('#locNote') && /המיקום לא נשמר/.test(await p.textContent('#locNote')), 'privacy note on the form');
   await p.fill('#phone', '0521111111'); await p.waitForTimeout(300); await p.click('#submit'); await p.waitForTimeout(500);
   console.log('inside →', (await p.textContent('#doneTitle')).trim());
   assert(/משה כהן/.test(await p.textContent('#doneTitle')));
@@ -64,6 +65,7 @@ const sent = [];
   assert.equal((await p.textContent('#whereTitle')).trim(), 'לא התקבל מיקום');
   assert(await p.isVisible('#whereAllow')); assert(await p.isHidden('#whereRetry'));
   assert(/שירותי מיקום/.test(await p.textContent('#whereText')) && /אתרי Safari/.test(await p.textContent('#whereText')), 'iPhone steps');
+  assert(/המיקום לא נשמר/.test(await p.textContent('#whereText')), 'privacy note when asking to enable location');
   await p.screenshot({ path: 'test/shots/l2-no-permission.png', fullPage: true });
   // still refused → the steps again; then the person allows it → "אפשר מיקום" registers
   await p.click('#whereAllow'); await p.waitForTimeout(500);
@@ -101,6 +103,7 @@ const sent = [];
   // 5. a computer: self-registration closed, gabbai mode works, with the location test
   ({ ctx, p } = await open({ permissions: ['geolocation'], geolocation: Object.assign(north(60), { accuracy: 12 }) }));
   console.log('computer →', (await p.textContent('#closed')).trim());
+  assert(await p.isHidden('#locNote'), 'no location note where nothing is checked');
   assert.equal(await p.isVisible('#form'), false);
   await p.click('#gabbaiOn'); await p.fill('#pin', pin); await p.click('#pinOk'); await p.waitForTimeout(400);
   assert.equal(await p.isVisible('#form'), true);
