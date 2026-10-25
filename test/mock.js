@@ -83,9 +83,11 @@ function makeEnv(opts) {
   const web = { url: '' };
   const now = { offsetMs: 0 };
   const fmt = (d, tz, f) => {
-    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hour12: false }).formatToParts(d).map(p => [p.type, p.value]));
+    const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(d).map(p => [p.type, p.value]));
     if (f === 'yyyy-MM-dd') return `${parts.year}-${parts.month}-${parts.day}`;
     if (f === 'H') return String(Number(parts.hour) % 24);
+    if (f === 'H:mm') return (Number(parts.hour) % 24) + ':' + parts.minute;
+    if (f === 'HH:mm') return String(Number(parts.hour) % 24).padStart(2, '0') + ':' + parts.minute;
     throw new Error('fmt ' + f);
   };
   const RealDate = Date;

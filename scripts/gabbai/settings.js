@@ -10,8 +10,8 @@ function loadSettings() {
 }
 function fillHours() {
   if ($('setFrom').options.length) return;
-  for (var h = 0; h <= 24; h++) {
-    var label = (h < 10 ? '0' : '') + h + ':00';
+  for (var h = 0; h <= 24; h += 0.5) {                     // every half hour: 8:00, 8:30, 9:00 …
+    var label = fmtHour_(h);
     if (h < 24) $('setFrom').add(new Option(label, String(h)));
     if (h > 0) $('setTo').add(new Option(label, String(h)));
   }
@@ -42,7 +42,7 @@ function saveSettings() {
   call('SaveSettings', [d], function (g) {
     unwait(); renderSettings(g);
     if (S.info) { S.info.name = g.name; $('sub').textContent = g.name; S.info.at = 0; }
-    flash('settingsNote', 'ok', 'ההגדרות נשמרו. רישום עצמי: ' + g.from + ':00–' + g.to + ':00.');
+    flash('settingsNote', 'ok', 'ההגדרות נשמרו. רישום עצמי: ' + fmtHour_(g.from) + '–' + fmtHour_(g.to) + '.');
   });
 }
 function addNoMinyan() {

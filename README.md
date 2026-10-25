@@ -184,7 +184,7 @@ Then upload it with `clasp push` (route B: just save the file).
 | 3 | תחילת התקופה | First day of the lottery period |
 | 4 | סוף התקופה | Last day of the period |
 | 5 | אחוז נוכחות מינימלי להגרלה | `75` means 75% or more |
-| 6–7 | רישום עצמי פתוח משעה / עד שעה | Self-registration hours, e.g. `8` and `11`. The gabbai can register at any time |
+| 6–7 | רישום עצמי פתוח משעה / עד שעה | Self-registration hours in half-hour steps, e.g. `8:30` and `11:00` (`8`, `8.5` also work). Kept as text. The gabbai can register at any time |
 | 8–9 | מיקום בית הכנסת — קו רוחב / קו אורך | The shul's point. Empty = no location check. Best set by measuring in the shul ([below](#location-check-registering-from-the-shul)) |
 | 10 | רדיוס מותר (מטרים) | Self-registration only within this distance; 40–60 is usually right |
 | 11 | סטיית GPS מותרת (מטרים) | How much GPS inaccuracy is forgiven beyond the radius. Empty = half the radius |
@@ -285,7 +285,7 @@ A web page with the gabbai's work, for when the Sheet isn't at hand. It needs th
   - **הגרלה** — shows who takes part, warns about entries still waiting for review and about an earlier draw, and asks for a second tap before drawing. The draw is logged in **הגרלות**.
   - **כפילויות** — pairs that look like one person. Tick "למזג" and choose which record to keep (the one with more days is preselected); attendance moves to it.
   - **קישור ו-QR** — the registration link with a QR code, copy and share.
-  - **הגדרות** — the minyan's name, the self-registration hours, the period, the lottery threshold, and the days without a minyan (add or remove dates). Saved to the הגדרות sheet.
+  - **הגדרות** — the minyan's name, the self-registration hours (half-hour steps: 8:00, 8:30, 9:00 …), the period, the lottery threshold, and the days without a minyan (add or remove dates). Saved to the הגדרות sheet.
   - **שינוי קוד גבאי** — asks for the current code; everyone else is logged out of gabbai mode, you stay in.
   - **יציאה** — logs out. After 30 minutes without activity the page logs out by itself.
 - **What stays in the Sheet only:** editing the tabs by hand. Every setting can be changed on the tools page.

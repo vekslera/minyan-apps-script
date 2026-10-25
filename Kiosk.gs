@@ -72,7 +72,7 @@ function kioskSubmit(key, d) {
     }
     if (dow_(date) === 6) return fail('אין רישום בשבת');
     if (ctx.excluded.has(date)) return fail('תאריך זה מסומן כיום ללא מניין');
-    if (!gabbai && !isOpenHour_(s, ctx.tz)) return fail('הרישום פתוח בין השעות ' + s.from + ':00 ל-' + s.to + ':00');
+    if (!gabbai && !isOpenHour_(s, ctx.tz)) return fail('הרישום פתוח בין השעות ' + fmtHour_(s.from) + ' ל-' + fmtHour_(s.to));
 
     // Self-registration only from a phone or a tablet; a computer is for gabbai mode.
     const device = String(d.device || '');

@@ -23,7 +23,10 @@ function readSettings_(ss, tz) {
     const map = {}, notes = {};
     v.forEach(r => {
       const k = String(r[0]).trim();
-      if (k) { map[k] = r[1] instanceof Date ? toKey_(r[1], tz) : r[1]; notes[k] = String(r[2] || ''); }
+      if (!k) return;
+      const hourRow = k === SET.FROM || k === SET.TO;
+      map[k] = hourRow ? parseHour_(r[1], null, tz) : r[1] instanceof Date ? toKey_(r[1], tz) : r[1];
+      notes[k] = String(r[2] || '');
     });
     raw = { map: map, notes: notes, excluded: v.slice(1).map(r => toKey_(r[4], tz)).filter(Boolean) };
     cachePutJson_(CACHE_KEYS.SETTINGS, raw);
@@ -32,7 +35,7 @@ function readSettings_(ss, tz) {
   const num = (x, d) => (x === '' || x == null || isNaN(Number(x))) ? d : Number(x);
   const excluded = new Set(raw.excluded);
   return { name: String(map[SET.NAME] || 'מניין שחרית').trim(), start: toKey_(map[SET.START], tz), end: toKey_(map[SET.END], tz),
-           threshold: num(map[SET.PCT], 75), from: num(map[SET.FROM], 5), to: num(map[SET.TO], 11),
+           threshold: num(map[SET.PCT], 75), from: num(map[SET.FROM], 5), to: num(map[SET.TO], 11),   // hours; 8.5 = 8:30
            // The gabbai code is kept out of sight (script properties). Until setup() moves it there,
            // the old places still work: Secrets.gs, then the old "קוד גבאי" row.
            pin: gabbaiPin_() || secret_('gabbaiPin') || String(map[OLD_SET.PIN] == null ? '' : map[OLD_SET.PIN]).trim(),
@@ -75,9 +78,27 @@ function setSettings_(values, notes) {
   cacheClear_();
 }
 
+/** Is self-registration open now? s.from / s.to are hours with half hours as .5 (8.5 = 8:30). */
 function isOpenHour_(s, tz) {
-  const h = Number(Utilities.formatDate(new Date(), tz, 'H'));
-  return h >= s.from && h < s.to;
+  const t = Utilities.formatDate(new Date(), tz, 'H:mm').split(':');
+  const now = Number(t[0]) + Number(t[1]) / 60;
+  return now >= s.from && now < s.to;
+}
+
+/**
+ * A registration hour from the sheet: 8, 8.5, "8:30", "08:30" or a time typed into a cell (a Date) →
+ * hours as a number, rounded to the half hour (8:30 → 8.5). Anything else → the default.
+ */
+function parseHour_(v, def, tz) {
+  let h = NaN;
+  if (v instanceof Date) { const t = Utilities.formatDate(v, tz, 'H:mm').split(':'); h = Number(t[0]) + Number(t[1]) / 60; }
+  else if (typeof v === 'number') h = v;
+  else {
+    const m = String(v == null ? '' : v).trim().match(/^(\d{1,2})(?:[:.](\d{1,2}))?$/);
+    if (m) h = String(v).indexOf(':') >= 0 ? Number(m[1]) + Number(m[2] || 0) / 60 : Number(String(v).trim());
+  }
+  if (!isFinite(h) || h < 0 || h > 24) return def;
+  return Math.round(h * 2) / 2;
 }
 
 // ---- Script cache: makes registration-page lookups cheap. Never the source of truth for writes. ----
@@ -156,6 +177,8 @@ function todayKey_(tz) { return Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd
 function keyToDate_(k, tz) { return Utilities.parseDate(k, tz, 'yyyy-MM-dd'); }
 function fmtKey_(k) { return k.slice(8, 10) + '/' + k.slice(5, 7) + '/' + k.slice(0, 4); }
 function fmtShort_(k) { return k.slice(8, 10) + '/' + k.slice(5, 7); }
+/** Hours as shown and written to the sheet: 8.5 → "8:30", 11 → "11:00". (Also sent to the pages.) */
+function fmtHour_(h) { const m = Math.round(Number(h) * 60); return Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0'); }
 function ymd_(y, m, d) { return new Date(Date.UTC(y, m - 1, d)).toISOString().slice(0, 10); }
 function dow_(k) { return new Date(Date.UTC(+k.slice(0, 4), +k.slice(5, 7) - 1, +k.slice(8, 10))).getUTCDay(); }
 function addDays_(k, n) { return ymd_(+k.slice(0, 4), +k.slice(5, 7), +k.slice(8, 10) + n); }
@@ -218,7 +241,7 @@ function clientScript_(file) {
  * logic. Only self-contained functions belong here.
  */
 function sharedJs_() {
-  const fns = [normPhone_, validPhone_, fmtPhone_,
+  const fns = [normPhone_, validPhone_, fmtPhone_, fmtHour_,
                clean_, norm_, skel_, levRatio_, sim_, splitFull_, nameVariants_, knownFulls_, nameScore_, suggest_,
                nickCanon_, firstNames_, alsoSurnames_, isFirstName_, canonFirst_, firstSim_];
   const consts = { FINALS: FINALS, NICKNAMES: NICKNAMES, FIRST_NAMES_EXTRA: FIRST_NAMES_EXTRA };

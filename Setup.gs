@@ -155,6 +155,9 @@ function migrateSettings_(st, tz) {
   defaults[SET.PCT] = 75; defaults[SET.FROM] = 5; defaults[SET.TO] = 11;
   defaults[SET.LAT] = ''; defaults[SET.LNG] = ''; defaults[SET.RADIUS] = SHUL_SET.NEW_RADIUS; defaults[SET.TOL] = '';
   SET_ROWS.forEach(r => { value[r[0]] = old[r[0]] ? old[r[0]].b : defaults[r[0]]; note[r[0]] = old[r[0]] && String(old[r[0]].c) ? old[r[0]].c : r[1]; });
+  if (/שעה עגולה/.test(String(note[SET.FROM]))) note[SET.FROM] = SET_ROWS.find(r => r[0] === SET.FROM)[1];   // older wording
+  // Hours as text ("8:30"): a number stays as it is, a time typed into the cell becomes "H:MM".
+  [SET.FROM, SET.TO].forEach(l => { const h = parseHour_(value[l], null, tz); if (h != null) value[l] = fmtHour_(h); });
 
   // The shul's location → the sheet.
   if (!old[SET.LAT]) {
@@ -179,6 +182,7 @@ function migrateSettings_(st, tz) {
   st.getRange(1, 1, rows.length, 3).setValues(rows);
   const row = label => SET_ROWS.findIndex(r => r[0] === label) + 2;
   st.getRange(row(SET.START), 2, 2, 1).setNumberFormat('dd/mm/yyyy');
+  st.getRange(row(SET.FROM), 2, 2, 1).setNumberFormat('@');
   st.getRange(row(SET.LAT), 2, 2, 1).setNumberFormat('0.0000000');
   st.getRange(row(SET.RADIUS), 2, 2, 1).setNumberFormat('0');
   if (!st.getRange('E1').getValue()) {

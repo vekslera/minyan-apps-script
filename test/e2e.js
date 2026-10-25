@@ -547,6 +547,32 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   g = W('gabbaiSetNoMinyan', k, s, [d1]);
   assert.deepEqual(g.excluded, [d1]);
   assert(Q.loadCtx_(envG.ss).excluded.has(d1));
+  // half hours: 8:30–11:00
+  assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { from: 8.25, to: 11 })), /חצי שעה/);
+  g = W('gabbaiSaveSettings', k, s, Object.assign({}, base, { from: 8.5, to: 11 }));
+  assert.equal(g.from, 8.5); assert.equal(g.to, 11);
+  const hourCell = label => envG.ss.getSheetByName('הגדרות').data.find(x => x[0] === label)[1];
+  assert.equal(hourCell('רישום עצמי פתוח משעה'), '8:30', 'written as text, as the gabbai would type it');
+  assert.equal(hourCell('רישום עצמי פתוח עד שעה'), '11:00');
+  // what a gabbai may type into the sheet
+  const tz = 'Asia/Jerusalem';
+  assert.equal(Q.parseHour_('8:30', null, tz), 8.5); assert.equal(Q.parseHour_('08:30', null, tz), 8.5);
+  assert.equal(Q.parseHour_(8.5, null, tz), 8.5); assert.equal(Q.parseHour_('9', null, tz), 9); assert.equal(Q.parseHour_('9.5', null, tz), 9.5);
+  assert.equal(Q.parseHour_(new Q.Date('2026-10-25T06:30:00Z'), null, tz), 8.5, 'a time typed into a cell (Sheets makes it a Date)');
+  assert.equal(Q.parseHour_('abc', 5, tz), 5); assert.equal(Q.parseHour_('25:00', 5, tz), 5);
+  assert.equal(Q.fmtHour_(8.5), '8:30'); assert.equal(Q.fmtHour_(11), '11:00'); assert.equal(Q.fmtHour_(0), '0:00');
+  envG.userEdit('הגדרות', 'B6', '9:30');
+  assert.equal(Q.readSettings_(envG.ss, tz).from, 9.5);
+  // open/closed by the half hour
+  const t = Q.Utilities.formatDate(new Q.Date(), tz, 'H:mm').split(':'), nowH = Number(t[0]) + Number(t[1]) / 60;
+  const slot = Math.floor(nowH * 2) / 2;
+  assert.equal(Q.isOpenHour_({ from: slot, to: slot + 0.5 }, tz), true);
+  assert.equal(Q.isOpenHour_({ from: slot + 0.5, to: slot + 1 }, tz), false);
+  // the closed message shows the half hour
+  envG.userEdit('הגדרות', 'B6', Q.fmtHour_(slot + 0.5)); envG.userEdit('הגדרות', 'B7', Q.fmtHour_(slot + 1));
+  const closed = Q.kioskSubmit(k, { first: 'א', last: 'ב', device: 'mobile' });
+  assert.equal(closed.ok, false); assert(closed.message.includes(Q.fmtHour_(slot + 0.5)), closed.message);
+  assert(/:30|:00/.test(closed.message));
   console.log('gabbai settings OK');
 }
 

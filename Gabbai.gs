@@ -93,15 +93,23 @@ function gabbaiSaveSettings(key, session, d) {
   const start = toKey_(d.start, tz), end = toKey_(d.end, tz);
   if (!name) throw new Error('חסר שם למניין');
   if (name.length > 60) throw new Error('שם המניין ארוך מדי');
-  if (!(Number.isInteger(from) && Number.isInteger(to) && from >= 0 && to <= 24 && from < to)) throw new Error('שעות הרישום אינן תקינות: "משעה" צריכה להיות לפני "עד שעה" (0–24)');
+  const half = x => isFinite(x) && Math.round(x * 2) === x * 2;                 // whole or half hours
+  if (!(half(from) && half(to) && from >= 0 && to <= 24 && from < to)) throw new Error('שעות הרישום אינן תקינות: "משעה" צריכה להיות לפני "עד שעה", בקפיצות של חצי שעה');
   if (!start || !end) throw new Error('תאריכי התקופה אינם תקינים');
   if (start > end) throw new Error('תחילת התקופה אחרי סופה');
   if (!(thr >= 1 && thr <= 100)) throw new Error('אחוז הנוכחות להגרלה צריך להיות בין 1 ל-100');
   const v = {};
-  v[SET.NAME] = name; v[SET.FROM] = from; v[SET.TO] = to; v[SET.PCT] = Math.round(thr * 10) / 10;
+  v[SET.NAME] = name; v[SET.FROM] = fmtHour_(from); v[SET.TO] = fmtHour_(to); v[SET.PCT] = Math.round(thr * 10) / 10;
   v[SET.START] = keyToDate_(start, tz); v[SET.END] = keyToDate_(end, tz);
-  withLock_(() => setSettings_(v));
+  withLock_(() => { textFormatHours_(); setSettings_(v); });
   return settingsForPage_();
+}
+
+/** The hour cells hold text ("8:30"), so Sheets doesn't turn them into times. */
+function textFormatHours_() {
+  const sh = sheet_(SpreadsheetApp.getActive(), SH.SETTINGS);
+  const labels = sh.getRange(1, 1, Math.max(sh.getLastRow(), 1), 1).getValues().map(r => String(r[0]).trim());
+  [SET.FROM, SET.TO].forEach(l => { const i = labels.indexOf(l); if (i >= 0) sh.getRange(i + 1, 2).setNumberFormat('@'); });
 }
 
 /** Replaces the list of days without a minyan (column E of הגדרות). dates = ['yyyy-mm-dd', …]. */

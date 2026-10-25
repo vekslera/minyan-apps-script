@@ -176,11 +176,13 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
   assert.equal(await p.inputValue('#setFrom'), '0'); assert.equal(await p.inputValue('#setTo'), '24');
   await p.selectOption('#setFrom', '11'); await p.selectOption('#setTo', '8'); await p.click('#setSave'); await p.waitForTimeout(200);
   assert(/לפני/.test(await p.textContent('#settingsNote')), 'hours checked in the page');
-  await p.fill('#setName', 'מניין סטיינבך'); await p.selectOption('#setFrom', '8'); await p.selectOption('#setTo', '11'); await p.fill('#setPct', '70');
+  assert.equal(await p.$eval('#setFrom', s => s.options[17].text), '8:30', 'half-hour steps');
+  await p.fill('#setName', 'מניין סטיינבך'); await p.selectOption('#setFrom', '8.5'); await p.selectOption('#setTo', '11'); await p.fill('#setPct', '70');
   await p.click('#setSave'); await p.waitForTimeout(400);
   console.log('settings:', (await p.textContent('#settingsNote')).trim(), '| header:', await p.textContent('#sub'));
   const sNow = G.readSettings_(env.ss, 'Asia/Jerusalem');
-  assert.equal(sNow.from, 8); assert.equal(sNow.to, 11); assert.equal(sNow.threshold, 70); assert.equal(sNow.name, 'מניין סטיינבך');
+  assert.equal(sNow.from, 8.5); assert.equal(sNow.to, 11);
+  assert(/8:30–11:00/.test(await p.textContent('#settingsNote'))); assert.equal(sNow.threshold, 70); assert.equal(sNow.name, 'מניין סטיינבך');
   const nm = G.addDays_(today, 1);
   await p.fill('#noMinyanDate', nm); await p.click('#noMinyanAdd'); await p.waitForTimeout(400);
   assert(G.readSettings_(env.ss, 'Asia/Jerusalem').excluded.has(nm));

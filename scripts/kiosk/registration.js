@@ -23,7 +23,7 @@ function refreshClosed() {
   if (!S.session) {
     if (i.dow === 6) why = 'שבת שלום<small>אין רישום בשבת</small>';
     else if (i.noMinyan) why = 'היום אין רישום';
-    else if (!i.open) why = 'הרישום סגור כעת<small>הרישום פתוח בין השעות ' + i.from + ':00 ל-' + i.to + ':00</small>';
+    else if (!i.open) why = 'הרישום סגור כעת<small>הרישום פתוח בין השעות ' + fmtHour_(i.from) + ' ל-' + fmtHour_(i.to) + '</small>';
     else if (DEVICE === 'desktop') why = 'רישום עצמי — מטלפון נייד או מטאבלט<small>במחשב אפשר לרשום רק במצב גבאי</small>';
   }
   show('locNote', !why && needsLocation());
