@@ -3,21 +3,26 @@
 #
 #   .\deploy-all.ps1 "what changed"          update everything in minyanim.json
 #   .\deploy-all.ps1 "what changed" -Only x  update only the one named x (e.g. -Only template)
-#   .\deploy-all.ps1 -Add                    add a minyan (asks for a name, its Script ID and its page address)
-#   .\deploy-all.ps1 -List                   show the list
+#   .\deploy-all.ps1 -Add                    add a minyan (asks for a name, its Script ID and its registration link)
+#   .\deploy-all.ps1 -Remove x               take x off the list (nothing changes in its Sheet)
+#   .\deploy-all.ps1 -List                   show the list, with every registration link
 #
-# minyanim.json (git-ignored) holds, per minyan: name, scriptId, deploymentId ("" = upload only, like the
-# template) and secrets (true only for the minyan whose Secrets.gs is in this folder). Everything runs as the
-# Google account clasp is signed in to: every Sheet must be shared with it as Editor, and the pages then run as it.
-param([string]$Description = "update", [string]$Only = "", [switch]$Add, [switch]$List, [switch]$NoCheck)
+# minyanim.json (git-ignored, private: it holds the links with their keys) has, per minyan: name, scriptId,
+# deploymentId and key ("" = upload only, like the template). Secrets.gs, if this folder still has one, goes only
+# to this folder's own minyan (the Script ID in .clasp.json). Everything runs as the Google account clasp is
+# signed in to: every Sheet must be shared with it as Editor, and the pages then run as it.
+param([string]$Description = "update", [string]$Only = "", [switch]$Add, [string]$Remove = "", [switch]$List, [switch]$NoCheck)
 $ErrorActionPreference = "Stop"
 $here = $PSScriptRoot
 $listFile = Join-Path $here "minyanim.json"
+$secretsFile = Join-Path $here "Secrets.gs"
 
 function Read-List {
   if (-not (Test-Path $listFile)) { return @() }
   $parsed = Get-Content -Raw -Encoding UTF8 -Path $listFile | ConvertFrom-Json
-  return @($parsed | Where-Object { $_ })
+  return @($parsed | Where-Object { $_ } | ForEach-Object {
+    [pscustomobject]@{ name = $_.name; scriptId = $_.scriptId; deploymentId = "$($_.deploymentId)"; key = "$($_.key)" }
+  })
 }
 function Write-List($items) {
   ConvertTo-Json -InputObject @($items) -Depth 3 | Set-Content -Encoding UTF8 -Path $listFile
@@ -26,20 +31,23 @@ function Main-ScriptId {
   $f = Join-Path $here ".clasp.json"
   if (Test-Path $f) { return (Get-Content -Raw $f | ConvertFrom-Json).scriptId } else { return "" }
 }
-function Secrets-DeploymentId {
-  $f = Join-Path $here "Secrets.gs"
-  if (-not (Test-Path $f)) { return "" }
-  $m = [regex]::Match((Get-Content -Raw $f), "deploymentId:\s*'([^']+)'")
+function Secret($name) {
+  if (-not (Test-Path $secretsFile)) { return "" }
+  $m = [regex]::Match((Get-Content -Raw $secretsFile), "$name\s*:\s*'([^']+)'")
   if ($m.Success) { return $m.Groups[1].Value } else { return "" }
 }
-# "https://script.google.com/macros/s/<id>/exec?k=…" (or a bare AKfyc… ID) -> the deployment ID
-function DeploymentId-From($text) {
-  $t = "$text".Trim()
-  $m = [regex]::Match($t, '/s/([\w-]{20,})/(exec|dev)')
-  if ($m.Success) { return $m.Groups[1].Value }
-  if ($t -match '^AKfyc[\w-]{15,}$') { return $t }
-  return ""
+function Link-Of($m) {
+  if (-not $m.deploymentId) { return "" }
+  $u = "https://script.google.com/macros/s/$($m.deploymentId)/exec"
+  if ($m.key) { return "$u`?k=$($m.key)" } else { return $u }
 }
+# A registration link "https://script.google.com/macros/s/<id>/exec?k=<key>" -> @(id, key)
+function Parse-Link($text) {
+  $t = "$text".Trim()
+  $m = [regex]::Match($t, '^https://script\.google\.com/(?:a/macros/[^/\s]+|macros)/s/([\w-]{20,})/exec\?(?:.*&)?k=([\w-]{6,})')
+  if ($m.Success) { return @($m.Groups[1].Value, $m.Groups[2].Value) } else { return $null }
+}
+function Uses-Secrets($m) { return (Test-Path $secretsFile) -and $m.scriptId -eq (Main-ScriptId) }
 
 $items = @(Read-List)
 
@@ -47,7 +55,7 @@ $items = @(Read-List)
 $oldTemplate = Join-Path $here ".clasp-template.json"
 if ((Test-Path $oldTemplate) -and -not ($items | Where-Object { $_.name -eq "template" })) {
   $tid = (Get-Content -Raw $oldTemplate | ConvertFrom-Json).scriptId
-  $items += [pscustomobject]@{ name = "template"; scriptId = $tid; deploymentId = ""; secrets = $false }
+  $items += [pscustomobject]@{ name = "template"; scriptId = $tid; deploymentId = ""; key = "" }
   Write-List $items
   Write-Host "The template (from .clasp-template.json) was added to minyanim.json as 'template'."
 }
@@ -55,33 +63,49 @@ if ((Test-Path $oldTemplate) -and -not ($items | Where-Object { $_.name -eq "tem
 if ($List) {
   if (-not $items.Count) { Write-Host "minyanim.json is empty. Add one with:  .\deploy-all.ps1 -Add" }
   foreach ($m in $items) {
-    $what = if ($m.deploymentId) { "page " + $m.deploymentId.Substring(0, 12) + "..." } else { "upload only" }
-    $sec = if ($m.secrets) { ", with Secrets.gs" } else { "" }
-    Write-Host ("{0,-16} script {1}...  {2}{3}" -f $m.name, $m.scriptId.Substring(0, 12), $what, $sec)
+    $link = Link-Of $m
+    $what = if (-not $link) { "(upload only)" } elseif (-not $m.key) { "$link   <- no key: -Remove and -Add again with the registration link" } else { $link }
+    $sec = if (Uses-Secrets $m) { "  [+ Secrets.gs]" } else { "" }
+    Write-Host ("{0,-14} script {1}...{2}" -f $m.name, $m.scriptId.Substring(0, 10), $sec)
+    Write-Host "               $what"
   }
+  exit 0
+}
+
+if ($Remove) {
+  if (-not ($items | Where-Object { $_.name -eq $Remove })) { Write-Error "No minyan named '$Remove' in minyanim.json."; exit 1 }
+  Write-List @($items | Where-Object { $_.name -ne $Remove })
+  Write-Host "'$Remove' was taken off the list (its Sheet and page are unchanged)."
   exit 0
 }
 
 if ($Add) {
   Write-Host "Adding a minyan. Its Sheet must be shared with the Google account clasp uses, as Editor."
-  $name = (Read-Host "Short name, in English letters (e.g. steinbach, mincha)").Trim()
+  $name = (Read-Host "Short name, in English letters (e.g. steinbach, mincha, template)").Trim()
   if ($name -notmatch '^[\w-]+$') { Write-Error "Use letters, digits, - or _ only."; exit 1 }
-  if ($items | Where-Object { $_.name -eq $name }) { Write-Error "'$name' is already in the list."; exit 1 }
+  if ($items | Where-Object { $_.name -eq $name }) { Write-Error "'$name' is already in the list (.\deploy-all.ps1 -Remove $name first)."; exit 1 }
   $main = Main-ScriptId
   Write-Host "Script ID: its Sheet -> Extensions/תוספים -> Apps Script -> Project Settings (gear) -> Script ID."
   $sid = (Read-Host ("Script ID" + $(if ($main) { " (Enter = this folder's own, from .clasp.json)" } else { "" }))).Trim()
   if (-not $sid) { $sid = $main }
   if ($sid -notmatch '^[\w-]{20,}$') { Write-Error "That doesn't look like a Script ID."; exit 1 }
   if ($items | Where-Object { $_.scriptId -eq $sid }) { Write-Error "This Script ID is already in the list."; exit 1 }
-  $own = $sid -eq $main
-  $dflt = if ($own) { Secrets-DeploymentId } else { "" }
-  Write-Host "Page address: the Web app URL (Deploy -> Manage deployments), or the registration link. Empty = upload only (a template)."
-  $addr = (Read-Host ("Page address" + $(if ($dflt) { " (Enter = deploymentId from Secrets.gs)" } else { "" }))).Trim()
-  $did = if ($addr) { DeploymentId-From $addr } else { $dflt }
-  if ($addr -and -not $did) { Write-Error "That doesn't look like a page address."; exit 1 }
-  $items += [pscustomobject]@{ name = $name; scriptId = $sid; deploymentId = $did; secrets = $own }
+  $fromSecrets = ""
+  if ($sid -eq $main -and (Secret "deploymentId") -and (Secret "kioskKey")) {
+    $fromSecrets = "https://script.google.com/macros/s/$(Secret 'deploymentId')/exec?k=$(Secret 'kioskKey')"
+  }
+  Write-Host "Registration link: in its Sheet, מניין -> קישור לדף הרישום -> העתקה (it ends with ?k=...). Empty = upload only (the template)."
+  $addr = (Read-Host ("Registration link" + $(if ($fromSecrets) { " (Enter = the one in Secrets.gs)" } else { "" }))).Trim()
+  if (-not $addr) { $addr = $fromSecrets }
+  $did = ""; $key = ""
+  if ($addr) {
+    $p = Parse-Link $addr
+    if (-not $p) { Write-Error "That isn't a registration link (https://script.google.com/macros/s/.../exec?k=...)."; exit 1 }
+    $did = $p[0]; $key = $p[1]
+  }
+  $items += [pscustomobject]@{ name = $name; scriptId = $sid; deploymentId = $did; key = $key }
   Write-List $items
-  Write-Host "Added '$name'$(if ($own) { ' (this folder''s minyan: its Secrets.gs goes with it)' })."
+  Write-Host "Added '$name'."
   if ($did) {
     Write-Host ""
     Write-Host "Once, before its first update: open its Sheet signed in as the clasp account,"
@@ -97,7 +121,7 @@ if (-not $targets.Count) {
   exit 1
 }
 
-# One upload folder per minyan, with only what Apps Script runs. Secrets.gs only where "secrets" is true.
+# One upload folder per minyan, with only what Apps Script runs (+ Secrets.gs for this folder's own minyan, while it exists).
 function Build-Folder($m) {
   $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("minyan-" + $m.name + "-" + [guid]::NewGuid().ToString("N").Substring(0, 8))
   New-Item -ItemType Directory -Path $tmp | Out-Null
@@ -105,34 +129,37 @@ function Build-Folder($m) {
     ($_.Extension -in ".gs", ".html" -and $_.Name -ne "Secrets.gs") -or $_.Name -eq "appsscript.json"
   } | Copy-Item -Destination $tmp
   foreach ($d in "scripts", "styles") { Copy-Item -Recurse -Path (Join-Path $here $d) -Destination (Join-Path $tmp $d) }
-  if ($m.secrets) {
-    $s = Join-Path $here "Secrets.gs"
-    if (-not (Test-Path $s)) { throw "'secrets' is true but there is no Secrets.gs in this folder" }
-    Copy-Item $s -Destination $tmp
-  }
+  if (Uses-Secrets $m) { Copy-Item $secretsFile -Destination $tmp }
   $cfg = [ordered]@{ scriptId = $m.scriptId; rootDir = "."; scriptExtensions = @(".gs"); htmlExtensions = @(".html", ".js") }
   $cfg | ConvertTo-Json | Set-Content -Encoding ascii -Path (Join-Path $tmp ".clasp.json")
   return $tmp
 }
-# Runs clasp (the function must not be named "clasp": PowerShell would call it instead); its messages are shown, and only the exit code decides success.
+# Runs clasp (the function must not be named "clasp": PowerShell would call it instead); its messages are shown,
+# and only the exit code decides success.
 function Invoke-Clasp {
   $ErrorActionPreference = "Continue"
   & clasp @args 2>&1 | ForEach-Object { Write-Host "    $_" }
   return $LASTEXITCODE
 }
-# The page without its key answers with the "bad link" page when all is well; Google's own error pages mean trouble.
-function Check-Page($id) {
-  try { $r = Invoke-WebRequest -UseBasicParsing -Uri "https://script.google.com/macros/s/$id/exec" -TimeoutSec 60; $body = "$($r.Content)" }
+# Opens the page as a worshipper would (with its key, when known). The bad-link page has its own title
+# (Kiosk.gs), and Google's own error pages mean trouble.
+function Check-Page($m) {
+  $url = Link-Of $m
+  try { $r = Invoke-WebRequest -UseBasicParsing -Uri $url -TimeoutSec 60; $body = "$($r.Content)" }
   catch { return "the page did not answer ($($_.Exception.Message))" }
   if ($body -match 'Authorization is required') { return "needs permissions: open its Sheet as the clasp account, מניין -> קישור לדף הרישום, allow" }
   if ($body -match 'unable to open the file|Script function not found|ReferenceError|TypeError') { return "the page shows an error" }
+  $t = [regex]::Match($body, '<title>([^<]*)</title>')
+  $title = if ($t.Success) { [System.Net.WebUtility]::HtmlDecode($t.Groups[1].Value) } else { "" }
+  if ($m.key -and $title -match 'הקישור אינו תקין') { return "THE REGISTRATION LINK NO LONGER WORKS (wrong key). If Secrets.gs was just removed: put it back, run deploy-all again, then run מניין -> הגדרה ראשונית in that Sheet" }
+  if (-not $m.key) { return "no key in minyanim.json, so only the address was checked (-Remove and -Add again with the registration link)" }
   return ""
 }
 
 $ok = @(); $warn = @(); $failed = @()
 foreach ($m in $targets) {
   Write-Host ""
-  Write-Host "=== $($m.name)"
+  Write-Host "=== $($m.name)$(if (Uses-Secrets $m) { '  (with Secrets.gs)' })"
   $tmp = $null; $pushed = $false
   try {
     $tmp = Build-Folder $m
@@ -143,8 +170,8 @@ foreach ($m in $targets) {
       Write-Host "  publishing a new version of the page..."
       if ((Invoke-Clasp update-deployment $m.deploymentId -d $Description) -ne 0) { throw "publishing failed" }
       if (-not $NoCheck) {
-        $problem = Check-Page $m.deploymentId
-        if ($problem) { Write-Host "  WARNING: $problem"; $warn += "$($m.name): $problem" }
+        $problem = Check-Page $m
+        if ($problem) { Write-Host "  CHECK: $problem"; $warn += "$($m.name): $problem" } else { Write-Host "  the registration link opens the page" }
       }
     }
     $ok += $m.name

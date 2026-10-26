@@ -158,6 +158,17 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   assert.equal(env3.ctx.readSettings_(env3.ss, 'Asia/Jerusalem').threshold, 75);
   G2.menuKioskLink();
   assert(env2.ui.lastDialog.includes('/AKfycbTEST/exec?k=fixedkey123'));
+  // retiring Secrets.gs: setup copied the address and the key to hidden storage, so the link stays the same
+  assert(/הקישור לדף הרישום \(הכתובת והמפתח\) נשמר גם במקום מוסתר/.test(env2.log.filter(l => l[0] === 'alert').slice(-1)[0][1]));
+  assert.equal(env2.props.WEB_URL, 'https://script.google.com/macros/s/AKfycbTEST/exec'); assert.equal(env2.props.KIOSK_KEY, 'fixedkey123');
+  G2.SECRETS = {};                                                   // Secrets.gs removed
+  G2.cacheClear_();
+  assert.equal(G2.kioskKey_(), 'fixedkey123', 'same key without Secrets.gs');
+  assert.equal(G2.kioskLink_(G2.readSettings_(env2.ss, 'Asia/Jerusalem')), 'https://script.google.com/macros/s/AKfycbTEST/exec?k=fixedkey123');
+  assert(!/kioskSubmit/.test(G2.doGet({ parameter: { k: 'other' } }).html) && /kioskSubmit/.test(G2.doGet({ parameter: { k: 'fixedkey123' } }).html), 'the old QR code still opens the page');
+  G2.setup();
+  assert(!/נשמר גם במקום מוסתר/.test(env2.log.filter(l => l[0] === 'alert').slice(-1)[0][1]), 'no message once Secrets.gs is gone');
+  assert.equal(G2.kioskKey_(), 'fixedkey123');
   assert(G2.doGet({ parameter: { k: 'fixedkey123' } }).html.includes("var KEY = 'fixedkey123'"));
   console.log('secrets override OK');
 }

@@ -80,7 +80,6 @@ clasp login                # opens a browser: choose the minyan account and allo
 2. In this folder:
    ```bash
    cp .clasp.json.example .clasp.json          # Windows: copy .clasp.json.example .clasp.json
-   cp Secrets.gs.example Secrets.gs            # Windows: copy Secrets.gs.example Secrets.gs
    ```
    Paste the Script ID into `.clasp.json`. Keep the two extension lines as they are:
    ```json
@@ -92,7 +91,7 @@ clasp login                # opens a browser: choose the minyan account and allo
    }
    ```
    **The extension lines are required.** By default clasp uploads `.js` files as *server* code. These two lines make it upload the browser scripts in `scripts/` as HTML-type files instead ([§11](#11-files)). `deploy.ps1` / `deploy.sh` refuse to run without them.
-   Both files are git-ignored. You will fill `Secrets.gs` in [step 6](#6-fill-in-the-settings).
+   `.clasp.json` is git-ignored. No `Secrets.gs` is needed ([§12](#12-private-settings-secretsgs)).
 
 **Push:**
 
@@ -117,7 +116,7 @@ In the script editor:
    `scripts/admin/helpers`, `scripts/admin/import`, `scripts/admin/review`, `scripts/admin/main`,
    `scripts/gabbai/main`, `scripts/gabbai/reports`, `scripts/gabbai/draw`, `scripts/gabbai/duplicates`, `scripts/gabbai/link`, `scripts/gabbai/shul`, `scripts/gabbai/settings`, `scripts/gabbai/pin`,
    `scripts/dialogs/linkDialog`, `scripts/dialogs/reportText`.
-5. **Recommended:** create `Secrets` (+ → Script) from `Secrets.gs.example`, for `deploymentId`. Everything else is configured in the הגדרות sheet and on the gabbai tools page.
+5. No `Secrets` file is needed: the page address is pasted in **מניין → כתובת דף הרישום (הדבקה)**, and everything else is configured in the הגדרות sheet and on the gabbai tools page.
 6. Save (Ctrl+S).
 
 **File names must be unique, ignoring the extension.** Apps Script treats `Admin.gs` and `Admin.html` as the same name, so the HTML files carry `Page`/`Dialog` suffixes.
@@ -163,10 +162,10 @@ Route A alternative: `clasp create-deployment -d "registration page"` prints the
 
 Settings come in two kinds:
 
-- **Set once, by whoever installs the project** → `Secrets.gs`.
+- **Set once, by whoever installs the project** → the page address, pasted in **מניין → כתובת דף הרישום (הדבקה)** ([§5](#5-publish-the-registration-page-web-app)). (Older installs: `Secrets.gs`, below — now optional.)
 - **Things the gabbai may change** → the **הגדרות** sheet, or more simply the gabbai tools page (**הגדרות** and **מיקום בית הכנסת**, [§8](#gabbai-tools-page)). The gabbai code is the exception: it is kept hidden, see [Gabbai code and login](#gabbai-code-and-login).
 
-**`Secrets.gs`** (route A, or route B if you created the Secrets file):
+**`Secrets.gs`** (optional, older installs; see [§12](#12-private-settings-secretsgs)):
 
 ```js
 const SECRETS = {
@@ -322,7 +321,7 @@ Menus and dialogs in the Sheet always use the latest uploaded code. The **regist
 ./deploy.sh "what changed"       # macOS / Linux
 ```
 
-Both run `clasp push -f`, then `clasp update-deployment <deploymentId from Secrets.gs>`. The address, the links and the printed QR code stay the same. With several minyanim, `deploy-all` updates them all at once ([§15](#15-more-minyanim-the-template-and-deploy-all)).
+Both run `clasp push -f`, then `clasp update-deployment <deploymentId>`. `deploy.ps1` takes this folder's minyan from `minyanim.json` when it is listed there (and then also checks the link), otherwise the deployment ID from `Secrets.gs`. The address, the links and the printed QR code stay the same. With several minyanim, `deploy-all` updates them all at once ([§15](#15-more-minyanim-the-template-and-deploy-all)).
 
 **Without a terminal:** double-click **`deploy.cmd`** in the project folder (Windows). It runs `deploy.ps1`, shows "DEPLOY OK" or "DEPLOY FAILED", and saves the output to `deploy-last.log`.
 
@@ -425,10 +424,11 @@ Apps Script cannot serve a `.js` file to the browser: a page is one HTML documen
 
 ## 12. Private settings (`Secrets.gs`)
 
+- **Not needed any more.** A minyan's page address and link key live in its Sheet's hidden storage (pasted address, generated key), so new installs and copies have no `Secrets.gs`. An existing one is retired as in [§15](#retiring-secretsgs-the-original-minyan). The rest of this section is for installs that still have it.
 - **Where they live.** Private values live in `Secrets.gs`. It is in `.gitignore`, so it never reaches git, but `clasp push` uploads it and the script reads it at run time.
 - **What it holds.** Only values set once: the owner account, the web-app deployment ID (the single source of the page address) and, optionally, a fixed link key. What the gabbai may change is in the הגדרות sheet; the gabbai code is in the script's properties.
 - **Every value is optional.** An empty `deploymentId` falls back to the address pasted in **מניין → כתובת דף הרישום (הדבקה)**; an empty `kioskKey` to an automatically generated key.
-- **Other private files.** `.clasp.json` (your Script ID) and `minyanim.json` (every minyan's Script ID and page) are also git-ignored.
+- **Other private files.** `.clasp.json` (your Script ID) and `minyanim.json` (every minyan's Script ID and full registration link) are also git-ignored.
 - **No passwords.** None are stored anywhere in the project. `clasp login` keeps its token in your user folder (`~/.clasprc.json`), outside the repo.
 
 ## 13. Local tests
@@ -479,16 +479,18 @@ Each minyan gets **its own copy** of the Sheet, in **its own Google account**: i
 
 ### The list of minyanim
 
-`minyanim.json`, in the project folder and git-ignored, lists them: a short name, the Script ID, the page's deployment ID (empty for the template), and whether this folder's `Secrets.gs` goes with it. It is filled by:
+`minyanim.json`, in the project folder, lists them: a short name, the Script ID, and the registration link split into its deployment ID and its key (both empty for the template). **It holds every minyan's full link, so it is private:** git-ignored, never sent to anyone; keep a backup somewhere safe (it can always be rebuilt from each Sheet's **קישור לדף הרישום**). It is filled by:
 
 ```powershell
-.\deploy-all.ps1 -Add      # asks: a short name; the Script ID; the page address
-.\deploy-all.ps1 -List
+.\deploy-all.ps1 -Add          # asks: a short name; the Script ID; the registration link
+.\deploy-all.ps1 -List         # every minyan with its full registration link
+.\deploy-all.ps1 -Remove name  # off the list (to re-add it, e.g. with a new link)
 ```
 
 - **Script ID:** that Sheet → **Extensions / תוספים → Apps Script → Project Settings ⚙ / הגדרות הפרויקט → Script ID**.
-- **Page address:** the Web app URL from **Deploy / פריסה → Manage deployments / ניהול פריסות**, or simply the registration link. Leave it empty for the template.
-- **This folder's own minyan:** press Enter at both questions to take the Script ID from `.clasp.json` and the deployment ID from `Secrets.gs`. That entry is the only one uploaded **with** `Secrets.gs`.
+- **Registration link:** that Sheet → **מניין → קישור לדף הרישום → העתקה** (it ends with `?k=…`). Leave it empty for the template.
+- **This folder's own minyan:** Enter at the Script ID takes it from `.clasp.json`; while `Secrets.gs` exists, Enter at the link takes it from there.
+- **`Secrets.gs` goes only to this folder's own minyan** (the Script ID in `.clasp.json`), and only while the file exists. No copy ever gets it.
 - **An older `.clasp-template.json`** (from the first `template.cmd`) is moved into the list as `template` automatically.
 
 ### Updating
@@ -501,7 +503,7 @@ Each minyan gets **its own copy** of the Sheet, in **its own Google account**: i
 Or double-click **`deploy-all.cmd`** (output in `deploy-all-last.log`), or **`template.cmd`** for the template only.
 
 - **Per minyan,** it uploads the code from a temporary folder (`clasp push -f`), then publishes a new version of the **same** page (`clasp update-deployment`), so the address and the printed QR codes stay valid.
-- **Then it opens the page without its key.** If Google answers with an error page instead (missing permissions, a broken page), it prints a **Check:** line.
+- **Then it opens the registration link, with its key**, as a worshipper would. If the page doesn't open (missing permissions, an error page, or the key no longer opens it), it prints a **Check:** line; "the registration link opens the page" means all is well.
 - **One failure doesn't stop the others.** The summary lists what failed; the usual cause is a Sheet not shared with the maintainer account.
 - **After a settings-layout change,** each minyan's gabbai (or the maintainer) runs **מניין → הגדרה ראשונית** once.
 
@@ -519,7 +521,20 @@ The person with the minyan's Google account follows **[`INSTALL-he.md`](INSTALL-
 
 ### What makes a copy independent
 
-- The template has no `Secrets.gs`, so a copy's address comes from the one pasted in **כתובת דף הרישום (הדבקה)** (document property `WEB_URL`). `deploy-all` never uploads `Secrets.gs` to it.
+- The template has no `Secrets.gs`, so a copy's address comes from the one pasted in **כתובת דף הרישום (הדבקה)** (document property `WEB_URL`), and its key is generated by `setup` (`KIOSK_KEY`). `deploy-all` never uploads `Secrets.gs` to it.
 - `setup` records the Sheet's ID. If it later finds a different ID (the Sheet was copied, and Google copied the hidden values along), it drops them all and makes new ones: a new page key, a new gabbai code, no address until one is pasted. The original's links don't open the copy.
 - Copy the **template**, never a minyan's working Sheet: that one has people and attendance (and possibly `Secrets.gs`).
 - Signed in to an account the Sheet is shared with, on a device with several Google accounts, the page may open Drive's "Sorry, unable to open the file" page. Worshippers aren't affected; an Incognito tab works around it. A brand-new deployment may also show that page for its first few minutes.
+
+### Retiring `Secrets.gs` (the original minyan)
+
+The minyan installed first keeps its page address and link key in `Secrets.gs`. Moving them into its Sheet makes it like every other minyan, without changing its link or the printed QR codes:
+
+1. **Update it with `Secrets.gs` still in place:** `deploy.cmd` (or `deploy-all.cmd`).
+2. **In its Sheet: מניין → הגדרה ראשונית.** The closing message says the link (address and key) is now kept in the Sheet's hidden storage too. Check that **מניין → קישור לדף הרישום** shows the same link as before.
+3. **Put the link in the list:** `.\deploy-all.ps1 -Remove <name>`, then `.\deploy-all.ps1 -Add` with the same name, Enter at the Script ID, and the link from step 2.
+4. **Move `Secrets.gs` out of the project folder** to a safe place outside the repo (keep it until step 5 has passed).
+5. **Update again** (`deploy-all.cmd`). The upload now replaces the script's files without `Secrets.gs`, and the check opens the page with the key from the list. "the registration link opens the page" → done; `Secrets.gs` may be deleted. A **Check: THE REGISTRATION LINK NO LONGER WORKS** → put `Secrets.gs` back, update, and run step 2 again.
+
+From then on `deploy.cmd` updates this folder's minyan through `minyanim.json` (the entry with the Script ID in `.clasp.json`).
+

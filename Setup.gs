@@ -174,6 +174,13 @@ function migrateSettings_(st, tz) {
     moved.push(fromOld ? 'קוד הגבאי הועבר למקום מוסתר (לא בגיליון). הקוד עצמו לא השתנה.'
                        : 'קוד הגבאי הראשוני: ' + pin + ' — לשינוי: מניין ← שינוי קוד גבאי.');
   }
+  // An older Secrets.gs with the page address and/or the link key: copy them to hidden storage, so Secrets.gs
+  // can be removed without changing the link (and the printed QR codes). Repeated on every run while they're there.
+  const sUrl = webAppUrlFromSecrets_(), sKey = secret_('kioskKey');
+  if (sUrl) props.setProperty('WEB_URL', sUrl);
+  if (sKey) props.setProperty('KIOSK_KEY', sKey);
+  if (sUrl || sKey) moved.push('הקישור לדף הרישום (' + [sUrl ? 'הכתובת' : '', sKey ? 'המפתח' : ''].filter(Boolean).join(' ו') +
+    ') נשמר גם במקום מוסתר בגיליון. מעכשיו אפשר להסיר את Secrets.gs — הקישור וקודי ה-QR לא ישתנו.');
   if (old[OLD_SET.URL]) {
     const was = parseWebUrl_(old[OLD_SET.URL].b);
     if (was && !secret_('deploymentId')) props.setProperty('WEB_URL', was);

@@ -57,8 +57,12 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
 
 ## Settings and secrets
 
-- `Secrets.gs` (git-ignored): only set-once values — `ownerAccount`, `deploymentId`, `kioskKey`, `locationLog`
-  (reserved). Every value is optional. Template: `Secrets.gs.example`.
+- `Secrets.gs` (git-ignored) is **legacy**: optional overrides (`ownerAccount`, `deploymentId`, `kioskKey`,
+  `locationLog`). `setup` copies `deploymentId`/`kioskKey` into document properties (`WEB_URL`/`KIOSK_KEY`) so it
+  can be retired without changing the link (README §15). New code must not need it.
+- `minyanim.json` (git-ignored, private): per minyan name, scriptId, deploymentId, key — the full links.
+  `deploy-all` opens each page with its key after updating; the bad-link page's title ("הקישור אינו תקין",
+  `doGet`) is what it looks for, so keep that title distinct.
 - The page address: `deploymentId`, else `WEB_URL` (pasted in **מניין → כתובת דף הרישום (הדבקה)** — how copies
   get it). **Never `ScriptApp.getService().getUrl()`**: in a copy it returned an /exec address that opens a Drive
   error page (the mock returns a wrong address on purpose).
@@ -74,8 +78,8 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
   other weekdays. Never test `dow_ === 6` alone for "is there a minyan".
 - Scaling: decided on **option C** — a copy per minyan in the minyan's own Google account. New minyanim copy a
   **template** Sheet (code only, never set up or deployed) and follow `INSTALL-he.md`. `deploy-all.ps1` updates
-  everything in `minyanim.json` (git-ignored): push from a temp folder (`Secrets.gs` only where `secrets: true`) +
-  `update-deployment`, then checks the page. It runs as the clasp account (**maintainer**, chosen by the owner):
+  everything in `minyanim.json`: push from a temp folder (`Secrets.gs` only to the entry with `.clasp.json`'s
+  Script ID, and only while the file exists) + `update-deployment`, then opens the link with its key. It runs as the clasp account (**maintainer**, chosen by the owner):
   every Sheet is shared with it as Editor, and after an update each page runs as it, so it must authorize each
   project once, and again when an update adds a new permission (e.g. email). Code must work identically in every copy: per-minyan values live in the
   sheet or in document properties, never in code. `setup` drops all document properties when the Sheet ID changed

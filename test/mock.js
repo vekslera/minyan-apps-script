@@ -153,7 +153,8 @@ function makeEnv(opts) {
   ctx.HtmlService.createHtmlOutputFromFile.getContent = undefined;
   // Tests never read your real Secrets.gs; a test may pass its own values instead.
   for (const f of files) if (f !== 'Secrets.gs') vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), ctx, { filename: f });
-  if (opts.secrets) vm.runInContext('const SECRETS = ' + JSON.stringify(opts.secrets) + ';', ctx);
+  // var, not const: a test may empty it (env.ctx.SECRETS = {}) to act as if Secrets.gs was removed.
+  if (opts.secrets) vm.runInContext('var SECRETS = ' + JSON.stringify(opts.secrets) + ';', ctx);
   // A change typed by a person in the Sheet: write it, then fire the onEdit simple trigger like Google does.
   const userEdit = (sheetName, a1, value) => {
     const r = ss.getSheetByName(sheetName).getRange(a1);

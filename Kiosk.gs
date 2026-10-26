@@ -25,7 +25,8 @@ function doGet(e) {
                         .replace('__INIT__', () => scriptJson_(kioskInit_(key, '')));
   html = html.replace('__DEBUG__', () => debug ? String(Date.now() - t0) : '');
   return HtmlService.createHtmlOutput(html)
-    .setTitle(tools ? 'כלי גבאי — מניין' : 'רישום נוכחות במניין')
+    // deploy-all.ps1 opens each page with its key and looks for this title: keep the bad-link title distinct.
+    .setTitle(!ok ? 'הקישור אינו תקין' : tools ? 'כלי גבאי — מניין' : 'רישום נוכחות במניין')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
 }
 
