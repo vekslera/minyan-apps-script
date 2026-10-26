@@ -1,19 +1,21 @@
 // ======================================================================================
-//  NOTIFICATIONS TO THE MAINTAINER (ntfy — instant push to the ntfy app on a phone)
+//  ALERTS TO THE MAINTAINER (an email to his Gmail; the Gmail app notifies at once)
 //
-//  - Errors nobody caused on purpose are pushed at once: a page that breaks in the browser or a server call
+//  - Errors nobody caused on purpose are sent at once: a page that breaks in the browser or a server call
 //    that fails (reported by scripts/common/report.js → clientError), or the page failing to build (doGet).
 //    The same error from the same place at most once an hour.
-//  - Once a day (a time trigger that setup() installs) a check pushes the "quiet" problems: no page address,
+//  - Once a day (a time trigger that setup() installs) a check sends the "quiet" problems: no page address,
 //    the period ending or ended, no registration at all on recent minyan days, many entries waiting for review.
 //
-//  The topic comes from Maintainer.gs, which deploy\deploy-all.ps1 writes into each minyan's upload (from the
+//  The address comes from Maintainer.gs, which deploy\deploy-all.ps1 writes into each minyan's upload (from the
 //  git-ignored deploy\maintainer.json) — never into git, never into the template. Without it nothing is sent.
+//  (ntfy.sh was tried first: from Google's shared servers its free daily quota is always used up.)
 //  Messages carry no registrants' names, phone numbers or locations: only the minyan (short name, name and its
-//  Google account), where, and the error text, with long numbers masked. Expected errors (the Hebrew messages the app shows its users) are never sent.
+//  Google account), where, and the error text, with long numbers masked. Expected errors (the Hebrew messages
+//  the app shows its users) are never sent.
 // ======================================================================================
 
-const NTFY = { SERVER: 'https://ntfy.sh', THROTTLE_S: 3600, CHECK_HOUR: 22, PENDING_MANY: 20, QUIET_DAYS: 3, ENDED_DAYS: 3 };
+const ALERTS = { THROTTLE_S: 3600, CHECK_HOUR: 22, PENDING_MANY: 20, QUIET_DAYS: 3, ENDED_DAYS: 3, FROM_NAME: 'מניין — התראות' };
 
 /** The registration page (Apps Script calls doGet by this name): builds it, and reports a failure. */
 function doGet(e) {
@@ -21,32 +23,27 @@ function doGet(e) {
   catch (err) { reportError_('doGet', err && err.message); throw err; }
 }
 
-/** The maintainer's channel, or null (no Maintainer.gs: a template copy, or tests). */
+/** The maintainer's address, as {email, minyan}, or null (no Maintainer.gs: a template copy, or tests). */
 function maintainer_() {
   // eslint-disable-next-line no-undef
   const m = typeof MAINTAINER !== 'undefined' && MAINTAINER ? MAINTAINER : null;
-  return m && /^[\w-]{6,64}$/.test(String(m.ntfyTopic || '')) ? m : null;
+  return m && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(m.email || '')) ? m : null;
 }
 
-/** Sends one notification. Returns true when ntfy accepted it. Never throws; why it failed is in notify_.why. */
-function notify_(title, message, priority) {
+/** Sends one alert email. Returns true when Google accepted it. Never throws; why it failed is in notify_.why. */
+function notify_(title, message) {
   const m = maintainer_();
   notify_.why = '';
   if (!m) return false;
   try {
-    let click = '';
-    try { click = SpreadsheetApp.getActive().getUrl(); } catch (e) {}
+    const ss = SpreadsheetApp.getActive();
+    let url = '', account = '';
+    try { url = ss.getUrl(); } catch (e) {}
     // which minyan's Google account it came from (Account.gs records it in setup)
-    let account = '';
-    try { account = PropertiesService.getDocumentProperties().getProperty('ACCOUNT') || ownerAccount_(SpreadsheetApp.getActive()); } catch (e) {}
-    const res = UrlFetchApp.fetch(m.ntfyServer || NTFY.SERVER, {
-      method: 'post', contentType: 'application/json', muteHttpExceptions: true,
-      payload: JSON.stringify({ topic: m.ntfyTopic, title: title, message: message + (account ? '\nחשבון: ' + account : ''), priority: priority || 3,
-                                tags: ['synagogue'].concat(m.minyan ? [String(m.minyan)] : []), click: click || undefined }),
-    });
-    const code = res.getResponseCode();
-    if (code >= 300) notify_.why = 'ntfy ' + code + ': ' + String(res.getContentText ? res.getContentText() : '').slice(0, 200);
-    return code < 300;
+    try { account = PropertiesService.getDocumentProperties().getProperty('ACCOUNT') || ownerAccount_(ss); } catch (e) {}
+    const body = message + (account ? '\n\nחשבון: ' + account : '') + (url ? '\nהגיליון: ' + url : '');
+    MailApp.sendEmail({ to: m.email, subject: title, body: body, name: ALERTS.FROM_NAME });
+    return true;
   } catch (e) { notify_.why = String(e && e.message || e).slice(0, 200); return false; }
 }
 
@@ -66,14 +63,14 @@ function notifyName_() {
 }
 function hash_(s) { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
 
-/** Pushes an error at once — at most once an hour for the same place and message. */
+/** Sends an error at once — at most once an hour for the same place and message. */
 function reportError_(where, message) {
   if (!maintainer_()) return false;
   const text = scrub_(message || 'שגיאה לא ידועה'), place = scrub_(where);
-  const key = 'NTFY_' + hash_(place + '|' + text);
+  const key = 'ALERT_' + hash_(place + '|' + text);
   const c = cache_();
-  try { if (c && c.get(key)) return false; if (c) c.put(key, '1', NTFY.THROTTLE_S); } catch (e) {}
-  return notify_('⚠ ' + notifyName_(), place + ': ' + text, 4);
+  try { if (c && c.get(key)) return false; if (c) c.put(key, '1', ALERTS.THROTTLE_S); } catch (e) {}
+  return notify_('⚠ ' + notifyName_(), place + ': ' + text);
 }
 
 /**
@@ -95,7 +92,7 @@ function menuTestAlert() {
     ui.alert('התראות למפתח', 'ההתראות אינן מופעלות בגיליון הזה. הן מופעלות כשהמפתח מעדכן את המניין (deploy-all).', ui.ButtonSet.OK);
     return;
   }
-  const ok = notify_('בדיקה · ' + notifyName_(), 'התראת בדיקה מהגיליון. אם היא הגיעה — ההתראות עובדות.', 3);
+  const ok = notify_('בדיקה · ' + notifyName_(), 'התראת בדיקה מהגיליון. אם היא הגיעה — ההתראות עובדות.');
   ui.alert('התראות למפתח', ok ? 'התראת הבדיקה נשלחה.' : 'שליחת ההתראה נכשלה.\n\nהסיבה (להעביר למפתח): ' + (notify_.why || 'לא ידועה'), ui.ButtonSet.OK);
 }
 
@@ -103,8 +100,8 @@ function menuTestAlert() {
 function installDailyCheck_() {
   try {
     if (ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'dailyCheck')) return '';
-    ScriptApp.newTrigger('dailyCheck').timeBased().everyDays(1).atHour(NTFY.CHECK_HOUR).create();
-    return 'נקבעה בדיקה יומית (בסביבות ' + NTFY.CHECK_HOUR + ':00) שמתריעה למפתח על תקלות.';
+    ScriptApp.newTrigger('dailyCheck').timeBased().everyDays(1).atHour(ALERTS.CHECK_HOUR).create();
+    return 'נקבעה בדיקה יומית (בסביבות ' + ALERTS.CHECK_HOUR + ':00) ששולחת למפתח התראה על תקלות.';
   } catch (e) { return ''; }
 }
 
@@ -118,7 +115,7 @@ function dailyCheck() {
   let lines;
   try { lines = dailyProblems_(ss, today); }
   catch (e) { lines = ['הבדיקה היומית נכשלה: ' + scrub_(e && e.message)]; }
-  if (lines.length) notify_('בדיקה יומית · ' + notifyName_(), lines.join('\n'), 3);
+  if (lines.length) notify_('בדיקה יומית · ' + notifyName_(), lines.join('\n'));
 }
 
 /** The quiet problems, as short Hebrew lines ([] = all well). */
@@ -128,21 +125,21 @@ function dailyProblems_(ss, today) {
   if (!kioskLink_(s)) out.push('כתובת דף הרישום לא הוגדרה (מניין ← כתובת דף הרישום (הדבקה)).');
   if (s.end) {
     const left = daysTo(s.end);
-    if (left < 0 && -left <= NTFY.ENDED_DAYS) out.push('התקופה הסתיימה ב-' + fmtKey_(s.end) + '. תקופה חדשה: כלי הגבאי ← הגדרות.');
+    if (left < 0 && -left <= ALERTS.ENDED_DAYS) out.push('התקופה הסתיימה ב-' + fmtKey_(s.end) + '. תקופה חדשה: כלי הגבאי ← הגדרות.');
     else if (left === 7 || left === 1) out.push('התקופה מסתיימת ב-' + fmtKey_(s.end) + ' (עוד ' + left + (left === 1 ? ' יום' : ' ימים') + ').');
   }
   // No registration at all on the last few minyan days of the period (before today): the page or the link may be broken.
   if (s.start && s.start < today && !(s.end && s.end < addDays_(today, -1))) {
     const days = [];
-    for (let k = addDays_(today, -1); k >= s.start && days.length < NTFY.QUIET_DAYS && daysTo(k) > -30; k = addDays_(k, -1)) {
+    for (let k = addDays_(today, -1); k >= s.start && days.length < ALERTS.QUIET_DAYS && daysTo(k) > -30; k = addDays_(k, -1)) {
       if (isMinyanDay_(s, k)) days.push(k);
     }
-    if (days.length === NTFY.QUIET_DAYS) {
+    if (days.length === ALERTS.QUIET_DAYS) {
       const seen = new Set(ctx.attRows.map(r => r[0] ? toKey_(r[0], ctx.tz) : '').filter(Boolean));
-      if (days.every(k => !seen.has(k))) out.push('אין אף רישום ב-' + NTFY.QUIET_DAYS + ' ימי המניין האחרונים. כדאי לבדוק שהדף והקישור עובדים.');
+      if (days.every(k => !seen.has(k))) out.push('אין אף רישום ב-' + ALERTS.QUIET_DAYS + ' ימי המניין האחרונים. כדאי לבדוק שהדף והקישור עובדים.');
     }
   }
   const waiting = countPendingNames_(ss);
-  if (waiting >= NTFY.PENDING_MANY) out.push(waiting + ' שמות ממתינים לבדיקה (כלי הגבאי ← רישומים לבדיקה).');
+  if (waiting >= ALERTS.PENDING_MANY) out.push(waiting + ' שמות ממתינים לבדיקה (כלי הגבאי ← רישומים לבדיקה).');
   return out;
 }

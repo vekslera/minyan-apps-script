@@ -21,7 +21,7 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
   `Admin.gs` Sheet dialogs (`admin*`, admin token) + the shared import/review core, `Reports.gs`,
   `Duplicates.gs`, `Location.gs`, `Auth.gs`, `Data.gs`, `Matching.gs`, `Names.gs`, `WhatsApp.gs`,
   `HebrewCalendar.gs`, `Utils.gs` (settings, page assembly, cache), `Config.gs`, `Setup.gs` (menu, setup, help sheet),
-  `Notify.gs` (ntfy alerts + daily check + test alert; owns `doGet`, which wraps `doGet_` in `Kiosk.gs`),
+  `Notify.gs` (email alerts + daily check + test alert; owns `doGet`, which wraps `doGet_` in `Kiosk.gs`),
   `Account.gs` (the read-only הגדרות row with the owner's Google account; `ACCOUNT` property; onEdit puts it back).
 - `*Page.html` / `*Dialog.html` — pages. `scripts/**/*.js` — browser code. `styles/tools.html` — shared CSS.
 - One implementation per feature, thin wrappers per surface (Sheet menu / dialogs vs. web tools).
@@ -97,20 +97,19 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
   sheet or in document properties, never in code. `setup` drops all document properties when the Sheet ID changed
   (`forgetIfCopied_`), so a copy never shares a key or gabbai code. Keep `INSTALL-he.md` in step with the menus.
 
-## Error alerts (ntfy)
+## Error alerts (email)
 
 - New features go in **new files**, with one-line hooks in existing ones (the owner's rule). Example: `Notify.gs` +
   `scripts/common/report.js` (+ `deploy/maintainer.ps1`); hooks: `doGet` → `doGet_`, `installDailyCheck_()` in
   `setup`, `reportProblem(...)` in the pages' `call()` failure handlers and `window.onerror`.
 - Reported: errors without Hebrew (the app's own user messages are Hebrew), page script errors, `doGet` failures;
-  once an hour per place+message; numbers masked; never names/phones/places. Daily check ~22:00, once per day
-  (`DAILY_CHECK` property) even with triggers from two accounts.
-- The topic: `minyan-attendance-script` (the owner's choice; with a random ending only if taken), kept in
-  `deploy/maintainer.json` (git-ignored) and written as `Maintainer.gs` into minyan uploads only (not the
-  template), with the minyan's short name (`minyan`, from `minyanim.json`) that starts every alert's title.
-  Every message ends with the minyan's Google account (the owner asked). Anyone knowing a topic can read/post on
-  ntfy.sh, so alerts never carry registrants' data. No `MAINTAINER`
-  → nothing is sent.
+  once an hour per place+message; numbers masked; never registrants' names/phones/places. Daily check ~22:00, once
+  per day (`DAILY_CHECK` property) even with triggers from two accounts.
+- Sent with `MailApp` to the maintainer's address: `deploy/maintainer.json` (git-ignored, set by `deploy-all -Alerts`),
+  written as `Maintainer.gs` (`{email, minyan}`) into minyan uploads only (not the template). The short name starts
+  every subject; the body ends with the minyan's Google account and Sheet link. No `MAINTAINER` → nothing is sent.
+- **ntfy.sh doesn't work from Apps Script:** its free quota is per sender IP, and Google's shared IPs have used it
+  up ("429 daily message quota reached"). Don't go back to it without an account/token.
 
 ## Privacy
 

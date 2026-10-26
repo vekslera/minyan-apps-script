@@ -93,7 +93,7 @@ function makeEnv(opts) {
     createMenu() { const m = { addItem: () => m, addSeparator: () => m, addToUi: () => m }; return m; },
   };
   const web = { url: '' };
-  const triggers = [], sent = [], ntfy = { status: 200 };
+  const triggers = [], sent = [], mail = { fail: '' };
   const now = { offsetMs: 0 };
   const fmt = (d, tz, f) => {
     const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(d).map(p => [p.type, p.value]));
@@ -131,8 +131,8 @@ function makeEnv(opts) {
                  getProjectTriggers: () => triggers.slice(),
                  newTrigger: fn => { const t = { fn: fn }; const b = { timeBased: () => b, everyDays: n => { t.days = n; return b; }, atHour: h => { t.hour = h; return b; },
                                                                       create: () => { triggers.push({ getHandlerFunction: () => fn, spec: t }); } }; return b; } },
-    // ntfy: env.sent lists every request; env.ntfyStatus is the answer's code
-    UrlFetchApp: { fetch: (url, o) => { sent.push({ url: url, body: JSON.parse(o.payload) }); return { getResponseCode: () => ntfy.status, getContentText: () => ntfy.status < 300 ? '{}' : '{"error":"test"}' }; } },
+    // Gmail: env.sent lists every email sent ({to, subject, body, name}); env.mail.fail = an error message to throw
+    MailApp: { sendEmail: o => { if (mail.fail) throw new Error(mail.fail); sent.push(Object.assign({}, o)); } },
     Logger: { log: m => log.push(['log', m]) },
     Session: { getEffectiveUser: () => ({ getEmail: () => 'test@example.com' }) },
     CacheService: { getScriptCache: () => ({
@@ -181,7 +181,7 @@ function makeEnv(opts) {
     r.setValue(value);
     if (typeof ctx.onEdit === 'function') ctx.onEdit({ range: r, value });
   };
-  return { ctx, ss, ui, log, props, now, cacheStore, userEdit, web, triggers, sent, ntfy };
+  return { ctx, ss, ui, log, props, now, cacheStore, userEdit, web, triggers, sent, mail };
 }
 
 module.exports = { makeEnv };

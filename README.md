@@ -33,7 +33,7 @@ Everything the users see is in Hebrew. The code and this README are in English.
 11. [Files](#11-files) and [private settings](#12-private-settings-secretsgs)
 12. [Local tests](#13-local-tests) and [performance notes](#14-performance-notes)
 13. [More minyanim: the template and deploy-all](#15-more-minyanim-the-template-and-deploy-all) — a copy per minyan, a one-page Hebrew guide, updating them all
-14. [Error alerts to the maintainer (ntfy)](#16-error-alerts-to-the-maintainer-ntfy)
+14. [Error alerts to the maintainer (email)](#16-error-alerts-to-the-maintainer-email)
 
 Google's menus are shown here as **English / עברית**, because the labels depend on your Google language setting.
 
@@ -392,7 +392,7 @@ docs/INSTALL-he.md                 one-page Hebrew installation guide for a new 
 test/                              local tests against a simulated Sheet
 ```
 
-Private, git-ignored, only on your computer: `.clasp.json` (your Script ID), `src/Secrets.gs` (if you still have one), `deploy/minyanim.json` (every minyan's Script ID and full link), `deploy/maintainer.json` (your ntfy topic), `deploy/*.log`.
+Private, git-ignored, only on your computer: `.clasp.json` (your Script ID), `src/Secrets.gs` (if you still have one), `deploy/minyanim.json` (every minyan's Script ID and full link), `deploy/maintainer.json` (the address for error alerts), `deploy/*.log`.
 
 **`src/`:**
 
@@ -414,7 +414,7 @@ Private, git-ignored, only on your computer: `.clasp.json` (your Script ID), `sr
 | `Duplicates.gs` | Finding and merging duplicate people (shared by the Sheet menu and the tools page) |
 | `Utils.gs` | Dates, settings, keys, private-settings loader, small helpers |
 | `Account.gs` | The read-only row with the minyan's Google account (filled in by setup, put back if edited) |
-| `Notify.gs` | Error alerts and the daily check, sent to the maintainer through ntfy ([§16](#16-error-alerts-to-the-maintainer-ntfy)); also `doGet`, which reports a page that fails to build |
+| `Notify.gs` | Error alerts and the daily check, emailed to the maintainer ([§16](#16-error-alerts-to-the-maintainer-email)); the test alert; also `doGet`, which reports a page that fails to build |
 | `KioskPage.html` | The registration page: markup and styles |
 | `GabbaiPage.html` | The gabbai tools page: markup and styles |
 | `AdminPage.html` | Import + review dialog in the Sheet: markup |
@@ -436,7 +436,7 @@ Private, git-ignored, only on your computer: `.clasp.json` (your Script ID), `sr
 | `deploy.sh` | The same for macOS/Linux, with the deployment ID from `src/Secrets.gs` |
 | `deploy-all.ps1`, `deploy-all.cmd` | Update every minyan in `minyanim.json` and the template ([§15](#15-more-minyanim-the-template-and-deploy-all)) |
 | `template.cmd` | Double-click: update the template only (`deploy-all.ps1 -Only template`) |
-| `maintainer.ps1` | The ntfy topic for error alerts (`maintainer.json`, made the first time), written by `deploy-all` into each minyan's upload as `Maintainer.gs` |
+| `maintainer.ps1` | The email address for error alerts (`maintainer.json`, set with `deploy-all.ps1 -Alerts`), written by `deploy-all` into each minyan's upload as `Maintainer.gs` |
 
 All `.gs` files share one global scope, and nothing runs at load time across files, so the order of files in the editor doesn't matter.
 
@@ -575,19 +575,19 @@ From then on `deploy.cmd` updates this folder's minyan through `minyanim.json` (
 
 ---
 
-## 16. Error alerts to the maintainer (ntfy)
+## 16. Error alerts to the maintainer (email)
 
-The maintainer gets a push notification on his phone, through the free **ntfy** app, when something goes wrong in any minyan. No email, no checking each Sheet's Executions log.
+When something goes wrong in any minyan, the maintainer gets an **email**. The Gmail app on his phone notifies at once. There's no other service to sign up to, and no checking each Sheet's Executions log. (ntfy.sh was tried first, but from Google's shared servers its free daily quota is always used up.)
 
 **Instant alerts** (`src/Notify.gs`, `src/scripts/common/report.js`):
 
-- **What is sent:** a page that breaks in the browser, a server call that fails with an error nobody meant, and the page failing to build. The alert says where it happened and the error text; tapping it opens that minyan's Sheet.
-- **Which minyan:** every title starts with the minyan's short name from `minyanim.json`, then its own name from הגדרות, e.g. "⚠ steinbach · מניין שחרית" or "בדיקה יומית · mincha · …". Every message ends with **חשבון:** followed by the minyan's Google account (from its read-only הגדרות row). So two minyanim with the same name are still told apart. The short name is also an ntfy tag.
-- **To test:** **מניין → שליחת התראת בדיקה למפתח** sends one alert, or says that alerts aren't on in this Sheet yet. If sending fails, it shows the reason: ntfy's answer code and text, or Google's error.
+- **What is sent:** a page that breaks in the browser, a server call that fails with an error nobody meant, and the page failing to build. The email says where it happened and the error text.
 - **What isn't:** the app's own messages to its users (all in Hebrew: a wrong code, closed hours, a wrong date). The same error from the same place is sent at most once an hour.
-- **No registrants' data leaves Google:** no names, phones or places of the people who register; long numbers in an error text are masked. The minyan's own Google account is included, as asked.
+- **Which minyan:** every subject starts with the minyan's short name from `minyanim.json`, then its own name from הגדרות, e.g. "⚠ steinbach · מניין שחרית" or "בדיקה יומית · mincha · …". Every email ends with **חשבון:** followed by the minyan's Google account (its read-only הגדרות row) and a link to its Sheet. So two minyanim with the same name are still told apart.
+- **No registrants' data:** no names, phones or places of the people who register; long numbers in an error text are masked.
+- **To test:** **מניין → שליחת התראת בדיקה למפתח** sends one email, or says that alerts aren't on in this Sheet yet. If sending fails, it shows Google's reason.
 
-**The daily check** (about 22:00; a time trigger that **מניין → הגדרה ראשונית** sets up) sends one message only when something is wrong:
+**The daily check** (about 22:00; a time trigger that **מניין → הגדרה ראשונית** sets up) sends one email only when something is wrong:
 
 - no page address;
 - the period ends in 7 days or tomorrow, or ended in the last 3 days;
@@ -596,15 +596,15 @@ The maintainer gets a push notification on his phone, through the free **ntfy** 
 
 If the gabbai also runs setup from his account, there are two triggers, but the check runs once a day.
 
-**The channel:**
+**The address:**
 
-- **The topic:** the first `deploy-all` makes `deploy\maintainer.json` with the topic `minyan-attendance-script`. If that topic already has someone else's messages, or is reserved, it uses that name with a short random ending. It prints the topic; `.\deploy\deploy-all.ps1 -Topic` shows it again. In the ntfy app: **Subscribe to topic** → that name (server ntfy.sh). To change it, edit `deploy\maintainer.json` and run `deploy-all`.
-- **Who can see it:** on ntfy.sh, anyone who knows a topic's name can read it and post to it, and this name is written in this public repository. That is why the alerts carry no personal data. For a closed channel, reserve the topic with an ntfy account, or put another name in `maintainer.json`.
-- **Not in the template:** a copy only gets the topic after the maintainer adds it to `minyanim.json`.
-- **How each minyan gets it:** `deploy-all` writes it into each minyan's upload as `Maintainer.gs`. A minyan updated any other way (a plain `clasp push`, `deploy.sh`) loses `Maintainer.gs` and stops sending until the next `deploy-all`.
-- **Without `Maintainer.gs`** (the template, new copies, tests) nothing is sent.
+- **Setting it:** `.\deploy\deploy-all.ps1 -Alerts` asks for it (Enter keeps the current one) and keeps it in `deploy\maintainer.json`, which is git-ignored.
+- **How each minyan gets it:** `deploy-all` writes it, with the minyan's short name, into each minyan's upload as `Maintainer.gs`, never into the template. A copy only gets it after the maintainer adds it to `minyanim.json`.
+  - A minyan updated any other way (a plain `clasp push`, `deploy.sh`) loses `Maintainer.gs` and stops sending until the next `deploy-all`.
+  - Without an address, `deploy-all` says "error alerts are off" and nothing is sent.
+- **Who sends it:** the emails are sent by the account the code runs as. For the pages, after `deploy-all` that's the maintainer account, so they arrive from yourself. A Gmail filter on the sender name "מניין — התראות" with its own label and notifications makes them stand out. Google allows about 100 emails a day per account, far more than the once-an-hour limit can produce.
 
-**Permissions:** this needs two more Google permissions: connecting to an external service (ntfy) and running on a schedule (the daily check). After the update that brings them, as with the first `deploy-all`:
+**Permissions:** this needs two more Google permissions: sending email and running on a schedule (the daily check). After the update that brings them:
 
 1. Open each minyan's Sheet as the maintainer account.
 2. Run **מניין → הגדרה ראשונית** and allow. That also sets up the daily check.

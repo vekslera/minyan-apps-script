@@ -1,4 +1,4 @@
-// Shared by the pages — tells the maintainer about a problem nobody caused on purpose (Notify.gs → ntfy):
+// Shared by the pages — tells the maintainer about a problem nobody caused on purpose (Notify.gs → an email):
 // a server call that failed with a non-Hebrew error, or a script error on the page itself.
 // The app's own Hebrew messages (wrong code, closed hours …) are not reported. Each message once per page load.
 // Declarations only — nothing runs when the file loads.
