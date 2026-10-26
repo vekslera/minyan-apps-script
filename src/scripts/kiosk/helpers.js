@@ -10,7 +10,7 @@ function call(fn, args, ok, fail) {
     showMsg(errText(e));
   };
   var r = google.script.run.withSuccessHandler(function (res) { done(res); ok(res); })
-                           .withFailureHandler(function (e) { done(null, 'failed'); onFail(e); });
+                           .withFailureHandler(function (e) { done(null, 'failed'); reportProblem('call', fn, e); onFail(e); });
   r[fn].apply(r, args);
 }
 function errText(e) { return (e && e.message) ? e.message : 'אירעה תקלה, נסו שוב'; }

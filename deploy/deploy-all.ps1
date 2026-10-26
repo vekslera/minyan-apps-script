@@ -7,17 +7,20 @@
 #   .\deploy-all.ps1 -Add                    add a minyan (asks for a name, its Script ID and its registration link)
 #   .\deploy-all.ps1 -Remove x               take x off the list (nothing changes in its Sheet)
 #   .\deploy-all.ps1 -List                   show the list, with every registration link
+#   .\deploy-all.ps1 -Topic                  show the ntfy topic for error alerts (maintainer.ps1)
 #
 # deploy\minyanim.json (git-ignored, private: it holds the links with their keys) has, per minyan: name, scriptId,
 # deploymentId and key ("" = upload only, like the template). src\Secrets.gs, if it still exists, goes only
 # to this project's own minyan (the Script ID in .clasp.json). Everything runs as the Google account clasp is
 # signed in to: every Sheet must be shared with it as Editor, and the pages then run as it.
-param([string]$Description = "update", [string]$Only = "", [switch]$Add, [string]$Remove = "", [switch]$List, [switch]$NoCheck)
+param([string]$Description = "update", [string]$Only = "", [switch]$Add, [string]$Remove = "", [switch]$List, [switch]$NoCheck, [switch]$Topic)
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot                 # the project folder
 $src = Join-Path $root "src"                             # the Apps Script code
 $listFile = Join-Path $PSScriptRoot "minyanim.json"
 $secretsFile = Join-Path $src "Secrets.gs"
+. (Join-Path $PSScriptRoot "maintainer.ps1")             # the ntfy topic for error alerts
+if ($Topic) { Write-Host "ntfy topic (subscribe to it in the ntfy app): $((Get-Maintainer).ntfyTopic)"; exit 0 }
 
 function Read-List {
   if (-not (Test-Path $listFile)) { return @() }
@@ -131,6 +134,7 @@ function Build-Folder($m) {
   Copy-Item -Recurse -Path (Join-Path $src "*") -Destination $tmp
   Get-ChildItem -Path $tmp -File | Where-Object { $_.Name -eq "Secrets.gs" -or $_.Extension -eq ".example" } | Remove-Item -Force
   if (Uses-Secrets $m) { Copy-Item $secretsFile -Destination $tmp }
+  if ($m.deploymentId) { Add-Maintainer $tmp $m.name }            # the ntfy topic: minyanim only, never the template
   $cfg = [ordered]@{ scriptId = $m.scriptId; rootDir = "."; scriptExtensions = @(".gs"); htmlExtensions = @(".html", ".js") }
   $cfg | ConvertTo-Json | Set-Content -Encoding ascii -Path (Join-Path $tmp ".clasp.json")
   return $tmp

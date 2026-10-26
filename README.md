@@ -33,6 +33,7 @@ Everything the users see is in Hebrew. The code and this README are in English.
 11. [Files](#11-files) and [private settings](#12-private-settings-secretsgs)
 12. [Local tests](#13-local-tests) and [performance notes](#14-performance-notes)
 13. [More minyanim: the template and deploy-all](#15-more-minyanim-the-template-and-deploy-all) — a copy per minyan, a one-page Hebrew guide, updating them all
+14. [Error alerts to the maintainer (ntfy)](#16-error-alerts-to-the-maintainer-ntfy)
 
 Google's menus are shown here as **English / עברית**, because the labels depend on your Google language setting.
 
@@ -390,7 +391,7 @@ docs/INSTALL-he.md                 one-page Hebrew installation guide for a new 
 test/                              local tests against a simulated Sheet
 ```
 
-Private, git-ignored, only on your computer: `.clasp.json` (your Script ID), `src/Secrets.gs` (if you still have one), `deploy/minyanim.json` (every minyan's Script ID and full link), `deploy/*.log`.
+Private, git-ignored, only on your computer: `.clasp.json` (your Script ID), `src/Secrets.gs` (if you still have one), `deploy/minyanim.json` (every minyan's Script ID and full link), `deploy/maintainer.json` (your ntfy topic), `deploy/*.log`.
 
 **`src/`:**
 
@@ -411,12 +412,13 @@ Private, git-ignored, only on your computer: `.clasp.json` (your Script ID), `sr
 | `Reports.gs` | Weekly and final reports, lottery draw (shared by the Sheet menu and the tools page) |
 | `Duplicates.gs` | Finding and merging duplicate people (shared by the Sheet menu and the tools page) |
 | `Utils.gs` | Dates, settings, keys, private-settings loader, small helpers |
+| `Notify.gs` | Error alerts and the daily check, sent to the maintainer through ntfy ([§16](#16-error-alerts-to-the-maintainer-ntfy)); also `doGet`, which reports a page that fails to build |
 | `KioskPage.html` | The registration page: markup and styles |
 | `GabbaiPage.html` | The gabbai tools page: markup and styles |
 | `AdminPage.html` | Import + review dialog in the Sheet: markup |
 | `styles/tools.html` | Styles of the import and review screens, shared by `AdminPage` and `GabbaiPage` |
 | `LinkDialog.html`, `ReportTextDialog.html`, `BadLinkPage.html` | Small dialogs/pages |
-| `scripts/common/dom.js`, `clipboard.js`, `timing.js` | Browser helpers shared by the pages; `timing.js` = the `&debug=1` timing panel |
+| `scripts/common/dom.js`, `clipboard.js`, `timing.js`, `report.js` | Browser helpers shared by the pages; `timing.js` = the `&debug=1` timing panel; `report.js` = tells the maintainer about a failed call or a page error |
 | `scripts/kiosk/*.js` | Registration page: `helpers`, `deviceDetection`, `hebrewDate`, `lookup` (live suggestions), `registration` (submit/confirmation), `gabbaiMode`, `myPhone` (remembered number on a phone), `location` (location check, "outside the shul" panel, gabbai test), `main` (state + `startKiosk()`) |
 | `scripts/admin/*.js` | Import and review screens: `helpers`, `import`, `review` (used by both pages), `main` (the Sheet dialog's tabs + `startAdmin()`) |
 | `scripts/gabbai/*.js` | Gabbai tools page: `main` (login, navigation + `startGabbai()`), `reports`, `draw`, `duplicates`, `link`, `poster` (the printable QR sign, PDF), `shul` (the shul's location), `settings`, `pin` |
@@ -432,6 +434,7 @@ Private, git-ignored, only on your computer: `.clasp.json` (your Script ID), `sr
 | `deploy.sh` | The same for macOS/Linux, with the deployment ID from `src/Secrets.gs` |
 | `deploy-all.ps1`, `deploy-all.cmd` | Update every minyan in `minyanim.json` and the template ([§15](#15-more-minyanim-the-template-and-deploy-all)) |
 | `template.cmd` | Double-click: update the template only (`deploy-all.ps1 -Only template`) |
+| `maintainer.ps1` | The ntfy topic for error alerts (`maintainer.json`, made the first time), written by `deploy-all` into each minyan's upload as `Maintainer.gs` |
 
 All `.gs` files share one global scope, and nothing runs at load time across files, so the order of files in the editor doesn't matter.
 
@@ -565,3 +568,38 @@ The minyan installed first keeps its page address and link key in `Secrets.gs`. 
 5. **Update again** (`deploy-all.cmd`). The upload now replaces the script's files without `Secrets.gs`, and the check opens the page with the key from the list. "the registration link opens the page" → done; `Secrets.gs` may be deleted. A **Check: THE REGISTRATION LINK NO LONGER WORKS** → put `Secrets.gs` back, update, and run step 2 again.
 
 From then on `deploy.cmd` updates this folder's minyan through `minyanim.json` (the entry with the Script ID in `.clasp.json`).
+
+---
+
+## 16. Error alerts to the maintainer (ntfy)
+
+The maintainer gets a push notification on his phone, through the free **ntfy** app, when something goes wrong in any minyan. No email, no checking each Sheet's Executions log.
+
+**Instant alerts** (`src/Notify.gs`, `src/scripts/common/report.js`):
+
+- **What is sent:** a page that breaks in the browser, a server call that fails with an error nobody meant, and the page failing to build. The alert says where it happened and the error text; tapping it opens that minyan's Sheet.
+- **Which minyan:** every title starts with the minyan's short name from `minyanim.json`, then its own name from הגדרות, e.g. "⚠ steinbach · מניין שחרית" or "בדיקה יומית · mincha · …". So two minyanim with the same name are still told apart. The short name is also an ntfy tag.
+- **What isn't:** the app's own messages to its users (all in Hebrew: a wrong code, closed hours, a wrong date). The same error from the same place is sent at most once an hour.
+- **No personal data leaves Google:** no names, phones or places; long numbers in an error text are masked.
+
+**The daily check** (about 22:00; a time trigger that **מניין → הגדרה ראשונית** sets up) sends one message only when something is wrong:
+
+- no page address;
+- the period ends in 7 days or tomorrow, or ended in the last 3 days;
+- **no registration at all on the last 3 minyan days** (usually a broken page or link);
+- 20 or more names waiting for review.
+
+If the gabbai also runs setup from his account, there are two triggers, but the check runs once a day.
+
+**The channel:**
+
+- **The topic:** the first `deploy-all` makes `deploy\maintainer.json` with the topic `minyan-attendance-script`. If that topic already has someone else's messages, or is reserved, it uses that name with a short random ending. It prints the topic; `.\deploy\deploy-all.ps1 -Topic` shows it again. In the ntfy app: **Subscribe to topic** → that name (server ntfy.sh). To change it, edit `deploy\maintainer.json` and run `deploy-all`.
+- **Who can see it:** on ntfy.sh, anyone who knows a topic's name can read it and post to it, and this name is written in this public repository. That is why the alerts carry no personal data. For a closed channel, reserve the topic with an ntfy account, or put another name in `maintainer.json`.
+- **Not in the template:** a copy only gets the topic after the maintainer adds it to `minyanim.json`.
+- **How each minyan gets it:** `deploy-all` writes it into each minyan's upload as `Maintainer.gs`. A minyan updated any other way (a plain `clasp push`, `deploy.sh`) loses `Maintainer.gs` and stops sending until the next `deploy-all`.
+- **Without `Maintainer.gs`** (the template, new copies, tests) nothing is sent.
+
+**Permissions:** this needs two more Google permissions: connecting to an external service (ntfy) and running on a schedule (the daily check). After the update that brings them, as with the first `deploy-all`:
+
+1. Open each minyan's Sheet as the maintainer account.
+2. Run **מניין → הגדרה ראשונית** and allow. That also sets up the daily check.

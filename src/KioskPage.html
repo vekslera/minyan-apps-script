@@ -93,7 +93,8 @@ footer{text-align:center;margin-top:20px}
 <body>
 <script>
 // Shows any script error on the page itself instead of leaving it stuck on "טוען…".
-window.onerror = function (msg) {
+window.onerror = function (msg, src, line) {
+  if (window.reportProblem) reportProblem('page', String(src || '').split('/').pop() + ':' + (line || ''), msg);
   var d = document.createElement('div');
   d.setAttribute('style', 'position:fixed;top:0;left:0;right:0;z-index:999;background:#fdeceb;color:#b42318;font:15px Arial,sans-serif;padding:10px 14px;direction:rtl');
   d.textContent = 'תקלה בדף: ' + msg + ' — נא לדווח לגבאי';
@@ -182,6 +183,7 @@ var DEBUG_MS = '__DEBUG__';
 var INIT = __INIT__;
 var TOOLS_URL = '__TOOLS__';
 </script>
+<script data-include="scripts/common/report.js"></script>
 <script data-include="scripts/common/dom.js"></script>
 <script data-include="scripts/common/timing.js"></script>
 <script data-include="scripts/kiosk/helpers.js"></script>

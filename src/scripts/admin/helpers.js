@@ -9,7 +9,7 @@
 function call(fn, args, ok) {
   var done = ttime(API.prefix + fn);                          // the &debug=1 timing panel (no-op otherwise)
   var r = google.script.run.withSuccessHandler(function (res) { done(res); ok(res); })
-                           .withFailureHandler(function (e) { done(null, 'failed'); busy(false); callFailed(e); });
+                           .withFailureHandler(function (e) { done(null, 'failed'); reportProblem('call', API.prefix + fn, e); busy(false); callFailed(e); });
   r[API.prefix + fn].apply(r, API.auth().concat(args));
 }
 function errText(e) { return (e && e.message) || 'אירעה תקלה'; }

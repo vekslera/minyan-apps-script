@@ -773,4 +773,77 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   console.log('template copies OK');
 }
 
+// ---------- Notifications to the maintainer (Notify.gs → ntfy) ----------
+{
+  // without Maintainer.gs (the template, its copies before deploy-all): nothing is sent
+  const env0 = makeEnv(); env0.ctx.setup();
+  assert.equal(env0.ctx.reportError_('x', 'TypeError: boom'), false); env0.ctx.dailyCheck();
+  assert.equal(env0.sent.length, 0, 'no channel, no messages');
+  assert.equal(env0.triggers.filter(t => t.getHandlerFunction() === 'dailyCheck').length, 1, 'the daily check is set up anyway');
+
+  const envN = makeEnv({ maintainer: { ntfyServer: 'https://ntfy.example', ntfyTopic: 'test-topic-0001', minyan: 'shulA' } }); const N = envN.ctx;
+  N.setup();
+  const k = envN.props.KIOSK_KEY, tz = 'Asia/Jerusalem', today = N.todayKey_(tz);
+  // setup: one daily trigger, at 22, also when run again
+  N.setup();
+  const daily = envN.triggers.filter(t => t.getHandlerFunction() === 'dailyCheck');
+  assert.equal(daily.length, 1); assert.equal(daily[0].spec.hour, 22); assert.equal(daily[0].spec.days, 1);
+  assert(envN.log.some(l => l[0] === 'alert' && /בדיקה יומית/.test(l[1])), 'setup says so (first time)');
+  // an unexpected error from a page: sent at once, with the minyan's name; the same one not again within the hour
+  assert.equal(N.clientError('wrong-key', { kind: 'page', message: 'x' }), false, 'only with the page key');
+  assert.equal(N.clientError(k, { kind: 'call', page: 'kiosk', where: 'kioskSubmit', message: 'TypeError: Cannot read properties of undefined (reading \'id\')' }), true);
+  assert.equal(envN.sent.length, 1);
+  const m = envN.sent[0];
+  assert.equal(m.url, 'https://ntfy.example'); assert.equal(m.body.topic, 'test-topic-0001');
+  assert(/^⚠ shulA · מניין שחרית$/.test(m.body.title), m.body.title); assert.deepEqual(m.body.tags, ['synagogue', 'shulA']); assert(/kiosk · kioskSubmit: TypeError/.test(m.body.message), m.body.message);
+  assert.equal(m.body.priority, 4); assert(/spreadsheets\/d\//.test(m.body.click), 'opens the Sheet');
+  N.clientError(k, { kind: 'call', page: 'kiosk', where: 'kioskSubmit', message: 'TypeError: Cannot read properties of undefined (reading \'id\')' });
+  assert.equal(envN.sent.length, 1, 'once an hour');
+  // the app's own Hebrew messages are not errors; a page script error always is (with the admin token too)
+  assert.equal(N.clientError(k, { kind: 'call', where: 'kioskLogin', message: 'קוד שגוי' }), false);
+  assert.equal(N.clientError(N.adminToken_(), { kind: 'page', page: 'admin', where: 'main.js:12', message: 'ReferenceError: x is not defined' }), true);
+  // no personal data: long numbers masked
+  N.reportError_('kioskSubmit', 'failed for 052-123-4567 at 31.9857703,34.8582831');
+  const last = envN.sent[envN.sent.length - 1].body.message;
+  assert(!/123-4567|9857703|8582831/.test(last), last);
+  // the page failing to build
+  const real = N.doGet_; N.doGet_ = () => { throw new Error('Exception: Service Spreadsheets failed'); };
+  assert.throws(() => N.doGet({ parameter: { k: k } }), /Service Spreadsheets failed/);
+  N.doGet_ = real;
+  assert(/doGet: Exception: Service Spreadsheets failed/.test(envN.sent[envN.sent.length - 1].body.message));
+  // ntfy down: nothing breaks
+  envN.ntfy.status = 500; assert.equal(N.reportError_('x', 'Error: another'), false); envN.ntfy.status = 200;
+
+  // the daily check: nothing to say → nothing sent
+  const sh = envN.ss.getSheetByName('הגדרות');
+  const row = label => sh.data.findIndex(x => x[0] === label) + 1;
+  const setRow = (label, v) => envN.userEdit('הגדרות', 'B' + row(label), v);
+  envN.props.WEB_URL = 'https://script.google.com/macros/s/AKfycbNOTIFY_example/exec';
+  setRow('תחילת התקופה', N.keyToDate_(today, tz)); setRow('סוף התקופה', N.keyToDate_(N.addDays_(today, 20), tz));
+  let n0 = envN.sent.length;
+  N.dailyCheck(); assert.equal(envN.sent.length, n0, 'all well: no message');
+  // a second trigger (setup run from another account) the same day does nothing
+  delete envN.props.WEB_URL; N.dailyCheck(); assert.equal(envN.sent.length, n0, 'once a day');
+  // problems: no address; the period ends in 7 days; nobody registered on the last 3 minyan days
+  delete envN.props.DAILY_CHECK;
+  setRow('תחילת התקופה', N.keyToDate_(N.addDays_(today, -14), tz)); setRow('סוף התקופה', N.keyToDate_(N.addDays_(today, 7), tz));
+  N.dailyCheck();
+  const d = envN.sent[envN.sent.length - 1].body;
+  assert.equal(d.title, 'בדיקה יומית · shulA · מניין שחרית'); assert.equal(d.priority, 3);
+  assert(/כתובת דף הרישום לא הוגדרה/.test(d.message), d.message);
+  assert(/התקופה מסתיימת ב-.* \(עוד 7 ימים\)/.test(d.message), d.message);
+  assert(/אין אף רישום ב-3 ימי המניין האחרונים/.test(d.message), d.message);
+  // one registration yesterday-ish (a minyan day) → no "no registrations" line
+  let lastDay = N.addDays_(today, -1); while (!N.isMinyanDay_(N.readSettings_(envN.ss, tz), lastDay)) lastDay = N.addDays_(lastDay, -1);
+  const sess = N.kioskLogin(k, N.gabbaiPin_()).token;
+  N.kioskSubmit(k, { phone: '0521111111', first: 'משה', last: 'כהן', session: sess, date: lastDay });
+  assert.deepEqual(N.dailyProblems_(envN.ss, today).filter(x => /אין אף רישום/.test(x)), []);
+  // the period ended yesterday → said (for 3 days), then quiet
+  setRow('סוף התקופה', N.keyToDate_(N.addDays_(today, -1), tz));
+  assert(N.dailyProblems_(envN.ss, today).some(x => /התקופה הסתיימה/.test(x)));
+  setRow('סוף התקופה', N.keyToDate_(N.addDays_(today, -10), tz));
+  assert(!N.dailyProblems_(envN.ss, today).some(x => /התקופה הסתיימה/.test(x)));
+  console.log('notifications OK');
+}
+
 console.log('\nALL OK');

@@ -28,6 +28,8 @@ past.forEach(d => sub({ phone: '0521111111', session: sess, date: d }));
 // a duplicate: "דוד לוי" once more without a phone
 { const c = G.loadCtx_(env.ss); G.createPerson_(c, { first: 'דוד', last: 'לוי', phone: '' }); G.flushCtx_(c); G.cacheClear_(); }
 
+// what the pages report to the maintainer (Notify.gs clientError)
+const reported = []; { const real = G.clientError; G.clientError = (a, i) => { reported.push(i); return real(a, i); }; }
 const shim = `(function(){function r(h){return new Proxy({},{get:function(_,p){if(p==='withSuccessHandler')return function(f){return r(Object.assign({},h,{ok:f}))};if(p==='withFailureHandler')return function(f){return r(Object.assign({},h,{fail:f}))};return function(){var a=[].slice.call(arguments);window.__gs(p,JSON.stringify(a)).then(function(x){var o=JSON.parse(x);if(o.err){h.fail&&h.fail({message:o.err})}else{h.ok&&h.ok(o.val)}})}}})}window.google={script:{run:r({})}}})();`;
 const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
 
@@ -154,6 +156,21 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
     await p.screenshot({ path: 'test/shots/g6b-poster.png', fullPage: true });
     console.log('QR sign: ' + dl.suggestedFilename() + ', ' + fs.statSync('test/shots/qr-sign.pdf').size + ' bytes');
   } else console.log('QR sign: PDF not checked (no local qrcodejs/jspdf)');
+
+  // problems are reported: a server call failing with a non-Hebrew error, and a script error on the page
+  { const real = G.gabbaiRebbe; G.gabbaiRebbe = () => { throw new TypeError("Cannot read properties of undefined (reading 'x')"); };
+    await p.click('#back'); await tile(p, 'rebbe'); await p.click('#rebbeBtn'); await p.waitForTimeout(400);
+    G.gabbaiRebbe = real; }
+  assert(reported.some(r => r.kind === 'call' && r.where === 'gabbaiRebbe' && /TypeError|Cannot read/.test(r.message)), JSON.stringify(reported));
+  await p.evaluate(() => setTimeout(() => { notDefinedAnywhere(); }, 0)); await p.waitForTimeout(400);
+  assert(reported.some(r => r.kind === 'page' && /notDefinedAnywhere/.test(r.message)), JSON.stringify(reported));
+  await p.evaluate(() => Array.from(document.body.children).filter(d => /^תקלה בדף/.test(d.textContent)).forEach(d => d.remove()));   // the red bar
+  const before = reported.length;
+  await p.click('#back'); await tile(p, 'pin'); await p.fill('#pinCur', 'wrong-code-x'); await p.fill('#pinNew', 'testcode8'); await p.fill('#pinNew2', 'testcode8');
+  await p.click('#pinSave'); await p.waitForTimeout(400);
+  assert.equal(reported.length, before, "the app's own Hebrew messages are not reported");
+  errors.length = 0;                                            // the page error above was on purpose
+  console.log('reported to the maintainer:', reported.map(r => r.kind + ' ' + r.where).join(', '));
 
   // change the code, then log out
   await p.click('#back'); await tile(p, 'pin');

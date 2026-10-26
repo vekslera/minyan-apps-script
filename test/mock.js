@@ -68,7 +68,7 @@ function makeEnv(opts) {
     getSheets() { return this.sheets.slice(); },
     deleteSheet(s) { this.sheets = this.sheets.filter(x => x !== s); },
     toast(m) { log.push(['toast', m]); },
-    id: 'ss1', getId() { return this.id; },                      // set env.ss.id to act as a copy of the Sheet
+    id: 'ss1', getId() { return this.id; }, getUrl() { return 'https://docs.google.com/spreadsheets/d/' + this.id + '/edit'; }, getName() { return 'גיליון'; },                      // set env.ss.id to act as a copy of the Sheet
   };
   ss.insertSheet('Sheet1');
   const props = {};
@@ -82,6 +82,7 @@ function makeEnv(opts) {
     createMenu() { const m = { addItem: () => m, addSeparator: () => m, addToUi: () => m }; return m; },
   };
   const web = { url: '' };
+  const triggers = [], sent = [], ntfy = { status: 200 };
   const now = { offsetMs: 0 };
   const fmt = (d, tz, f) => {
     const parts = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(d).map(p => [p.type, p.value]));
@@ -114,7 +115,13 @@ function makeEnv(opts) {
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     HtmlService: { createHtmlOutput: htmlOut },
     // Google reported a wrong /exec address in a copy of the Sheet; the code must never use it (see kioskLink_).
-    ScriptApp: { getService: () => ({ getUrl: () => web.url || 'https://script.google.com/macros/s/AKfycbWRONG_reported_address/exec' }) },
+    ScriptApp: { getService: () => ({ getUrl: () => web.url || 'https://script.google.com/macros/s/AKfycbWRONG_reported_address/exec' }),
+                 // time triggers: env.triggers lists what was created (this account's only, like Google)
+                 getProjectTriggers: () => triggers.slice(),
+                 newTrigger: fn => { const t = { fn: fn }; const b = { timeBased: () => b, everyDays: n => { t.days = n; return b; }, atHour: h => { t.hour = h; return b; },
+                                                                      create: () => { triggers.push({ getHandlerFunction: () => fn, spec: t }); } }; return b; } },
+    // ntfy: env.sent lists every request; env.ntfyStatus is the answer's code
+    UrlFetchApp: { fetch: (url, o) => { sent.push({ url: url, body: JSON.parse(o.payload) }); return { getResponseCode: () => ntfy.status }; } },
     Logger: { log: m => log.push(['log', m]) },
     Session: { getEffectiveUser: () => ({ getEmail: () => 'test@example.com' }) },
     CacheService: { getScriptCache: () => ({
@@ -155,13 +162,15 @@ function makeEnv(opts) {
   for (const f of files) if (f !== 'Secrets.gs') vm.runInContext(fs.readFileSync(path.join(dir, f), 'utf8'), ctx, { filename: f });
   // var, not const: a test may empty it (env.ctx.SECRETS = {}) to act as if Secrets.gs was removed.
   if (opts.secrets) vm.runInContext('var SECRETS = ' + JSON.stringify(opts.secrets) + ';', ctx);
+  // Maintainer.gs, as deploy-all writes it into a minyan's upload (never in src/)
+  if (opts.maintainer) vm.runInContext('var MAINTAINER = ' + JSON.stringify(opts.maintainer) + ';', ctx);
   // A change typed by a person in the Sheet: write it, then fire the onEdit simple trigger like Google does.
   const userEdit = (sheetName, a1, value) => {
     const r = ss.getSheetByName(sheetName).getRange(a1);
     r.setValue(value);
     if (typeof ctx.onEdit === 'function') ctx.onEdit({ range: r, value });
   };
-  return { ctx, ss, ui, log, props, now, cacheStore, userEdit, web };
+  return { ctx, ss, ui, log, props, now, cacheStore, userEdit, web, triggers, sent, ntfy };
 }
 
 module.exports = { makeEnv };

@@ -3,7 +3,7 @@
 //  Runs as the owner. Every call checks the page key from the link.
 // ======================================================================================
 
-function doGet(e) {
+function doGet_(e) {                       // doGet itself is in Notify.gs: it reports a failure
   const t0 = Date.now();
   const key = kioskKey_();
   const ok = e && e.parameter && e.parameter.k === key;

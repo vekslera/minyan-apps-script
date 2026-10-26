@@ -61,7 +61,7 @@ function refreshHome() {
   google.script.run.withSuccessHandler(timed('gabbaiInit', function (info) {
     if (!info.session) return loggedOut('');
     setInfo(info);
-  })).withFailureHandler(callFailed).gabbaiInit(KEY, S.session);
+  })).withFailureHandler(function (e) { reportProblem('call', 'gabbaiInit', e); callFailed(e); }).gabbaiInit(KEY, S.session);
 }
 function setInfo(info) {
   S.info = info; info.at = Date.now();
@@ -138,5 +138,5 @@ function startGabbai() {
     if (!info.session) return loggedOut('');
     setInfo(info);
     go('home');
-  })).withFailureHandler(function (e) { S.session = ''; go('login'); flash('loginNote', 'err', errText(e)); }).gabbaiInit(KEY, S.session);
+  })).withFailureHandler(function (e) { reportProblem('call', 'gabbaiInit', e); S.session = ''; go('login'); flash('loginNote', 'err', errText(e)); }).gabbaiInit(KEY, S.session);
 }

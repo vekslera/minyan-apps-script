@@ -20,7 +20,8 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
   `Kiosk.gs` registration page (`doGet`, `kiosk*`), `Gabbai.gs` tools page (`gabbai*`, needs a session),
   `Admin.gs` Sheet dialogs (`admin*`, admin token) + the shared import/review core, `Reports.gs`,
   `Duplicates.gs`, `Location.gs`, `Auth.gs`, `Data.gs`, `Matching.gs`, `Names.gs`, `WhatsApp.gs`,
-  `HebrewCalendar.gs`, `Utils.gs` (settings, page assembly, cache), `Config.gs`, `Setup.gs` (menu, setup, help sheet).
+  `HebrewCalendar.gs`, `Utils.gs` (settings, page assembly, cache), `Config.gs`, `Setup.gs` (menu, setup, help sheet),
+  `Notify.gs` (ntfy alerts + daily check; owns `doGet`, which wraps `doGet_` in `Kiosk.gs`).
 - `*Page.html` / `*Dialog.html` — pages. `scripts/**/*.js` — browser code. `styles/tools.html` — shared CSS.
 - One implementation per feature, thin wrappers per surface (Sheet menu / dialogs vs. web tools).
 - `test/` — Node tests against a simulated Sheet (`test/mock.js`); never uploaded.
@@ -92,6 +93,20 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
   project once, and again when an update adds a new permission (e.g. email). Code must work identically in every copy: per-minyan values live in the
   sheet or in document properties, never in code. `setup` drops all document properties when the Sheet ID changed
   (`forgetIfCopied_`), so a copy never shares a key or gabbai code. Keep `INSTALL-he.md` in step with the menus.
+
+## Error alerts (ntfy)
+
+- New features go in **new files**, with one-line hooks in existing ones (the owner's rule). Example: `Notify.gs` +
+  `scripts/common/report.js` (+ `deploy/maintainer.ps1`); hooks: `doGet` → `doGet_`, `installDailyCheck_()` in
+  `setup`, `reportProblem(...)` in the pages' `call()` failure handlers and `window.onerror`.
+- Reported: errors without Hebrew (the app's own user messages are Hebrew), page script errors, `doGet` failures;
+  once an hour per place+message; numbers masked; never names/phones/places. Daily check ~22:00, once per day
+  (`DAILY_CHECK` property) even with triggers from two accounts.
+- The topic: `minyan-attendance-script` (the owner's choice; with a random ending only if taken), kept in
+  `deploy/maintainer.json` (git-ignored) and written as `Maintainer.gs` into minyan uploads only (not the
+  template), with the minyan's short name (`minyan`, from `minyanim.json`) that starts every alert's title.
+  Anyone knowing a topic can read/post on ntfy.sh, so alerts never carry personal data. No `MAINTAINER`
+  → nothing is sent.
 
 ## Privacy
 

@@ -2,6 +2,8 @@
 .clasp.json
 .clasp-template.json
 minyanim.json
+maintainer.json
+Maintainer.gs
 .clasprc.json
 Secrets.gs
 
