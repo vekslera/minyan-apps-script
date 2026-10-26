@@ -75,8 +75,10 @@ function onVisibility() {
 }
 
 /**
- * Outside the shul: say so, and offer "נסה שוב" / "שלח לאישור הגבאי".
- * No position: explain why, with steps for this kind of phone, and offer "אפשר מיקום" / "שלח לאישור הגבאי".
+ * Outside the shul: say so, and offer "נסה שוב" (main) / "שלח לאישור הגבאי".
+ * No position: people don't read instructions and the page can't switch location on for them, so the main
+ * button is "שלח לאישור הגבאי" — never a dead end. Under it a smaller "הפעלתי מיקום — נסה שוב", and the steps
+ * folded behind "איך מפעילים מיקום?".
  */
 function showWhere(res) {
   var outside = res.where === 'outside';
@@ -86,16 +88,20 @@ function showWhere(res) {
     : locationHelp(S.loc && S.loc.error);
   show('whereRetry', outside);
   show('whereAllow', !outside);
+  // the main (big) button: "נסה שוב" when outside, "שלח לאישור הגבאי" when there is no position
+  $('whereSend').className = outside ? 'secondary' : 'primary';
+  if (outside) $('where').insertBefore($('whereSend'), $('whereAllow'));
+  else $('where').insertBefore($('whereSend'), $('whereRetry'));
   show('form', false);
   show('where', true);
 }
 
-/** "אפשר מיקום": asks the browser again (this shows its permission prompt when it still can), then registers. */
+/** "הפעלתי מיקום — נסה שוב": asks the browser again (its prompt appears when it still can), then registers. */
 function allowLocation() {
-  var b = $('whereAllow');
-  b.disabled = true; b.textContent = 'מבקש מיקום…';
+  var b = $('whereAllow'), label = b.textContent;
+  b.disabled = true; b.textContent = 'בודק מיקום…';
   getLocation(function (loc) {
-    b.disabled = false; b.textContent = 'אפשר מיקום';
+    b.disabled = false; b.textContent = label;
     S.loc = loc;
     if (loc.error) { $('whereText').innerHTML = locationHelp(loc.error, true); return; }
     hideWhere();
@@ -122,7 +128,7 @@ function locationHelp(err, again) {
                 : kind === 'android' ? 'בדפדפן: לוחצים על הסמל שליד כתובת האתר (מנעול או הגדרות) ← הרשאות ← מיקום ← "אפשר".'
                 : 'בהגדרות הדפדפן לאתר הזה: מיקום ← "אפשר".';
   if (err === 'denied') {
-    lead = again ? 'הדפדפן עדיין לא מקבל מיקום.' : 'הדפדפן לא קיבל רשות להשתמש במיקום.';
+    lead = 'הדפדפן לא קיבל רשות להשתמש במיקום.';
     steps = kind === 'ios' ? [turnOn, allowSite] : [allowSite, turnOn];
   } else if (err === 'unavailable') {
     lead = 'נראה שהמיקום בטלפון כבוי.';
@@ -131,13 +137,16 @@ function locationHelp(err, again) {
     lead = 'המיקום לא התקבל בזמן.';
     steps = ['לוודא שהמיקום בטלפון מופעל.', 'לעמוד רגע ליד חלון או בחצר.'];
   } else if (err === 'unsupported') {
-    return 'הדפדפן הזה לא תומך במיקום. אפשר לשלוח את הרישום לאישור הגבאי, או לפתוח את הדף בדפדפן אחר.';
+    return 'הדפדפן הזה לא תומך במיקום. אפשר לשלוח את הרישום לאישור הגבאי, או לפתוח את הדף בדפדפן אחר.';  // (no steps to fold)
   } else {
     lead = 'לא התקבל מיקום.';
     steps = [turnOn];
   }
-  steps.push('ללחוץ "אפשר מיקום" כאן ולאשר אם הטלפון שואל.');
-  return esc(lead) + ' מה עושים:<ol>' + steps.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol>' +
+  steps.push('לחזור לכאן וללחוץ "הפעלתי מיקום — נסה שוב", ולאשר אם הטלפון שואל.');
+  return (again ? '<p class="again">המיקום עדיין לא התקבל. אפשר לשלוח לאישור הגבאי.</p>' : '') +
+         esc(lead) + '<br>אפשר לשלוח את הרישום לאישור הגבאי, או להפעיל מיקום ולנסות שוב.' +
+         '<details' + (again ? ' open' : '') + '><summary>איך מפעילים מיקום?</summary><ol>' +
+         steps.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol></details>' +
          '<p class="privacy">המיקום לא נשמר — הוא משמש רק לבדיקה שאתה בבית הכנסת.</p>';
 }
 function hideWhere() { show('where', false); show('form', true); }

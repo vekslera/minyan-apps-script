@@ -44,6 +44,10 @@ input.tel{direction:ltr;text-align:right;letter-spacing:.5px}
 .where-text .privacy,.locnote{color:var(--muted);font-size:15px;margin:10px 0 0;text-align:center}
 .where-text ol{text-align:right;margin:10px 0 0;padding:0 22px 0 0;font-size:17px}
 .where-text li{margin:4px 0}
+.where-text .again{color:var(--err);font-weight:700}
+.where-text details{margin-top:10px;font-size:17px}
+.where-text summary{color:var(--accent);text-decoration:underline;cursor:pointer;font-weight:700;list-style:none}
+.where-text summary::-webkit-details-marker{display:none}
 .msg.err{background:var(--err-bg);color:var(--err)}
 .done{text-align:center;padding:26px 8px 10px}
 .mark{width:96px;height:96px;border-radius:50%;margin:0 auto 14px;display:grid;place-items:center;font-size:56px;font-weight:800}
@@ -139,9 +143,9 @@ window.onerror = function (msg) {
       <div class="mark wait">!</div>
       <h2 id="whereTitle"></h2>
       <div id="whereText" class="where-text"></div>
-      <button class="primary" id="whereAllow" type="button" hidden>אפשר מיקום</button>
       <button class="primary" id="whereRetry" type="button">נסה שוב</button>
       <button class="secondary" id="whereSend" type="button">שלח לאישור הגבאי</button>
+      <button class="secondary" id="whereAllow" type="button" hidden>הפעלתי מיקום — נסה שוב</button>
       <button class="link" id="whereCancel" type="button">ביטול</button>
     </div>
 

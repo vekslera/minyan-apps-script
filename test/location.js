@@ -71,6 +71,7 @@ const sent = [];
   ({ ctx, p } = await open(Object.assign({ geolocation: Object.assign(north(850), { accuracy: 20 }) }, phone)));
   await p.fill('#last', 'לוי'); await p.fill('#first', 'דוד'); await p.click('#submit'); await p.waitForTimeout(500);
   assert.equal(await p.isVisible('#where'), true);
+  assert.equal(await p.getAttribute('#whereRetry', 'class'), 'primary'); assert.equal(await p.getAttribute('#whereSend', 'class'), 'secondary');
   console.log('outside →', (await p.textContent('#whereTitle')).trim(), '|', (await p.textContent('#whereText')).trim().slice(0, 40));
   await p.screenshot({ path: 'test/shots/l1-outside.png' });
   await ctx.setGeolocation(Object.assign(north(40), { accuracy: 15 }));
@@ -92,12 +93,20 @@ const sent = [];
   console.log('no permission →', (await p.textContent('#whereTitle')).trim(), '|', (await p.textContent('#whereText')).trim().slice(0, 50));
   assert.equal((await p.textContent('#whereTitle')).trim(), 'לא התקבל מיקום');
   assert(await p.isVisible('#whereAllow')); assert(await p.isHidden('#whereRetry'));
+  assert.equal((await p.textContent('#whereAllow')).trim(), 'הפעלתי מיקום — נסה שוב');
   assert(/שירותי מיקום/.test(await p.textContent('#whereText')) && /אתרי Safari/.test(await p.textContent('#whereText')), 'iPhone steps');
   assert(/המיקום לא נשמר/.test(await p.textContent('#whereText')), 'privacy note when asking to enable location');
   await p.screenshot({ path: 'test/shots/l2-no-permission.png', fullPage: true });
-  // still refused → the steps again; then the person allows it → "אפשר מיקום" registers
+  // the main button is "שלח לאישור הגבאי"; the retry is smaller, under it; the steps are folded
+  assert.equal(await p.getAttribute('#whereSend', 'class'), 'primary');
+  assert.equal(await p.getAttribute('#whereAllow', 'class'), 'secondary');
+  assert.equal(await p.$eval('#where', w => [...w.querySelectorAll('button')].filter(b => !b.hidden).map(b => b.id).join(',')), 'whereSend,whereAllow,whereCancel');
+  assert.equal(await p.$eval('#whereText details', d => d.open), false, 'steps folded');
+  // still refused → a clear red line, the steps open; then the person allows it → the retry registers
   await p.click('#whereAllow'); await p.waitForTimeout(500);
-  assert(/עדיין/.test(await p.textContent('#whereText')));
+  assert(/עדיין לא התקבל/.test(await p.textContent('#whereText .again')));
+  assert.equal(await p.$eval('#whereText details', d => d.open), true);
+  await p.screenshot({ path: 'test/shots/l2b-still-no-location.png', fullPage: true });
   await ctx.grantPermissions(['geolocation'], { origin: 'https://kiosk.test' });
   await ctx.setGeolocation(Object.assign(north(25), { accuracy: 12 }));
   await p.click('#whereAllow'); await p.waitForTimeout(600);
