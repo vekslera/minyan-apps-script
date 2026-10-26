@@ -1,21 +1,23 @@
 ﻿# Update every minyan from this folder: upload the code to each one's Sheet and publish a new version of
 # its registration page (same address — links and printed QR codes stay valid). Also updates the template.
 #
+# (in the deploy folder; the code it uploads is ..\src)
 #   .\deploy-all.ps1 "what changed"          update everything in minyanim.json
 #   .\deploy-all.ps1 "what changed" -Only x  update only the one named x (e.g. -Only template)
 #   .\deploy-all.ps1 -Add                    add a minyan (asks for a name, its Script ID and its registration link)
 #   .\deploy-all.ps1 -Remove x               take x off the list (nothing changes in its Sheet)
 #   .\deploy-all.ps1 -List                   show the list, with every registration link
 #
-# minyanim.json (git-ignored, private: it holds the links with their keys) has, per minyan: name, scriptId,
-# deploymentId and key ("" = upload only, like the template). Secrets.gs, if this folder still has one, goes only
-# to this folder's own minyan (the Script ID in .clasp.json). Everything runs as the Google account clasp is
+# deploy\minyanim.json (git-ignored, private: it holds the links with their keys) has, per minyan: name, scriptId,
+# deploymentId and key ("" = upload only, like the template). src\Secrets.gs, if it still exists, goes only
+# to this project's own minyan (the Script ID in .clasp.json). Everything runs as the Google account clasp is
 # signed in to: every Sheet must be shared with it as Editor, and the pages then run as it.
 param([string]$Description = "update", [string]$Only = "", [switch]$Add, [string]$Remove = "", [switch]$List, [switch]$NoCheck)
 $ErrorActionPreference = "Stop"
-$here = $PSScriptRoot
-$listFile = Join-Path $here "minyanim.json"
-$secretsFile = Join-Path $here "Secrets.gs"
+$root = Split-Path -Parent $PSScriptRoot                 # the project folder
+$src = Join-Path $root "src"                             # the Apps Script code
+$listFile = Join-Path $PSScriptRoot "minyanim.json"
+$secretsFile = Join-Path $src "Secrets.gs"
 
 function Read-List {
   if (-not (Test-Path $listFile)) { return @() }
@@ -28,7 +30,7 @@ function Write-List($items) {
   ConvertTo-Json -InputObject @($items) -Depth 3 | Set-Content -Encoding UTF8 -Path $listFile
 }
 function Main-ScriptId {
-  $f = Join-Path $here ".clasp.json"
+  $f = Join-Path $root ".clasp.json"
   if (Test-Path $f) { return (Get-Content -Raw $f | ConvertFrom-Json).scriptId } else { return "" }
 }
 function Secret($name) {
@@ -52,7 +54,7 @@ function Uses-Secrets($m) { return (Test-Path $secretsFile) -and $m.scriptId -eq
 $items = @(Read-List)
 
 # The template used to live in .clasp-template.json (template.cmd): move it into the list once.
-$oldTemplate = Join-Path $here ".clasp-template.json"
+$oldTemplate = Join-Path $root ".clasp-template.json"
 if ((Test-Path $oldTemplate) -and -not ($items | Where-Object { $_.name -eq "template" })) {
   $tid = (Get-Content -Raw $oldTemplate | ConvertFrom-Json).scriptId
   $items += [pscustomobject]@{ name = "template"; scriptId = $tid; deploymentId = ""; key = "" }
@@ -86,7 +88,7 @@ if ($Add) {
   if ($items | Where-Object { $_.name -eq $name }) { Write-Error "'$name' is already in the list (.\deploy-all.ps1 -Remove $name first)."; exit 1 }
   $main = Main-ScriptId
   Write-Host "Script ID: its Sheet -> Extensions/תוספים -> Apps Script -> Project Settings (gear) -> Script ID."
-  $sid = (Read-Host ("Script ID" + $(if ($main) { " (Enter = this folder's own, from .clasp.json)" } else { "" }))).Trim()
+  $sid = (Read-Host ("Script ID" + $(if ($main) { " (Enter = this project's own, from .clasp.json)" } else { "" }))).Trim()
   if (-not $sid) { $sid = $main }
   if ($sid -notmatch '^[\w-]{20,}$') { Write-Error "That doesn't look like a Script ID."; exit 1 }
   if ($items | Where-Object { $_.scriptId -eq $sid }) { Write-Error "This Script ID is already in the list."; exit 1 }
@@ -121,14 +123,13 @@ if (-not $targets.Count) {
   exit 1
 }
 
-# One upload folder per minyan, with only what Apps Script runs (+ Secrets.gs for this folder's own minyan, while it exists).
+# One upload folder per minyan: a copy of src\ without Secrets.gs and *.example (+ Secrets.gs for this
+# project's own minyan, while it exists).
 function Build-Folder($m) {
   $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("minyan-" + $m.name + "-" + [guid]::NewGuid().ToString("N").Substring(0, 8))
   New-Item -ItemType Directory -Path $tmp | Out-Null
-  Get-ChildItem -Path $here -File | Where-Object {
-    ($_.Extension -in ".gs", ".html" -and $_.Name -ne "Secrets.gs") -or $_.Name -eq "appsscript.json"
-  } | Copy-Item -Destination $tmp
-  foreach ($d in "scripts", "styles") { Copy-Item -Recurse -Path (Join-Path $here $d) -Destination (Join-Path $tmp $d) }
+  Copy-Item -Recurse -Path (Join-Path $src "*") -Destination $tmp
+  Get-ChildItem -Path $tmp -File | Where-Object { $_.Name -eq "Secrets.gs" -or $_.Extension -eq ".example" } | Remove-Item -Force
   if (Uses-Secrets $m) { Copy-Item $secretsFile -Destination $tmp }
   $cfg = [ordered]@{ scriptId = $m.scriptId; rootDir = "."; scriptExtensions = @(".gs"); htmlExtensions = @(".html", ".js") }
   $cfg | ConvertTo-Json | Set-Content -Encoding ascii -Path (Join-Path $tmp ".clasp.json")

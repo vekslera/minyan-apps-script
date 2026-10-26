@@ -1,7 +1,3 @@
-# Only the Apps Script files are uploaded by `clasp push`.
-**/node_modules/**
-test/**
+# clasp uploads the src/ folder ("rootDir": "src" in .clasp.json). Never these from it:
 *.example
-*.md
-*.ps1
-*.sh
+**/*.md

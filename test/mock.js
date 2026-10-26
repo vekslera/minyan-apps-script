@@ -124,7 +124,7 @@ function makeEnv(opts) {
   vm.createContext(ctx);
   // Load the split project like Apps Script does: every .gs file into one global scope.
   // Reverse alphabetical order on purpose, to prove nothing depends on load order.
-  const dir = path.join(__dirname, '..');
+  const dir = path.join(__dirname, '..', 'src');                     // the Apps Script project (rootDir in .clasp.json)
   const files = fs.readdirSync(dir).filter(f => f.endsWith('.gs')).sort().reverse();
   // Apps Script ignores extensions: Admin.gs and Admin.html would clash on push.
   const walk = d => fs.readdirSync(path.join(dir, d), { withFileTypes: true }).flatMap(e =>

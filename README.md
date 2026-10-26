@@ -85,27 +85,27 @@ clasp login                # opens a browser: choose the minyan account and allo
    ```json
    {
      "scriptId": "1AbC…your-script-id…",
-     "rootDir": ".",
+     "rootDir": "src",
      "scriptExtensions": [".gs"],
      "htmlExtensions": [".html", ".js"]
    }
    ```
-   **The extension lines are required.** By default clasp uploads `.js` files as *server* code. These two lines make it upload the browser scripts in `scripts/` as HTML-type files instead ([§11](#11-files)). `deploy.ps1` / `deploy.sh` refuse to run without them.
+   **`"rootDir": "src"` is required:** the Apps Script project is the `src/` folder; the rest (docs, tests, deploy scripts) stays on your computer. **The extension lines are required too.** By default clasp uploads `.js` files as *server* code. These two lines make it upload the browser scripts in `scripts/` as HTML-type files instead ([§11](#11-files)). `deploy.ps1` / `deploy.sh` refuse to run without them.
    `.clasp.json` is git-ignored. No `Secrets.gs` is needed ([§12](#12-private-settings-secretsgs)).
 
 **Push:**
 
 ```bash
-clasp status      # lists what will be uploaded: 15 .gs files + Secrets.gs, 7 .html files (one in styles/), 26 scripts/…/*.js files, appsscript.json
+clasp status      # lists what will be uploaded from src/: 15 .gs files, 7 .html files (one in styles/), 26 scripts/…/*.js files, appsscript.json
 clasp push -f     # -f overwrites the project's manifest without asking
 ```
 
-- **Push replaces the whole online project with this folder.** The editor's default `Code.gs` disappears; that is expected.
+- **Push replaces the whole online project with `src/`.** The editor's default `Code.gs` disappears; that is expected.
 - **Check the result.** Reload the editor tab: you should see the files listed in [§11](#11-files).
 
 ### Route B: copy-paste in the browser (no tools)
 
-In the script editor:
+In the script editor (all the files are in the `src/` folder):
 
 1. Click the default file **`Code.gs`** → ⋮ → **Rename / שינוי שם** → `Setup`. Replace its content with the content of `Setup.gs`.
 2. For each of the other `.gs` files (`Admin`, `Auth`, `Config`, `Data`, `Duplicates`, `Gabbai`, `HebrewCalendar`, `Kiosk`, `Location`, `Matching`, `Names`, `Reports`, `Utils`, `WhatsApp`): **Files / קבצים → + → Script / סקריפט**. Type the name **without `.gs`** and paste the content.
@@ -315,15 +315,15 @@ Menus and dialogs in the Sheet always use the latest uploaded code. The **regist
 **Route A:**
 
 ```powershell
-.\deploy.ps1 "what changed"      # Windows PowerShell
+.\deploy\deploy.ps1 "what changed"      # Windows PowerShell
 ```
 ```bash
-./deploy.sh "what changed"       # macOS / Linux
+./deploy/deploy.sh "what changed"       # macOS / Linux
 ```
 
 Both run `clasp push -f`, then `clasp update-deployment <deploymentId>`. `deploy.ps1` takes this folder's minyan from `minyanim.json` when it is listed there (and then also checks the link), otherwise the deployment ID from `Secrets.gs`. The address, the links and the printed QR code stay the same. With several minyanim, `deploy-all` updates them all at once ([§15](#15-more-minyanim-the-template-and-deploy-all)).
 
-**Without a terminal:** double-click **`deploy.cmd`** in the project folder (Windows). It runs `deploy.ps1`, shows "DEPLOY OK" or "DEPLOY FAILED", and saves the output to `deploy-last.log`.
+**Without a terminal:** double-click **`deploy.cmd`** in the `deploy` folder (Windows). It runs `deploy.ps1`, shows "DEPLOY OK" or "DEPLOY FAILED", and saves the output to `deploy\deploy-last.log`.
 
 - **PowerShell may block the script.** If it says running scripts is disabled, run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once.
 
@@ -369,6 +369,22 @@ Its closing message lists what moved. After that, `gabbaiPin`, `lotteryThreshold
 
 ## 11. Files
 
+```
+README.md, CLAUDE.md, LICENSE      this manual; notes for AI coding sessions; the license
+.clasp.json.example, .claspignore  clasp settings ("rootDir": "src")
+src/                               the Apps Script project — everything clasp uploads
+  *.gs, *.html, appsscript.json      server code, pages, manifest
+  scripts/, styles/                  browser code and shared CSS (uploaded as HTML-type files)
+  Secrets.gs.example                 optional private values (older installs)
+deploy/                            updating the minyanim from your computer (Windows; deploy.sh for macOS/Linux)
+docs/INSTALL-he.md                 one-page Hebrew installation guide for a new minyan
+test/                              local tests against a simulated Sheet
+```
+
+Private, git-ignored, only on your computer: `.clasp.json` (your Script ID), `src/Secrets.gs` (if you still have one), `deploy/minyanim.json` (every minyan's Script ID and full link), `deploy/*.log`.
+
+**`src/`:**
+
 | File | What it holds |
 |---|---|
 | `Setup.gs` | The מניין menu, `setup()` (first-time setup, and moving settings after an update), the הוראות (help) sheet |
@@ -398,14 +414,15 @@ Its closing message lists what moved. After that, `gabbaiPin`, `lotteryThreshold
 | `scripts/dialogs/*.js` | `linkDialog` (QR + copy), `reportText` (copy) |
 | `appsscript.json` | Manifest (time zone, V8, web-app access) |
 | `Secrets.gs.example` | Template for your private `Secrets.gs` |
-| `CLAUDE.md` | Notes for AI coding sessions (Claude): how the owner works, the Apps Script traps, tests, privacy rules |
-| `deploy.ps1`, `deploy.sh` | Push + update the existing web-app deployment |
-| `deploy.cmd` | Double-click version of `deploy.ps1` (Windows) |
-| `deploy-all.ps1`, `deploy-all.cmd` | Update every minyan in `minyanim.json` and the template: upload + new version of each page ([§15](#15-more-minyanim-the-template-and-deploy-all)) |
+
+**`deploy/`** (run from anywhere; they work on the project folder above them):
+
+| File | What it holds |
+|---|---|
+| `deploy.ps1`, `deploy.cmd` | Update this project's own minyan: push + new version of its page (through `minyanim.json` when it is listed there, else `src/Secrets.gs`) |
+| `deploy.sh` | The same for macOS/Linux, with the deployment ID from `src/Secrets.gs` |
+| `deploy-all.ps1`, `deploy-all.cmd` | Update every minyan in `minyanim.json` and the template ([§15](#15-more-minyanim-the-template-and-deploy-all)) |
 | `template.cmd` | Double-click: update the template only (`deploy-all.ps1 -Only template`) |
-| `INSTALL-he.md` | One-page Hebrew installation guide for a new minyan (from the template) |
-| `.claspignore` | Keeps docs, tests and scripts out of `clasp push` |
-| `test/` | Local tests against a simulated Sheet (not uploaded) |
 
 All `.gs` files share one global scope, and nothing runs at load time across files, so the order of files in the editor doesn't matter.
 
@@ -479,12 +496,12 @@ Each minyan gets **its own copy** of the Sheet, in **its own Google account**: i
 
 ### The list of minyanim
 
-`minyanim.json`, in the project folder, lists them: a short name, the Script ID, and the registration link split into its deployment ID and its key (both empty for the template). **It holds every minyan's full link, so it is private:** git-ignored, never sent to anyone; keep a backup somewhere safe (it can always be rebuilt from each Sheet's **קישור לדף הרישום**). It is filled by:
+`deploy\minyanim.json` lists them: a short name, the Script ID, and the registration link split into its deployment ID and its key (both empty for the template). **It holds every minyan's full link, so it is private:** git-ignored, never sent to anyone; keep a backup somewhere safe (it can always be rebuilt from each Sheet's **קישור לדף הרישום**). It is filled by:
 
 ```powershell
-.\deploy-all.ps1 -Add          # asks: a short name; the Script ID; the registration link
-.\deploy-all.ps1 -List         # every minyan with its full registration link
-.\deploy-all.ps1 -Remove name  # off the list (to re-add it, e.g. with a new link)
+.\deploy\deploy-all.ps1 -Add          # asks: a short name; the Script ID; the registration link
+.\deploy\deploy-all.ps1 -List         # every minyan with its full registration link
+.\deploy\deploy-all.ps1 -Remove name  # off the list (to re-add it, e.g. with a new link)
 ```
 
 - **Script ID:** that Sheet → **Extensions / תוספים → Apps Script → Project Settings ⚙ / הגדרות הפרויקט → Script ID**.
@@ -496,11 +513,11 @@ Each minyan gets **its own copy** of the Sheet, in **its own Google account**: i
 ### Updating
 
 ```powershell
-.\deploy-all.ps1 "what changed"                 # every minyan + the template
-.\deploy-all.ps1 "what changed" -Only template  # just one
+.\deploy\deploy-all.ps1 "what changed"                 # every minyan + the template
+.\deploy\deploy-all.ps1 "what changed" -Only template  # just one
 ```
 
-Or double-click **`deploy-all.cmd`** (output in `deploy-all-last.log`), or **`template.cmd`** for the template only.
+Or double-click **`deploy\deploy-all.cmd`** (output in `deploy\deploy-all-last.log`), or **`deploy\template.cmd`** for the template only.
 
 - **Per minyan,** it uploads the code from a temporary folder (`clasp push -f`), then publishes a new version of the **same** page (`clasp update-deployment`), so the address and the printed QR codes stay valid.
 - **Then it opens the registration link, with its key**, as a worshipper would. If the page doesn't open (missing permissions, an error page, or the key no longer opens it), it prints a **Check:** line; "the registration link opens the page" means all is well.
@@ -510,14 +527,14 @@ Or double-click **`deploy-all.cmd`** (output in `deploy-all-last.log`), or **`te
 ### Making the template (once)
 
 1. A new blank Sheet, e.g. `מניין — תבנית (לא לגעת)`, in any account; share it with the maintainer account as Editor. Don't run `setup` in it and don't deploy it: a copy starts from nothing.
-2. `.\deploy-all.ps1 -Add` → name `template`, its Script ID, empty address. Then `template.cmd`.
+2. `.\deploy\deploy-all.ps1 -Add` → name `template`, its Script ID, empty address. Then `template.cmd`.
 3. Sheet → **Share / שיתוף → General access: Anyone with the link, Viewer**. Copy the link and change its end from `/edit…` to **`/copy`**. That link opens Google's "Make a copy" page; the copy includes the script.
 
 `deploy-all` keeps the template current along with the minyanim, so copies made later get the latest code.
 
 ### Setting up a minyan
 
-The person with the minyan's Google account follows **[`INSTALL-he.md`](INSTALL-he.md)** (Hebrew, one page): copy → **מניין → הגדרה ראשונית** → publish the web app → paste its address in **מניין → כתובת דף הרישום (הדבקה)** → settings and shul location on the tools page → share the Sheet with the maintainer account as Editor. Then the maintainer authorizes it once (above) and adds it with `.\deploy-all.ps1 -Add`.
+The person with the minyan's Google account follows **[`docs/INSTALL-he.md`](docs/INSTALL-he.md)** (Hebrew, one page): copy → **מניין → הגדרה ראשונית** → publish the web app → paste its address in **מניין → כתובת דף הרישום (הדבקה)** → settings and shul location on the tools page → share the Sheet with the maintainer account as Editor. Then the maintainer authorizes it once (above) and adds it with `.\deploy\deploy-all.ps1 -Add`.
 
 ### What makes a copy independent
 
@@ -532,8 +549,8 @@ The minyan installed first keeps its page address and link key in `Secrets.gs`. 
 
 1. **Update it with `Secrets.gs` still in place:** `deploy.cmd` (or `deploy-all.cmd`).
 2. **In its Sheet: מניין → הגדרה ראשונית.** The closing message says the link (address and key) is now kept in the Sheet's hidden storage too. Check that **מניין → קישור לדף הרישום** shows the same link as before.
-3. **Put the link in the list:** `.\deploy-all.ps1 -Remove <name>`, then `.\deploy-all.ps1 -Add` with the same name, Enter at the Script ID, and the link from step 2.
-4. **Move `Secrets.gs` out of the project folder** to a safe place outside the repo (keep it until step 5 has passed).
+3. **Put the link in the list:** `.\deploy\deploy-all.ps1 -Remove <name>`, then `.\deploy\deploy-all.ps1 -Add` with the same name, Enter at the Script ID, and the link from step 2.
+4. **Move `src\Secrets.gs` out of the project folder** to a safe place outside the repo (keep it until step 5 has passed).
 5. **Update again** (`deploy-all.cmd`). The upload now replaces the script's files without `Secrets.gs`, and the check opens the page with the key from the list. "the registration link opens the page" → done; `Secrets.gs` may be deleted. A **Check: THE REGISTRATION LINK NO LONGER WORKS** → put `Secrets.gs` back, update, and run step 2 again.
 
 From then on `deploy.cmd` updates this folder's minyan through `minyanim.json` (the entry with the Script ID in `.clasp.json`).

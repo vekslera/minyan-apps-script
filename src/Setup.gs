@@ -17,12 +17,13 @@
  *   Reports.gs         weekly and final reports, lottery draw
  *   Duplicates.gs      finding and merging duplicate people
  *   Utils.gs           dates, settings, keys, small helpers
- *   Secrets.gs         YOUR private values (deployment ID, gabbai code …). Not in git — copy Secrets.gs.example.
+ *   Secrets.gs         optional, older installs only (page address, link key). Not in git; see Secrets.gs.example.
  *   KioskPage.html, GabbaiPage.html, AdminPage.html, LinkDialog.html, ReportTextDialog.html, BadLinkPage.html   the pages
  *   styles/tools.html  styles shared by the import/review screens; the scripts folder  the browser code
  *   (Apps Script needs every file name unique across .gs and .html, hence the suffixes.)
  *
- * INSTALL — see README.md (manual copy into the editor, or `clasp push`).
+ * This folder (src/) is the whole Apps Script project ("rootDir": "src" in .clasp.json).
+ * INSTALL — see README.md (manual copy into the editor, or `clasp push`); updating: deploy/.
  ****************************************************************************************/
 
 // ======================================================================================

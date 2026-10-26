@@ -1,6 +1,6 @@
 {
   "scriptId": "PASTE_THE_SCRIPT_ID_HERE",
-  "rootDir": ".",
+  "rootDir": "src",
   "scriptExtensions": [".gs"],
   "htmlExtensions": [".html", ".js"]
 }

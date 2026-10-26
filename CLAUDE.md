@@ -13,6 +13,9 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
 
 ## Layout
 
+- `src/` is the whole Apps Script project (`"rootDir": "src"` in `.clasp.json`); file names in Google are relative
+  to it (`scripts/kiosk/main`), so moving files *inside* `src/` renames them in Google. `deploy/` = update scripts
+  (+ private `minyanim.json`), `docs/` = `INSTALL-he.md`, `test/` = tests. In `src/`:
 - `*.gs` — server code, one global scope; load order must not matter (only constants at load time).
   `Kiosk.gs` registration page (`doGet`, `kiosk*`), `Gabbai.gs` tools page (`gabbai*`, needs a session),
   `Admin.gs` Sheet dialogs (`admin*`, admin token) + the shared import/review core, `Reports.gs`,
@@ -77,7 +80,7 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
   counts when `isMinyanDay_` (a minyan weekday, not in column E); registration, gabbai mode and the import refuse
   other weekdays. Never test `dow_ === 6` alone for "is there a minyan".
 - Scaling: decided on **option C** — a copy per minyan in the minyan's own Google account. New minyanim copy a
-  **template** Sheet (code only, never set up or deployed) and follow `INSTALL-he.md`. `deploy-all.ps1` updates
+  **template** Sheet (code only, never set up or deployed) and follow `docs/INSTALL-he.md`. `deploy-all.ps1` updates
   everything in `minyanim.json`: push from a temp folder (`Secrets.gs` only to the entry with `.clasp.json`'s
   Script ID, and only while the file exists) + `update-deployment`, then opens the link with its key. It runs as the clasp account (**maintainer**, chosen by the owner):
   every Sheet is shared with it as Editor, and after an update each page runs as it, so it must authorize each
@@ -101,9 +104,9 @@ When the live app behaves differently from the tests, first teach the mock the q
 
 ## Deploying (done by the owner, on his laptop)
 
-`deploy.cmd` (double-click) or `.\deploy.ps1 "msg"` = `clasp push -f` + a new version of the **same**
-deployment (the link and printed QR codes stay valid). Never create a new deployment. With several minyanim:
-`deploy-all.cmd` (all + the template) or `template.cmd` (template only). After a settings-layout change, run
+All in `deploy/`: `deploy.cmd` (double-click) or `.\deploy\deploy.ps1 "msg"` = `clasp push -f` + a new version of
+the **same** deployment (the link and printed QR codes stay valid). Never create a new deployment. With several
+minyanim: `deploy-all.cmd` (all + the template) or `template.cmd` (template only). After a settings-layout change, run
 **מניין → הגדרה ראשונית** once in each minyan. Then `git push`. Test the .ps1 scripts with PowerShell 7 and a fake
 `clasp` on PATH; keep them Windows PowerShell 5.1-compatible (it is what `*.cmd` runs).
 

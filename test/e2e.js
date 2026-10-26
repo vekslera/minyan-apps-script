@@ -261,7 +261,7 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   const vm2 = require('vm'), fs2 = require('fs'), path2 = require('path');
   const box = vm2.createContext({});
   const walk = d => fs2.readdirSync(d, { withFileTypes: true }).flatMap(e => e.isDirectory() ? walk(path2.join(d, e.name)) : [path2.join(d, e.name)]);
-  const files = walk(path2.join(__dirname, '..', 'scripts')).filter(f => f.endsWith('.js'));
+  const files = walk(path2.join(__dirname, '..', 'src', 'scripts')).filter(f => f.endsWith('.js'));
   files.forEach(f => vm2.runInContext(fs2.readFileSync(f, 'utf8'), box, { filename: f }));
   // and every include in the pages resolves
   for (const page of ['KioskPage', 'AdminPage', 'GabbaiPage', 'LinkDialog', 'ReportTextDialog']) {
