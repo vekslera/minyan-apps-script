@@ -435,7 +435,7 @@ Private, git-ignored, only on your computer: `.clasp.json` (your Script ID), `sr
 | `deploy.ps1`, `deploy.cmd` | Update this project's own minyan: push + new version of its page (through `minyanim.json` when it is listed there, else `src/Secrets.gs`) |
 | `deploy.sh` | The same for macOS/Linux, with the deployment ID from `src/Secrets.gs` |
 | `deploy-all.ps1`, `deploy-all.cmd` | Update every minyan in `minyanim.json` and the template ([§15](#15-more-minyanim-the-template-and-deploy-all)) |
-| `template.cmd` | Double-click: update the template only (`deploy-all.ps1 -Only template`) |
+| `template.cmd` | Double-click: update the template only: every entry without a page (`deploy-all.ps1 -Templates`) |
 | `maintainer.ps1` | The email address for error alerts (`maintainer.json`, set with `deploy-all.ps1 -Alerts`), written by `deploy-all` into each minyan's upload as `Maintainer.gs` |
 
 All `.gs` files share one global scope, and nothing runs at load time across files, so the order of files in the editor doesn't matter.
@@ -532,7 +532,8 @@ Each minyan gets **its own copy** of the Sheet, in **its own Google account**: i
 
 ```powershell
 .\deploy\deploy-all.ps1 "what changed"                 # every minyan + the template
-.\deploy\deploy-all.ps1 "what changed" -Only template  # just one
+.\deploy\deploy-all.ps1 "what changed" -Only steinbach  # just one
+.\deploy\deploy-all.ps1 "what changed" -Templates       # just the template(s)
 ```
 
 Or double-click **`deploy\deploy-all.cmd`** (output in `deploy\deploy-all-last.log`), or **`deploy\template.cmd`** for the template only.
@@ -544,15 +545,36 @@ Or double-click **`deploy\deploy-all.cmd`** (output in `deploy\deploy-all-last.l
 
 ### Making the template (once)
 
-1. A new blank Sheet, e.g. `מניין — תבנית (לא לגעת)`, in any account; share it with the maintainer account as Editor. Don't run `setup` in it and don't deploy it: a copy starts from nothing.
-2. `.\deploy\deploy-all.ps1 -Add` → name `template`, its Script ID, empty address. Then `template.cmd`.
-3. Sheet → **Share / שיתוף → General access: Anyone with the link, Viewer**. Copy the link and change its end from `/edit…` to **`/copy`**. That link opens Google's "Make a copy" page; the copy includes the script.
+The template belongs in the **maintainer's own account**, not in one of the minyanim's.
+
+1. Signed in as the maintainer: a new blank Sheet, e.g. `מניין — תבנית (לא לגעת)`. Don't run `setup` in it and don't deploy it: a copy starts from nothing.
+2. **Extensions / תוספים → Apps Script → Project Settings ⚙ / הגדרות הפרויקט → Script ID**: copy it.
+3. `.\deploy\deploy-all.ps1 -Add` → any short name (e.g. `template`), its Script ID, **Enter** at the link (no page), the maintainer's address as its account. Then double-click `deploy\template.cmd`; it updates every entry without a page (`deploy-all.ps1 -Templates`), whatever its name.
+4. Sheet → **Share / שיתוף → General access: Anyone with the link, Viewer**. Copy the link and change its end from `/edit…` to **`/copy`**. That link opens Google's "Make a copy" page; the copy includes the script.
 
 `deploy-all` keeps the template current along with the minyanim, so copies made later get the latest code.
 
-### Setting up a minyan
+**Moving a template** to another account means making a new one: steps 1–4 there, then `.\deploy\deploy-all.ps1 -Remove <old name>` and the old Sheet to the trash. Its old `/copy` link stops working.
 
-The person with the minyan's Google account follows **[`docs/INSTALL-he.md`](docs/INSTALL-he.md)** (Hebrew, one page): copy → **מניין → הגדרה ראשונית** → publish the web app → paste its address in **מניין → כתובת דף הרישום (הדבקה)** → settings and shul location on the tools page → share the Sheet with the maintainer account as Editor. Then the maintainer authorizes it once (above) and adds it with `.\deploy\deploy-all.ps1 -Add`.
+### Setting up a minyan (the whole sequence)
+
+**At the new minyan**, signed in as its own Google account, following **[`docs/INSTALL-he.md`](docs/INSTALL-he.md)** (Hebrew, one page):
+
+1. The template's `/copy` link → **יצירת עותק**.
+2. **מניין → הגדרה ראשונית** → allow. The copy gets its own link key and gabbai code (shown once), and its account row is filled in.
+3. **Extensions / תוספים → Apps Script → Deploy / פריסה → New deployment / פריסה חדשה → Web app** (Me / Anyone), then copy its address.
+4. **מניין → כתובת דף הרישום (הדבקה)** → paste.
+5. On the tools page: settings, the shul's location, the QR sign.
+6. Share the Sheet with the maintainer account as **Editor**.
+
+**Then the maintainer:**
+
+1. Open the new Sheet as the maintainer → **מניין → הגדרה ראשונית** → allow. This must come before step 3: after `deploy-all` the page runs as the maintainer.
+2. `.\deploy\deploy-all.ps1 -Add` → a short name, its Script ID, its registration link (**מניין → קישור לדף הרישום → העתקה**), its account.
+3. `.\deploy\deploy-all.ps1 "add <name>" -Only <name>` → "the registration link opens the page". This also switches its error alerts on.
+4. In its Sheet: **מניין → שליחת התראת בדיקה למפתח** → the email arrives.
+
+From then on `deploy-all.cmd` updates it with the others.
 
 ### What makes a copy independent
 

@@ -3,7 +3,8 @@
 #
 # (in the deploy folder; the code it uploads is ..\src)
 #   .\deploy-all.ps1 "what changed"          update everything in minyanim.json
-#   .\deploy-all.ps1 "what changed" -Only x  update only the one named x (e.g. -Only template)
+#   .\deploy-all.ps1 "what changed" -Only x  update only the one named x
+#   .\deploy-all.ps1 "what changed" -Templates  update only the entries without a page (the template)
 #   .\deploy-all.ps1 -Add                    add a minyan (asks for a name, its Script ID and its registration link)
 #   .\deploy-all.ps1 -Remove x               take x off the list (nothing changes in its Sheet)
 #   .\deploy-all.ps1 -SetAccount x           record (or change) the Google account that owns x's Sheet
@@ -15,7 +16,7 @@
 # (its address only — never a password). src\Secrets.gs, if it still exists, goes only
 # to this project's own minyan (the Script ID in .clasp.json). Everything runs as the Google account clasp is
 # signed in to: every Sheet must be shared with it as Editor, and the pages then run as it.
-param([string]$Description = "update", [string]$Only = "", [switch]$Add, [string]$Remove = "", [switch]$List, [switch]$NoCheck, [switch]$Alerts, [string]$SetAccount = "")
+param([string]$Description = "update", [string]$Only = "", [switch]$Add, [string]$Remove = "", [switch]$List, [switch]$NoCheck, [switch]$Alerts, [string]$SetAccount = "", [switch]$Templates)
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot                 # the project folder
 $src = Join-Path $root "src"                             # the Apps Script code
@@ -58,13 +59,17 @@ function Uses-Secrets($m) { return (Test-Path $secretsFile) -and $m.scriptId -eq
 
 $items = @(Read-List)
 
-# The template used to live in .clasp-template.json (template.cmd): move it into the list once.
+# The template used to live in .clasp-template.json (the first template.cmd): move it into the list once, then
+# delete the old file — otherwise a template taken off the list would come back on the next run.
 $oldTemplate = Join-Path $root ".clasp-template.json"
-if ((Test-Path $oldTemplate) -and -not ($items | Where-Object { $_.name -eq "template" })) {
+if (Test-Path $oldTemplate) {
   $tid = (Get-Content -Raw $oldTemplate | ConvertFrom-Json).scriptId
-  $items += [pscustomobject]@{ name = "template"; scriptId = $tid; deploymentId = ""; key = ""; account = "" }
-  Write-List $items
-  Write-Host "The template (from .clasp-template.json) was added to minyanim.json as 'template'."
+  if ($tid -and -not ($items | Where-Object { $_.scriptId -eq $tid -or $_.name -eq "template" })) {
+    $items += [pscustomobject]@{ name = "template"; scriptId = $tid; deploymentId = ""; key = ""; account = "" }
+    Write-List $items
+    Write-Host "The template (from .clasp-template.json) was added to minyanim.json as 'template'."
+  }
+  Remove-Item -Force $oldTemplate
 }
 
 if ($List) {
@@ -140,9 +145,10 @@ if ($Add) {
   exit 0
 }
 
-$targets = @($items | Where-Object { -not $Only -or $_.name -eq $Only })
+$targets = @($items | Where-Object { (-not $Only -or $_.name -eq $Only) -and (-not $Templates -or -not $_.deploymentId) })
 if (-not $targets.Count) {
-  if ($Only) { Write-Error "No minyan named '$Only' in minyanim.json (see .\deploy-all.ps1 -List)." }
+  if ($Templates) { Write-Error "No template in minyanim.json (an entry without a registration link; see .\deploy-all.ps1 -List)." }
+  elseif ($Only) { Write-Error "No minyan named '$Only' in minyanim.json (see .\deploy-all.ps1 -List)." }
   else { Write-Error "minyanim.json is empty. Add the minyanim first:  .\deploy-all.ps1 -Add" }
   exit 1
 }

@@ -130,7 +130,8 @@ When the live app behaves differently from the tests, first teach the mock the q
 
 All in `deploy/`: `deploy.cmd` (double-click) or `.\deploy\deploy.ps1 "msg"` = `clasp push -f` + a new version of
 the **same** deployment (the link and printed QR codes stay valid). Never create a new deployment. With several
-minyanim: `deploy-all.cmd` (all + the template) or `template.cmd` (template only). After a settings-layout change, run
+minyanim: `deploy-all.cmd` (all + the template) or `template.cmd` (`-Templates`: entries without a page). The template
+  lives in the maintainer's account. After a settings-layout change, run
 **מניין → הגדרה ראשונית** once in each minyan. Then `git push`. Test the .ps1 scripts with PowerShell 7 and a fake
 `clasp` on PATH; keep them Windows PowerShell 5.1-compatible (it is what `*.cmd` runs).
 
