@@ -68,7 +68,7 @@ function makeEnv(opts) {
     getSheets() { return this.sheets.slice(); },
     deleteSheet(s) { this.sheets = this.sheets.filter(x => x !== s); },
     toast(m) { log.push(['toast', m]); },
-    getId() { return 'ss1'; },
+    id: 'ss1', getId() { return this.id; },                      // set env.ss.id to act as a copy of the Sheet
   };
   ss.insertSheet('Sheet1');
   const props = {};
@@ -76,7 +76,8 @@ function makeEnv(opts) {
   const ui = {
     ButtonSet: { OK: 'OK', OK_CANCEL: 'OK_CANCEL', YES_NO: 'YES_NO' }, Button: { OK: 'OK', YES: 'YES', CANCEL: 'CANCEL' },
     alert(...a) { log.push(['alert', a.slice(0, 2).join(' | ')]); return ui.nextAlert || 'OK'; },
-    prompt(t, m) { const r = ui.nextPrompt || ''; return { getSelectedButton: () => 'OK', getResponseText: () => r }; },
+    prompt(t, m) { log.push(['prompt', t + ' | ' + m]); const r = ui.nextPrompt || '', b = ui.nextPromptButton || 'OK';
+                   return { getSelectedButton: () => b, getResponseText: () => r }; },
     showModalDialog(h, title) { log.push(['dialog', title]); ui.lastDialog = h.html; },
     createMenu() { const m = { addItem: () => m, addSeparator: () => m, addToUi: () => m }; return m; },
   };
@@ -108,7 +109,8 @@ function makeEnv(opts) {
       parseDate: (k, tz) => new FakeDate(k + 'T09:00:00Z'),
       getUuid: () => crypto.randomUUID(),
     },
-    PropertiesService: { getDocumentProperties: () => ({ getProperty: k => props[k] || null, setProperty: (k, v) => { props[k] = String(v); }, deleteProperty: k => { delete props[k]; } }) },
+    PropertiesService: { getDocumentProperties: () => ({ getProperty: k => props[k] || null, setProperty: (k, v) => { props[k] = String(v); }, deleteProperty: k => { delete props[k]; },
+                                              getProperties: () => Object.assign({}, props), deleteAllProperties: () => { Object.keys(props).forEach(k => delete props[k]); } }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     HtmlService: { createHtmlOutput: htmlOut },
     ScriptApp: { getService: () => ({ getUrl: () => web.url }) },     // set env.web.url = what Google would return

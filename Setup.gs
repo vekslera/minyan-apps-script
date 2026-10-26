@@ -31,6 +31,8 @@
 // ======================================================================================
 
 function onOpen() {
+  // A Sheet that was never set up (e.g. just copied from the template): point to the first step.
+  try { const ss = SpreadsheetApp.getActive(); if (!ss.getSheetByName(SH.SETTINGS)) ss.toast('להתחלה: תפריט מניין ← הגדרה ראשונית', 'ברוכים הבאים', 30); } catch (e) {}
   // A switched-off tool (threshold 0) stays in the menu, marked "(כבוי)"; choosing it explains how to switch it on.
   let lotteryOn = true, rebbeOn = true;
   try { const ss = SpreadsheetApp.getActive(), s = readSettings_(ss, ss.getSpreadsheetTimeZone()); lotteryOn = s.threshold > 0; rebbeOn = s.rebbe > 0; } catch (e) {}
@@ -76,6 +78,8 @@ function setup() {
   try { ss.setSpreadsheetLocale('iw_IL'); } catch (e) {}
   const tz = ss.getSpreadsheetTimeZone();
 
+  const copied = forgetIfCopied_(ss);
+
   writeHelp_(ensureSheet_(ss, SH.HELP, null));
 
   const st = ensureSheet_(ss, SH.SETTINGS, null);
@@ -107,15 +111,31 @@ function setup() {
   ss.getSheetByName(SH.HELP).activate();
   onOpen();
 
+  if (copied) moved.unshift('זהו עותק של גיליון אחר: נוצרו לו קישור וקוד גבאי משלו.');
   ui.alert('ההגדרה הושלמה',
     (moved.length ? 'עודכן:\n• ' + moved.join('\n• ') + '\n\n' : '') +
-    (webAppUrlFromSecrets_() ? 'תפריט מניין ← קישור לדף הרישום.' :
+    (kioskLink_(readSettings_(ss, tz)) ? 'תפריט מניין ← קישור לדף הרישום.' :
     'השלב הבא — פרסום דף הרישום:\n\n' +
-    '1. בעורך הסקריפט: פריסה (Deploy) ← פריסה חדשה (New deployment) ← סוג: אפליקציית אינטרנט (Web app).\n' +
+    '1. תוספים (Extensions) ← Apps Script ← פריסה (Deploy) ← פריסה חדשה (New deployment) ← סוג: אפליקציית אינטרנט (Web app).\n' +
     '2. הפעלה בתור (Execute as): אני (Me).  גישה (Who has access): כל אחד (Anyone).\n' +
-    '3. לחצו "פריסה", העתיקו את מזהה הפריסה (Deployment ID) לקובץ Secrets.gs, בשורה deploymentId.\n' +
-    '4. תפריט מניין ← קישור לדף הרישום.'),
+    '3. לחצו "פריסה" (Deploy) ואשרו את ההרשאות. העתיקו את כתובת אפליקציית האינטרנט (Web app URL).\n' +
+    '4. כאן: תפריט מניין ← קישור לדף הרישום ← הדביקו את הכתובת.'),
     ui.ButtonSet.OK);
+}
+
+/**
+ * Copying the Sheet (File → Make a copy, e.g. from the template) may copy the script's hidden values too.
+ * A copy must not share the original's page key, gabbai code, admin token, page address or shul point:
+ * when the Sheet's ID differs from the one recorded, they are all dropped, and setup() makes new ones.
+ * Returns true when this is such a copy.
+ */
+function forgetIfCopied_(ss) {
+  const props = PropertiesService.getDocumentProperties();
+  const home = props.getProperty('SHEET_ID'), id = ss.getId();
+  const copied = !!home && home !== id;
+  if (copied) { props.deleteAllProperties(); gabbaiPin_.v = undefined; shulArea_.v = undefined; }
+  props.setProperty('SHEET_ID', id);
+  return copied;
 }
 
 /**
@@ -125,7 +145,8 @@ function setup() {
  *    installation gets a random 6-digit code);
  *  - the shul's location → the sheet (from the gabbai's measurement in script properties, or Secrets.gs);
  *  - the lottery threshold → the sheet (from Secrets.gs lotteryThreshold);
- *  - the old "כתובת דף הרישום" row is dropped: the address comes from Secrets.gs deploymentId.
+ *  - the old "כתובת דף הרישום" row is dropped: the address comes from Secrets.gs deploymentId, or is
+ *    pasted once (מניין → קישור לדף הרישום).
  * Safe to run again. Returns what it changed, in Hebrew, for the closing message.
  */
 function migrateSettings_(st, tz) {
@@ -151,7 +172,11 @@ function migrateSettings_(st, tz) {
     moved.push(fromOld ? 'קוד הגבאי הועבר למקום מוסתר (לא בגיליון). הקוד עצמו לא השתנה.'
                        : 'קוד הגבאי הראשוני: ' + pin + ' — לשינוי: מניין ← שינוי קוד גבאי.');
   }
-  if (old[OLD_SET.URL]) moved.push('השורה "' + OLD_SET.URL + '" הוסרה: הכתובת נלקחת מ-deploymentId בקובץ Secrets.gs.');
+  if (old[OLD_SET.URL]) {
+    const was = parseWebUrl_(old[OLD_SET.URL].b);
+    if (was && !secret_('deploymentId')) props.setProperty('WEB_URL', was);
+    moved.push('השורה "' + OLD_SET.URL + '" הוסרה מהגיליון (הכתובת נשמרת במקום מוסתר).');
+  }
 
   const value = {}, note = {};
   const today = todayKey_(tz);

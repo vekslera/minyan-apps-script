@@ -32,6 +32,7 @@ Everything the users see is in Hebrew. The code and this README are in English.
 10. [Troubleshooting](#10-troubleshooting)
 11. [Files](#11-files) and [private settings](#12-private-settings-secretsgs)
 12. [Local tests](#13-local-tests) and [performance notes](#14-performance-notes)
+13. [More minyanim: the template](#15-more-minyanim-the-template) — a copy per minyan, with a one-page Hebrew guide
 
 Google's menus are shown here as **English / עברית**, because the labels depend on your Google language setting.
 
@@ -153,6 +154,8 @@ In the script editor:
 Create a **new** deployment only this once. Later code updates go to the **same** deployment ([§9](#9-updating-the-code-later)); otherwise the address changes and the links (and the printed QR code) stop working.
 
 Route A alternative: `clasp create-deployment -d "registration page"` prints the deployment ID.
+
+**Without `Secrets.gs`** (route B, or a copy made from the template): **מניין → קישור לדף הרישום** asks once for the Web app URL; paste it. It is kept in the script's properties, not in the sheet.
 
 ---
 
@@ -334,7 +337,7 @@ Don't create a new deployment for an update: it gets a new address.
 - the gabbai code → hidden in the script's properties (the code itself doesn't change);
 - the shul's location and radius → the sheet (your measurement on the tools page, else `shulLat`/`shulLng`/`shulRadius`);
 - the lottery threshold → the sheet;
-- the old "כתובת דף הרישום" row is dropped — the address comes from `deploymentId`.
+- the old "כתובת דף הרישום" row is dropped from the sheet; its address is kept hidden (used only when `deploymentId` is empty).
 
 Its closing message lists what moved. After that, `gabbaiPin`, `lotteryThreshold`, `shulLat`, `shulLng` and `shulRadius` can be deleted from your `Secrets.gs`; they are no longer read.
 
@@ -349,7 +352,7 @@ Its closing message lists what moved. After that, `gabbaiPin`, `lotteryThreshold
 | `clasp push`: "User has not enabled the Apps Script API" | Turn it on at <https://script.google.com/home/usersettings>, wait a minute, retry. |
 | setup() "Exceeded maximum execution time" | The "ההגדרה הושלמה" popup in the Sheet tab wasn't clicked. Run it again and click OK in the Sheet. |
 | No **מניין** menu | Reload the Sheet. If it's still missing, setup() hasn't run successfully ([§4](#4-run-setup-and-grant-permissions)). |
-| "דף הרישום עדיין לא פורסם" when opening the link dialog | No web-app address is known. Set `deploymentId` in `Secrets.gs` and push the code ([§9](#9-updating-the-code-later)). |
+| "חיבור דף הרישום" asks for an address | No web-app address is known yet. Paste the Web app URL from the deployment ([§5](#5-publish-the-registration-page-web-app)), or set `deploymentId` in `Secrets.gs` and push the code. |
 | Page says "הקישור אינו תקין" | You opened the bare `/exec` address. Use the full link from **מניין → קישור לדף הרישום**. |
 | Google page: "Sorry, unable to open the file at this time / מצטערים, לא ניתן לפתוח את הקובץ כרגע" | The address doesn't belong to an *active* deployment (an old or archived one, or a typo), or several Google accounts are signed in. Check **Deploy → Manage deployments** and compare the deployment ID with yours. Try a private window. In the editor, **Executions / ביצועים** shows a `doGet` row for every request that actually reached the script. |
 | A registration shows "הרישום התקבל ויאושר על ידי הגבאי" | The system wasn't sure who it was, or the person sent it for approval from outside the shul. The entry waits in **מניין → רישומים לבדיקה**; its note says why. |
@@ -397,6 +400,9 @@ Its closing message lists what moved. After that, `gabbaiPin`, `lotteryThreshold
 | `Secrets.gs.example` | Template for your private `Secrets.gs` |
 | `CLAUDE.md` | Notes for AI coding sessions (Claude): how the owner works, the Apps Script traps, tests, privacy rules |
 | `deploy.ps1`, `deploy.sh` | Push + update the existing web-app deployment |
+| `deploy.cmd` | Double-click version of `deploy.ps1` (Windows) |
+| `template.ps1`, `template.cmd` | Upload the code to the template Sheet, **without `Secrets.gs`** ([§15](#15-more-minyanim-the-template)) |
+| `INSTALL-he.md` | One-page Hebrew installation guide for a new minyan (from the template) |
 | `.claspignore` | Keeps docs, tests and scripts out of `clasp push` |
 | `test/` | Local tests against a simulated Sheet (not uploaded) |
 
@@ -419,8 +425,8 @@ Apps Script cannot serve a `.js` file to the browser: a page is one HTML documen
 
 - **Where they live.** Private values live in `Secrets.gs`. It is in `.gitignore`, so it never reaches git, but `clasp push` uploads it and the script reads it at run time.
 - **What it holds.** Only values set once: the owner account, the web-app deployment ID (the single source of the page address) and, optionally, a fixed link key. What the gabbai may change is in the הגדרות sheet; the gabbai code is in the script's properties.
-- **Every value is optional.** An empty `deploymentId` falls back to the address Google reports; an empty `kioskKey` to an automatically generated key.
-- **Other private files.** `.clasp.json` (your Script ID) is also git-ignored.
+- **Every value is optional.** An empty `deploymentId` falls back to the address pasted once in **מניין → קישור לדף הרישום**, then to the address Google reports; an empty `kioskKey` to an automatically generated key.
+- **Other private files.** `.clasp.json` (your Script ID) and `.clasp-template.json` (the template's) are also git-ignored.
 - **No passwords.** None are stored anywhere in the project. `clasp login` keeps its token in your user folder (`~/.clasprc.json`), outside the repo.
 
 ## 13. Local tests
@@ -453,3 +459,27 @@ node test/profile.js       # counts Google-service calls per action on a month o
 - **Cache for read-only lookups.** People and settings are kept in the script cache for up to 10 minutes. The cache is cleared whenever the script writes, and by the `onEdit` trigger whenever someone edits the אנשים or הגדרות sheet by hand. Every write reads the sheet fresh, so the cache can never overwrite data.
 - **Deleting rows by hand** fires no `onEdit`. The registration page may then still suggest a deleted name for up to 10 minutes; registrations are not affected.
 - **Large sheets load only when needed.** The attendance history and the review sheet are read only by actions that use them.
+
+---
+
+## 15. More minyanim: the template
+
+Each minyan gets **its own copy** of the Sheet, in **its own Google account**: its own people, attendance, settings, gabbai code and registration page. They are made from one **template** Sheet that holds only the code.
+
+**Making the template (once, on the developer's computer):**
+
+1. In the developer's Google account: a new blank Sheet, e.g. `מניין — תבנית`. Don't run `setup` in it and don't deploy it: a copy starts from nothing.
+2. **Extensions / תוספים → Apps Script → Project Settings ⚙ / הגדרות הפרויקט → Script ID** — copy it.
+3. In the project folder, double-click **`template.cmd`** (or `.\template.ps1`). The first time it asks for the Script ID and keeps it in `.clasp-template.json` (git-ignored). It uploads the code **without `Secrets.gs`** (from a temporary folder), so no copy ever carries this minyan's address or private values. It refuses if the ID is the one in `.clasp.json`.
+4. Sheet → **Share / שיתוף → General access: Anyone with the link, Viewer**. Copy the link and change its end from `/edit…` to **`/copy`**. That link opens Google's "Make a copy" page; the copy includes the script.
+
+**After a code change:** run `template.cmd` again, so copies made from then on get the current code. (Existing copies are updated by `deploy-all`, planned.)
+
+**Setting up a minyan from it:** the person with the minyan's Google account follows **[`INSTALL-he.md`](INSTALL-he.md)** (Hebrew, one page): copy → **מניין → הגדרה ראשונית** → publish the web app → paste its address in **מניין → קישור לדף הרישום** → settings and shul location on the tools page → share the Sheet with the developer as Editor, for updates and help.
+
+**What makes a copy independent:**
+
+- The template has no `Secrets.gs`, so a copy's address comes from the one pasted in **קישור לדף הרישום** (document property `WEB_URL`).
+- `setup` records the Sheet's ID. If it later finds a different ID (the Sheet was copied, and Google copied the hidden values along), it drops them all and makes new ones: a new page key, a new gabbai code (shown once), no address until one is pasted. The original's links don't open the copy.
+- Copy the **template**, never a minyan's working Sheet: that one has its `Secrets.gs`, people and attendance.
+

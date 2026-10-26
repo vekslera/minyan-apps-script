@@ -57,8 +57,10 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
 
 ## Settings and secrets
 
-- `Secrets.gs` (git-ignored): only set-once values — `ownerAccount`, `deploymentId` (the single source of the
-  page address), `kioskKey`, `locationLog` (reserved). Template: `Secrets.gs.example`.
+- `Secrets.gs` (git-ignored): only set-once values — `ownerAccount`, `deploymentId`, `kioskKey`, `locationLog`
+  (reserved). Every value is optional. Template: `Secrets.gs.example`.
+- The page address: `deploymentId`, else `WEB_URL` (pasted once in **קישור לדף הרישום** — how copies get it),
+  else `ScriptApp.getService().getUrl()`.
 - The הגדרות sheet: everything the gabbai changes (name, period, thresholds, hours, minyan weekdays, shul point,
   radius, GPS tolerance, no-minyan dates in column E). Rows are found by label (`SET`, `SET_ROWS` in `Config.gs`);
   new rows go **at the end** so existing rows keep their places. `setup()` (`migrateSettings_`) puts the
@@ -70,7 +72,10 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
   counts when `isMinyanDay_` (a minyan weekday, not in column E); registration, gabbai mode and the import refuse
   other weekdays. Never test `dow_ === 6` alone for "is there a minyan".
 - Scaling: decided on **option C** — a copy per minyan in the minyan's own Google account, updated centrally
-  (`deploy-all`, planned). The analysis is a doc the owner keeps; next: a template Sheet + Hebrew install guide.
+  (`deploy-all`, planned next). New minyanim copy a **template** Sheet (code only, pushed by `template.cmd` without
+  `Secrets.gs`) and follow `INSTALL-he.md`. Code must work identically in every copy: per-minyan values live in the
+  sheet or in document properties, never in code. `setup` drops all document properties when the Sheet ID changed
+  (`forgetIfCopied_`), so a copy never shares a key or gabbai code. Keep `INSTALL-he.md` in step with the menus.
 
 ## Privacy
 

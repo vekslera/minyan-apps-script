@@ -195,24 +195,52 @@ function resolvePending_(decisions) {
   }
 }
 
-/** The registration link with its key, or '' while the web app is not deployed yet. */
+/**
+ * The registration link with its key, or '' while the address is not known yet. The address: Secrets.gs
+ * (deploymentId), else the one pasted once in the Sheet (WEB_URL — how a copy made from the template gets it),
+ * else what Google reports for the script.
+ */
 function kioskLink_(settings) {
-  let url = settings.url;
+  let url = settings.url || PropertiesService.getDocumentProperties().getProperty('WEB_URL') || '';
   if (!url) { try { url = ScriptApp.getService().getUrl() || ''; } catch (e) { url = ''; } }
   return /^https:\/\/script\.google\.com\/.+\/exec/.test(url) ? url.split('?')[0] + '?k=' + kioskKey_() : '';
+}
+
+/**
+ * A web-app address as pasted by the person who deployed it → 'https://script.google.com/…/s/<id>/exec',
+ * or '' when it isn't one. A bare deployment ID (AKfycb…) is accepted too.
+ */
+function parseWebUrl_(text) {
+  const t = String(text || '').trim();
+  const m = t.match(/^https:\/\/script\.google\.com\/(?:a\/macros\/[^\/\s]+|macros)\/s\/([\w-]{20,})\/(?:exec|dev)\b/);
+  if (m) return t.slice(0, t.indexOf('/s/')) + '/s/' + m[1] + '/exec';
+  return /^AKfyc[\w-]{15,}$/.test(t) ? 'https://script.google.com/macros/s/' + t + '/exec' : '';
+}
+
+/** Asks for the web-app address once (a copy made from the template has no Secrets.gs). true = saved. */
+function askWebUrl_(ui) {
+  const r = ui.prompt('חיבור דף הרישום',
+    'אם עוד לא פרסמתם את הדף: תוספים (Extensions) ← Apps Script ← פריסה (Deploy) ← פריסה חדשה ← אפליקציית אינטרנט (Web app), ' +
+    'הפעלה בתור: אני, גישה: כל אחד ← פריסה.\n\nהדביקו כאן את כתובת אפליקציית האינטרנט (Web app URL, מסתיימת ב-exec):',
+    ui.ButtonSet.OK_CANCEL);
+  if (r.getSelectedButton() !== ui.Button.OK) return false;
+  const url = parseWebUrl_(r.getResponseText());
+  if (!url) {
+    ui.alert('הכתובת אינה תקינה', 'יש להדביק את הכתובת שמופיעה בסוף הפריסה, תחת "אפליקציית אינטרנט" (Web app). היא מתחילה ב-https://script.google.com ומסתיימת ב-exec.', ui.ButtonSet.OK);
+    return false;
+  }
+  PropertiesService.getDocumentProperties().setProperty('WEB_URL', url);
+  return true;
 }
 
 function menuKioskLink() {
   const ui = SpreadsheetApp.getUi();
   const ss = SpreadsheetApp.getActive();
   const s = readSettings_(ss, ss.getSpreadsheetTimeZone());
-  const link = kioskLink_(s);
-  if (!link) {
-    ui.alert('דף הרישום עדיין לא פורסם',
-      'בעורך הסקריפט: פריסה (Deploy) ← פריסה חדשה ← אפליקציית אינטרנט (Web app), הפעלה בתור "אני", גישה "כל אחד".\n' +
-      'אחר כך העתיקו את מזהה הפריסה (Deployment ID) לקובץ Secrets.gs, בשורה deploymentId, ועדכנו את הקוד (clasp push).',
-      ui.ButtonSet.OK);
-    return;
+  let link = kioskLink_(s);
+  if (!link) {                                     // not published yet, or a copy that doesn't know its address
+    if (!askWebUrl_(ui)) return;
+    link = kioskLink_(s);
   }
   const html = HtmlService.createHtmlOutput(page_('LinkDialog').replace(/__LINK__/g, () => escHtml_(link)).replace(/__TOOLS__/g, () => escHtml_(link + '&view=gabbai')).replace('__PIN__', () => escHtml_(s.pin)))
     .setWidth(560).setHeight(500);

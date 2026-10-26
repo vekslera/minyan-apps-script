@@ -693,4 +693,48 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   console.log('minyan weekdays OK');
 }
 
+// ---------- A copy made from the template: own key, own gabbai code, address pasted once ----------
+{
+  // the template: code only, never set up — a copy opens with a pointer to the first step
+  const envC = makeEnv(); const Q = envC.ctx;
+  Q.onOpen();
+  assert(envC.log.some(l => l[0] === 'toast' && /הגדרה ראשונית/.test(l[1])), 'a fresh copy points to setup');
+  // what the web-app address may look like when pasted
+  assert.equal(Q.parseWebUrl_(' https://script.google.com/macros/s/AKfycbEXAMPLE_example-123/exec?usp=sharing '), 'https://script.google.com/macros/s/AKfycbEXAMPLE_example-123/exec');
+  assert.equal(Q.parseWebUrl_('https://script.google.com/a/macros/example.org/s/AKfycbEXAMPLE_example-123/exec'), 'https://script.google.com/a/macros/example.org/s/AKfycbEXAMPLE_example-123/exec');
+  assert.equal(Q.parseWebUrl_('AKfycbEXAMPLE_example-123'), 'https://script.google.com/macros/s/AKfycbEXAMPLE_example-123/exec');
+  assert.equal(Q.parseWebUrl_('https://docs.google.com/spreadsheets/d/x/edit'), '');
+  assert.equal(Q.parseWebUrl_(''), '');
+  // setup in the copy, then the address: not known yet → setup says how to publish; the link asks for it
+  Q.setup();
+  assert(/פריסה חדשה/.test(envC.log.filter(l => l[0] === 'alert').slice(-1)[0][1]), 'setup explains how to publish');
+  assert(/קוד הגבאי הראשוני: \d{6}/.test(envC.log.filter(l => l[0] === 'alert').slice(-1)[0][1]), 'the new code is shown once');
+  envC.ui.nextPromptButton = 'CANCEL'; Q.menuKioskLink();
+  assert(!envC.log.some(l => l[0] === 'dialog'), 'cancelled: no link');
+  envC.ui.nextPromptButton = 'OK'; envC.ui.nextPrompt = 'not an address'; Q.menuKioskLink();
+  assert(/אינה תקינה/.test(envC.log.filter(l => l[0] === 'alert').slice(-1)[0][1]));
+  envC.ui.nextPrompt = 'https://script.google.com/macros/s/AKfycbCOPY_example_0001/exec';
+  Q.menuKioskLink();
+  assert(envC.log.some(l => l[0] === 'dialog'), 'the link dialog opens after pasting');
+  const key1 = Q.kioskKey_(), pin1 = Q.gabbaiPin_();
+  assert.equal(Q.kioskLink_(Q.readSettings_(envC.ss, 'Asia/Jerusalem')), 'https://script.google.com/macros/s/AKfycbCOPY_example_0001/exec?k=' + key1);
+  const n = envC.log.length; Q.menuKioskLink();
+  assert(!envC.log.slice(n).some(l => l[0] === 'prompt'), 'asked only once');
+  Q.setup();
+  assert.equal(Q.kioskKey_(), key1, 'setup again: same key'); assert.equal(Q.gabbaiPin_(), pin1, 'same code');
+  assert(/קישור לדף הרישום/.test(envC.log.filter(l => l[0] === 'alert').slice(-1)[0][1]));
+  // this Sheet copied again (hidden values copied along): the copy gets everything new
+  envC.ss.id = 'ss-copy';
+  Q.setup();
+  const last = envC.log.filter(l => l[0] === 'alert').slice(-1)[0][1];
+  assert(/זהו עותק/.test(last), last);
+  assert.notEqual(Q.kioskKey_(), key1, 'a new page key'); assert.notEqual(Q.gabbaiPin_(), pin1, 'a new gabbai code');
+  assert.equal(envC.props.WEB_URL, undefined, "the original's address is not used");
+  assert(/פריסה חדשה/.test(last), 'and is told to publish its own page');
+  // the original's old link doesn't open the copy's page
+  const bad = Q.doGet({ parameter: { k: key1 } }).html;
+  assert(!bad.includes('kioskSubmit') && bad === Q.doGet({ parameter: { k: 'x' } }).html, "the original's key opens only the bad-link page");
+  console.log('template copies OK');
+}
+
 console.log('\nALL OK');
