@@ -36,7 +36,11 @@ const SET = {
   LNG:   'מיקום בית הכנסת — קו אורך',
   RADIUS: 'רדיוס מותר (מטרים)',
   TOL:   'סטיית GPS מותרת (מטרים)',
+  GNAME: 'שם הגבאי',
+  GPHONE: 'טלפון הגבאי',
 };
+// The developer, on the printable QR sign (with the gabbai, or alone when the gabbai's details aren't set).
+const DEVELOPER = { name: 'אלכס וקסלר', phone: '052-8353205' };
 // Rows of older versions, read once by setup() to move their values (see migrateSettings_ in Setup.gs).
 const OLD_SET = { PIN: 'קוד גבאי', URL: 'כתובת דף הרישום (Web app)' };
 // The הגדרות sheet, top to bottom (column E holds the "no minyan" dates). setup() keeps this order.
@@ -53,6 +57,8 @@ const SET_ROWS = [
   [SET.TOL, 'כמה אי-דיוק של ה-GPS נסלח מעבר לרדיוס. ריק = חצי רדיוס'],
   [SET.REBBE, '25 = נכללים בדוח לרבי מי שהגיע ל-25% מימי המניין ומעלה. 0 = ללא דוח (כבוי)'],
   [SET.DAYS, 'הימים בשבוע שבהם יש מניין, באותיות: א ב ג ד ה ו (ראשון עד שישי), או א-ה. רק בימים אלה יש רישום והם נספרים'],
+  [SET.GNAME, 'מופיע בדף ה-QR להדפסה: למי לפנות מי שלא מצליח להירשם. ריק = רק פרטי המפתח'],
+  [SET.GPHONE, 'טלפון לסמס, מופיע בדף ה-QR להדפסה'],
 ];
 
 // Name-matching thresholds (0..1)

@@ -3,6 +3,16 @@
 const assert = require('assert');
 const { chromium } = require('playwright');
 const { makeEnv } = require('./mock');
+const fs = require('fs'), path = require('path');
+// The QR and PDF libraries normally come from cdnjs; here from a local copy when there is one
+// (npm install qrcodejs@1.0.0 jspdf@2.5.1 in the project folder, or MINYAN_TEST_LIBS=<a node_modules folder>).
+const LIBS = (() => {
+  for (const d of [process.env.MINYAN_TEST_LIBS, path.join(__dirname, '..', 'node_modules')].filter(Boolean)) {
+    const q = path.join(d, 'qrcodejs', 'qrcode.min.js'), j = path.join(d, 'jspdf', 'dist', 'jspdf.umd.min.js');
+    if (fs.existsSync(q) && fs.existsSync(j)) return { qr: fs.readFileSync(q, 'utf8'), pdf: fs.readFileSync(j, 'utf8') };
+  }
+  return null;
+})();
 const env = makeEnv(); const G = env.ctx; G.setup(); G.setPin_('1234');   // an old-style short code, to see the "weak code" hint
 env.userEdit('הגדרות', 'B6', 0); env.userEdit('הגדרות', 'B7', 24);
 const today = G.todayKey_('Asia/Jerusalem');
@@ -30,7 +40,12 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
     await p.exposeFunction('__gs', (fn, a) => { G.__webContext = true; try { return JSON.stringify({ val: G[fn](...JSON.parse(a)) }); } catch (e) { return JSON.stringify({ err: e.message }); } finally { G.__webContext = false; } });
     const html = G.doGet({ parameter: { k: key, view: 'gabbai' } }).html.replace('<head>', '<head><script>' + shim + '</script>');
     await p.route('https://kiosk.test/', r => r.fulfill({ contentType: 'text/html', body: html }));
-    await p.route(/fonts\.g|cdnjs/, r => r.abort());
+    await p.route(/fonts\.g|cdnjs/, r => {
+      const u = r.request().url();
+      if (LIBS && /qrcode\.min\.js$/.test(u)) return r.fulfill({ contentType: 'text/javascript', body: LIBS.qr });
+      if (LIBS && /jspdf\.umd\.min\.js$/.test(u)) return r.fulfill({ contentType: 'text/javascript', body: LIBS.pdf });
+      return r.abort();
+    });
     await p.goto('https://kiosk.test/'); await p.waitForTimeout(400);
     return p;
   }
@@ -116,6 +131,29 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
   await p.click('#back'); await tile(p, 'link');
   assert.equal((await p.textContent('#url')).trim(), 'https://script.google.com/macros/s/AKfyc_EXAMPLE/exec?k=' + key);
   await p.screenshot({ path: 'test/shots/g6-link.png' });
+  // the printable QR sign: the texts, with and without the gabbai's details
+  const tx = await p.evaluate(() => [posterTexts({ name: '', dev: { name: 'מפתח', phone: '050-0000000' } }),
+    posterTexts({ name: 'מניין לדוגמה', gabbai: { name: 'ישראל', phone: '050-1111111' }, dev: { name: 'מפתח', phone: '050-0000000' } }),
+    posterTexts({ name: 'מניין לדוגמה', gabbai: { name: 'ישראל', phone: '' }, dev: { name: 'מפתח', phone: '050-0000000' } })]);
+  assert.equal(tx[0].title, 'רישום למניין', 'no name → "רישום למניין"');
+  assert.equal(tx[0].who, 'גש למפתח או שלח סמס למספר'); assert.equal(tx[0].phone, '050-0000000'); assert.equal(tx[0].dev, '');
+  assert.equal(tx[1].who, 'גש לגבאי, ישראל, או שלח סמס למספר'); assert.equal(tx[1].phone, '050-1111111');
+  assert(/מפתח, 050-0000000/.test(tx[1].dev), 'the developer too');
+  assert.equal(tx[2].who, 'גש לגבאי, ישראל'); assert.equal(tx[2].phone, '');
+  assert.equal(tx[1].top, 'בס"ד');
+  if (LIBS) {
+    const [dl] = await Promise.all([
+      p.waitForEvent('download', { timeout: 20000 }),
+      p.click('#posterBtn').then(() => p.waitForSelector('#posterDownload', { timeout: 15000 })).then(() => p.click('#posterDownload'))
+    ]);
+    assert.equal(dl.suggestedFilename(), 'minyan-QR.pdf');
+    await dl.saveAs('test/shots/qr-sign.pdf');
+    const head = fs.readFileSync('test/shots/qr-sign.pdf').slice(0, 5).toString();
+    assert.equal(head, '%PDF-', 'a PDF file');
+    assert(await p.isVisible('#posterImg'), 'a preview of the sign');
+    await p.screenshot({ path: 'test/shots/g6b-poster.png', fullPage: true });
+    console.log('QR sign: ' + dl.suggestedFilename() + ', ' + fs.statSync('test/shots/qr-sign.pdf').size + ' bytes');
+  } else console.log('QR sign: PDF not checked (no local qrcodejs/jspdf)');
 
   // change the code, then log out
   await p.click('#back'); await tile(p, 'pin');

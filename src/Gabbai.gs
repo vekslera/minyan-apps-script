@@ -78,8 +78,11 @@ function gabbaiMerge(key, session, pairs) {
 function gabbaiLink(key, session) {
   checkSession_(key, session);
   const ss = SpreadsheetApp.getActive();
-  const link = kioskLink_(readSettings_(ss, ss.getSpreadsheetTimeZone()));
-  return { link: link, tools: link ? link + '&view=gabbai' : '' };
+  const s = readSettings_(ss, ss.getSpreadsheetTimeZone());
+  const link = kioskLink_(s);
+  // name, gabbai and dev: for the printable QR sign (scripts/gabbai/poster.js)
+  return { link: link, tools: link ? link + '&view=gabbai' : '', name: s.name,
+           gabbai: { name: s.gabbaiName, phone: s.gabbaiPhone }, dev: { name: DEVELOPER.name, phone: DEVELOPER.phone } };
 }
 
 // ---- Settings: name, minyan weekdays, registration hours, period, thresholds, days without a minyan ----
@@ -87,11 +90,12 @@ function settingsForPage_() {
   const ss = SpreadsheetApp.getActive(), tz = ss.getSpreadsheetTimeZone();
   const s = readSettings_(ss, tz);
   return { name: s.name, from: s.from, to: s.to, start: s.start, end: s.end, threshold: s.threshold, rebbe: s.rebbe, days: s.days,
+           gabbaiName: s.gabbaiName, gabbaiPhone: s.gabbaiPhone,
            excluded: Array.from(s.excluded).sort(), today: todayKey_(tz) };
 }
 function gabbaiSettings(key, session) { checkSession_(key, session); return settingsForPage_(); }
 
-/** d = {name, days, from, to, start, end, threshold, rebbe}. Checks everything first; saves all or nothing. */
+/** d = {name, days, from, to, start, end, threshold, rebbe, gabbaiName, gabbaiPhone}. Checks everything first; saves all or nothing. */
 function gabbaiSaveSettings(key, session, d) {
   checkSession_(key, session);
   d = d || {};
@@ -110,19 +114,30 @@ function gabbaiSaveSettings(key, session, d) {
   // days: weekday numbers 0 (Sunday) … 5 (Friday); left out = unchanged
   const days = d.days === undefined ? null : Array.from(new Set((d.days || []).map(Number))).filter(x => x >= 0 && x <= 5).sort();
   if (days && !days.length) throw new Error('יש לבחור לפחות יום מניין אחד');
+  // the gabbai's name and phone (for the QR sign): optional; left out = unchanged
+  const gName = d.gabbaiName === undefined ? null : clean_(d.gabbaiName);
+  if (gName && gName.length > 40) throw new Error('שם הגבאי ארוך מדי');
+  let gPhone = d.gabbaiPhone === undefined ? null : String(d.gabbaiPhone || '').trim();
+  if (gPhone) {
+    const p = normPhone_(gPhone);
+    if (!validPhone_(p)) throw new Error('טלפון הגבאי אינו תקין');
+    gPhone = fmtPhone_(p);
+  }
   const v = {};
   if (days) v[SET.DAYS] = fmtDays_(days);
+  if (gName !== null) v[SET.GNAME] = gName;
+  if (gPhone !== null) v[SET.GPHONE] = gPhone;
   v[SET.NAME] = name; v[SET.FROM] = fmtHour_(from); v[SET.TO] = fmtHour_(to); v[SET.PCT] = Math.round(thr * 10) / 10; v[SET.REBBE] = Math.round(reb * 10) / 10;
   v[SET.START] = keyToDate_(start, tz); v[SET.END] = keyToDate_(end, tz);
   withLock_(() => { textFormatHours_(); setSettings_(v); });
   return settingsForPage_();
 }
 
-/** The hour cells hold text ("8:30"), so Sheets doesn't turn them into times. */
+/** The hour and phone cells hold text ("8:30", "052-…"), so Sheets doesn't turn them into times or numbers. */
 function textFormatHours_() {
   const sh = sheet_(SpreadsheetApp.getActive(), SH.SETTINGS);
   const labels = sh.getRange(1, 1, Math.max(sh.getLastRow(), 1), 1).getValues().map(r => String(r[0]).trim());
-  [SET.FROM, SET.TO].forEach(l => { const i = labels.indexOf(l); if (i >= 0) sh.getRange(i + 1, 2).setNumberFormat('@'); });
+  [SET.FROM, SET.TO, SET.GPHONE].forEach(l => { const i = labels.indexOf(l); if (i >= 0) sh.getRange(i + 1, 2).setNumberFormat('@'); });
 }
 
 /** Replaces the list of days without a minyan (column E of הגדרות). dates = ['yyyy-mm-dd', …]. */

@@ -57,6 +57,11 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
   can hang). The early reading starts on load only if permission is already granted, else on the first tap into
   a field; it is used if under 2 minutes old; retries always take a fresh one.
 - Small debug or helper overlays must not cover the form on a phone (the timing panel is ~4 lines and hideable).
+- Downloaded file names in English letters only (`minyan-QR.pdf`): with Hebrew in the name Chrome may save the
+  file as "download", without ".pdf".
+- The printable QR sign (`scripts/gabbai/poster.js`) is drawn on a canvas in the browser (the browser shapes the
+  Hebrew) and wrapped in a PDF by jsPDF from cdnjs — no server work and no new permission. The developer's
+  details are `DEVELOPER` in `Config.gs`; the gabbai's are settings rows (`SET.GNAME`, `SET.GPHONE`).
 
 ## Settings and secrets
 

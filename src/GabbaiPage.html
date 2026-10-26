@@ -48,6 +48,9 @@ a.btn{text-decoration:none;display:inline-block}
 .url{direction:ltr;text-align:left;word-break:break-all;background:var(--soft);border:1px solid var(--line);border-radius:8px;padding:8px;font-size:13px;margin:8px 0}
 #qr{width:200px;height:200px;margin:4px auto 10px}
 #qr img,#qr canvas{margin:0 auto}
+#posterBox{margin-top:14px;border-top:1px solid var(--line);padding-top:12px;text-align:center}
+#posterImg{display:block;width:100%;max-width:340px;margin:0 auto 6px;border:1px solid var(--line);box-shadow:0 2px 8px rgba(0,0,0,.12)}
+#posterBox .actions{justify-content:center}
 .mobile-only{display:none}
 @media (max-width:640px){
   .mobile-only{display:block}
@@ -215,6 +218,12 @@ window.onerror = function (msg) {
     </div>
     <div class="row"><label>אחוז נוכחות להגרלה <input type="number" id="setPct" min="0" max="100" step="1" style="width:80px">%</label></div>
     <div class="row"><label>אחוז נוכחות לדוח לרבי <input type="number" id="setRebbe" min="0" max="100" step="1" style="width:80px">%</label></div>
+    <div class="field"><span>הגבאי — למי שלא מצליח להירשם (מופיע בדף ה-QR להדפסה)</span>
+      <div class="row" style="margin-top:4px">
+        <label>שם <input id="setGName" type="text" maxlength="40" placeholder="לא חובה"></label>
+        <label>טלפון <input id="setGPhone" type="tel" dir="ltr" maxlength="20" placeholder="לא חובה" style="width:150px"></label>
+      </div>
+      <small class="g-meta">ריק = בדף יופיעו רק פרטי המפתח.</small></div>
     <p class="g-meta"><b>0 = כבוי:</b> אחוז 0 מכבה את ההגרלה או את הדוח לרבי. הכלי נשאר ברשימה ומסומן "כבוי"; כדי להפעיל שוב — כותבים אחוז גדול מ-0.</p>
     <button class="btn primary" id="setSave" type="button">שמירה</button>
     <p class="g-meta" style="margin-top:10px">מחוץ לשעות הרישום אפשר לרשום רק במצב גבאי. השינויים נשמרים בגיליון "הגדרות".</p>
@@ -259,6 +268,7 @@ var API = { prefix: 'gabbai', auth: function () { return [KEY, S.session]; } };
 <script data-include="scripts/gabbai/draw.js"></script>
 <script data-include="scripts/gabbai/duplicates.js"></script>
 <script data-include="scripts/gabbai/link.js"></script>
+<script data-include="scripts/gabbai/poster.js"></script>
 <script data-include="scripts/gabbai/pin.js"></script>
 <script data-include="scripts/gabbai/shul.js"></script>
 <script data-include="scripts/gabbai/settings.js"></script>

@@ -705,6 +705,24 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
     assert.equal(W('kioskInit', k, '').minyanDay, true);
   }
   console.log('minyan weekdays OK');
+  // the gabbai's details for the QR sign (and the developer's)
+  let ln = W('gabbaiLink', k, s);
+  assert.deepEqual(ln.gabbai, { name: '', phone: '' }); assert.equal(ln.dev.name, 'אלכס וקסלר'); assert.equal(ln.name, g.name);
+  assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { gabbaiPhone: '123' })), /טלפון הגבאי אינו תקין/);
+  g = W('gabbaiSaveSettings', k, s, Object.assign({}, base, { gabbaiName: ' ישראל  ישראלי ', gabbaiPhone: '0501112233' }));
+  assert.equal(g.gabbaiName, 'ישראל ישראלי'); assert.equal(g.gabbaiPhone, '050-1112233');
+  const gRow = label => sh.data.find(x => x[0] === label);
+  assert.equal(gRow('טלפון הגבאי')[1], '050-1112233', 'kept as text');
+  assert(sh.data.findIndex(x => x[0] === 'טלפון הגבאי') > sh.data.findIndex(x => x[0] === 'ימי המניין'), 'new rows at the end');
+  ln = W('gabbaiLink', k, s);
+  assert.deepEqual(ln.gabbai, { name: 'ישראל ישראלי', phone: '050-1112233' });
+  g = W('gabbaiSaveSettings', k, s, base);
+  assert.equal(g.gabbaiPhone, '050-1112233', 'left out → unchanged');
+  envD.userEdit('הגדרות', 'B' + (sh.data.findIndex(x => x[0] === 'טלפון הגבאי') + 1), 501112233);   // Sheets made it a number
+  assert.equal(Q.readSettings_(envD.ss, tz).gabbaiPhone, '050-1112233');
+  g = W('gabbaiSaveSettings', k, s, Object.assign({}, base, { gabbaiName: '', gabbaiPhone: '' }));
+  assert.equal(g.gabbaiName, ''); assert.equal(g.gabbaiPhone, '');
+  console.log('gabbai details OK');
 }
 
 // ---------- A copy made from the template: own key, own gabbai code, address pasted once ----------

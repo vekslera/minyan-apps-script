@@ -36,6 +36,7 @@ function readSettings_(ss, tz) {
   const excluded = new Set(raw.excluded);
   return { name: String(map[SET.NAME] || 'מניין שחרית').trim(), start: toKey_(map[SET.START], tz), end: toKey_(map[SET.END], tz),
            days: parseDays_(map[SET.DAYS]) || DEFAULT_DAYS.slice(),       // weekdays 0 (Sunday) … 5 (Friday)
+           gabbaiName: String(map[SET.GNAME] == null ? '' : map[SET.GNAME]).trim(), gabbaiPhone: phoneCell_(map[SET.GPHONE]),
            threshold: num(map[SET.PCT], 75), rebbe: num(map[SET.REBBE], 25), from: num(map[SET.FROM], 5), to: num(map[SET.TO], 11),   // hours; 8.5 = 8:30
            // The gabbai code is kept out of sight (script properties). Until setup() moves it there,
            // the old places still work: Secrets.gs, then the old "קוד גבאי" row.
@@ -225,6 +226,15 @@ function daysLabel_(days) {
 }
 /** Is this date a minyan day (a minyan weekday and not marked "no minyan")? */
 function isMinyanDay_(s, key) { return s.days.indexOf(dow_(key)) >= 0 && !s.excluded.has(key); }
+
+/** A phone typed into a cell ("052-1234567", or 521234567 when Sheets made it a number) → "052-1234567"; else as typed. */
+function phoneCell_(v) {
+  const raw = String(v == null ? '' : v).trim();
+  if (!raw) return '';
+  let p = normPhone_(raw);
+  if (!validPhone_(p) && /^\d{8,9}$/.test(raw)) p = normPhone_('0' + raw);
+  return validPhone_(p) ? fmtPhone_(p) : raw;
+}
 
 /** Hours as shown and written to the sheet: 8.5 → "8:30", 11 → "11:00". (Also sent to the pages.) */
 function fmtHour_(h) { const m = Math.round(Number(h) * 60); return Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0'); }
