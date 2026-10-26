@@ -72,9 +72,12 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
 - Minyan weekdays (`ימי המניין`, Hebrew letters, default `א ב ג ד ה ו`): `s.days` = weekday numbers 0–5. A day
   counts when `isMinyanDay_` (a minyan weekday, not in column E); registration, gabbai mode and the import refuse
   other weekdays. Never test `dow_ === 6` alone for "is there a minyan".
-- Scaling: decided on **option C** — a copy per minyan in the minyan's own Google account, updated centrally
-  (`deploy-all`, planned next). New minyanim copy a **template** Sheet (code only, pushed by `template.cmd` without
-  `Secrets.gs`) and follow `INSTALL-he.md`. Code must work identically in every copy: per-minyan values live in the
+- Scaling: decided on **option C** — a copy per minyan in the minyan's own Google account. New minyanim copy a
+  **template** Sheet (code only, never set up or deployed) and follow `INSTALL-he.md`. `deploy-all.ps1` updates
+  everything in `minyanim.json` (git-ignored): push from a temp folder (`Secrets.gs` only where `secrets: true`) +
+  `update-deployment`, then checks the page. It runs as the clasp account (**maintainer**, chosen by the owner):
+  every Sheet is shared with it as Editor, and after an update each page runs as it, so it must authorize each
+  project once, and again when an update adds a new permission (e.g. email). Code must work identically in every copy: per-minyan values live in the
   sheet or in document properties, never in code. `setup` drops all document properties when the Sheet ID changed
   (`forgetIfCopied_`), so a copy never shares a key or gabbai code. Keep `INSTALL-he.md` in step with the menus.
 
@@ -95,8 +98,10 @@ When the live app behaves differently from the tests, first teach the mock the q
 ## Deploying (done by the owner, on his laptop)
 
 `deploy.cmd` (double-click) or `.\deploy.ps1 "msg"` = `clasp push -f` + a new version of the **same**
-deployment (the link and printed QR codes stay valid). Never create a new deployment. After a settings-layout
-change, run **מניין → הגדרה ראשונית** once. Then `git push`.
+deployment (the link and printed QR codes stay valid). Never create a new deployment. With several minyanim:
+`deploy-all.cmd` (all + the template) or `template.cmd` (template only). After a settings-layout change, run
+**מניין → הגדרה ראשונית** once in each minyan. Then `git push`. Test the .ps1 scripts with PowerShell 7 and a fake
+`clasp` on PATH; keep them Windows PowerShell 5.1-compatible (it is what `*.cmd` runs).
 
 ## When working through the remote device bridge
 

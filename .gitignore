@@ -1,6 +1,7 @@
 # Private — never commit
 .clasp.json
 .clasp-template.json
+minyanim.json
 .clasprc.json
 Secrets.gs
 

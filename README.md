@@ -32,7 +32,7 @@ Everything the users see is in Hebrew. The code and this README are in English.
 10. [Troubleshooting](#10-troubleshooting)
 11. [Files](#11-files) and [private settings](#12-private-settings-secretsgs)
 12. [Local tests](#13-local-tests) and [performance notes](#14-performance-notes)
-13. [More minyanim: the template](#15-more-minyanim-the-template) — a copy per minyan, with a one-page Hebrew guide
+13. [More minyanim: the template and deploy-all](#15-more-minyanim-the-template-and-deploy-all) — a copy per minyan, a one-page Hebrew guide, updating them all
 
 Google's menus are shown here as **English / עברית**, because the labels depend on your Google language setting.
 
@@ -322,7 +322,7 @@ Menus and dialogs in the Sheet always use the latest uploaded code. The **regist
 ./deploy.sh "what changed"       # macOS / Linux
 ```
 
-Both run `clasp push -f`, then `clasp update-deployment <deploymentId from Secrets.gs>`. The address, the links and the printed QR code stay the same.
+Both run `clasp push -f`, then `clasp update-deployment <deploymentId from Secrets.gs>`. The address, the links and the printed QR code stay the same. With several minyanim, `deploy-all` updates them all at once ([§15](#15-more-minyanim-the-template-and-deploy-all)).
 
 **Without a terminal:** double-click **`deploy.cmd`** in the project folder (Windows). It runs `deploy.ps1`, shows "DEPLOY OK" or "DEPLOY FAILED", and saves the output to `deploy-last.log`.
 
@@ -402,7 +402,8 @@ Its closing message lists what moved. After that, `gabbaiPin`, `lotteryThreshold
 | `CLAUDE.md` | Notes for AI coding sessions (Claude): how the owner works, the Apps Script traps, tests, privacy rules |
 | `deploy.ps1`, `deploy.sh` | Push + update the existing web-app deployment |
 | `deploy.cmd` | Double-click version of `deploy.ps1` (Windows) |
-| `template.ps1`, `template.cmd` | Upload the code to the template Sheet, **without `Secrets.gs`** ([§15](#15-more-minyanim-the-template)) |
+| `deploy-all.ps1`, `deploy-all.cmd` | Update every minyan in `minyanim.json` and the template: upload + new version of each page ([§15](#15-more-minyanim-the-template-and-deploy-all)) |
+| `template.cmd` | Double-click: update the template only (`deploy-all.ps1 -Only template`) |
 | `INSTALL-he.md` | One-page Hebrew installation guide for a new minyan (from the template) |
 | `.claspignore` | Keeps docs, tests and scripts out of `clasp push` |
 | `test/` | Local tests against a simulated Sheet (not uploaded) |
@@ -427,7 +428,7 @@ Apps Script cannot serve a `.js` file to the browser: a page is one HTML documen
 - **Where they live.** Private values live in `Secrets.gs`. It is in `.gitignore`, so it never reaches git, but `clasp push` uploads it and the script reads it at run time.
 - **What it holds.** Only values set once: the owner account, the web-app deployment ID (the single source of the page address) and, optionally, a fixed link key. What the gabbai may change is in the הגדרות sheet; the gabbai code is in the script's properties.
 - **Every value is optional.** An empty `deploymentId` falls back to the address pasted in **מניין → כתובת דף הרישום (הדבקה)**; an empty `kioskKey` to an automatically generated key.
-- **Other private files.** `.clasp.json` (your Script ID) and `.clasp-template.json` (the template's) are also git-ignored.
+- **Other private files.** `.clasp.json` (your Script ID) and `minyanim.json` (every minyan's Script ID and page) are also git-ignored.
 - **No passwords.** None are stored anywhere in the project. `clasp login` keeps its token in your user folder (`~/.clasprc.json`), outside the repo.
 
 ## 13. Local tests
@@ -463,24 +464,62 @@ node test/profile.js       # counts Google-service calls per action on a month o
 
 ---
 
-## 15. More minyanim: the template
+## 15. More minyanim: the template and deploy-all
 
-Each minyan gets **its own copy** of the Sheet, in **its own Google account**: its own people, attendance, settings, gabbai code and registration page. They are made from one **template** Sheet that holds only the code.
+Each minyan gets **its own copy** of the Sheet, in **its own Google account**: its own people, attendance, settings, gabbai code and registration page. Copies are made from one **template** Sheet that holds only the code, and all of them are updated together from the developer's computer with **`deploy-all`**.
 
-**Making the template (once, on the developer's computer):**
+### The maintainer account
 
-1. In the developer's Google account: a new blank Sheet, e.g. `מניין — תבנית`. Don't run `setup` in it and don't deploy it: a copy starts from nothing.
-2. **Extensions / תוספים → Apps Script → Project Settings ⚙ / הגדרות הפרויקט → Script ID** — copy it.
-3. In the project folder, double-click **`template.cmd`** (or `.\template.ps1`). The first time it asks for the Script ID and keeps it in `.clasp-template.json` (git-ignored). It uploads the code **without `Secrets.gs`** (from a temporary folder), so no copy ever carries this minyan's address or private values. It refuses if the ID is the one in `.clasp.json`.
-4. Sheet → **Share / שיתוף → General access: Anyone with the link, Viewer**. Copy the link and change its end from `/edit…` to **`/copy`**. That link opens Google's "Make a copy" page; the copy includes the script.
+`deploy-all` runs as the Google account `clasp` is signed in to, the **maintainer account**:
 
-**After a code change:** run `template.cmd` again, so copies made from then on get the current code. (Existing copies are updated by `deploy-all`, planned.)
+- **Every minyan's Sheet**, this folder's own minyan included, and the template are shared with it as **Editor / עורך**. Sharing the Sheet shares its script.
+- **Publishing a new version of a page makes the page run as the account that published it.** After the first update, every minyan's page runs as the maintainer account. That account has edit access to each Sheet, so the pages keep working, and each Sheet still belongs to its minyan.
+- **Once per minyan, before its first update,** open its Sheet signed in as the maintainer account, choose **מניין → קישור לדף הרישום** and allow the permissions. Without this the page would answer "Authorization is required". Do the same after an update that needs new permissions (for example, sending email).
+- **To switch clasp to the maintainer account:** run `clasp logout`, then `clasp login`, and sign in as that account. It must have the Apps Script API on: <https://script.google.com/home/usersettings>. `clasp` keeps one login at a time, so `deploy.cmd` then also runs as the maintainer.
 
-**Setting up a minyan from it:** the person with the minyan's Google account follows **[`INSTALL-he.md`](INSTALL-he.md)** (Hebrew, one page): copy → **מניין → הגדרה ראשונית** → publish the web app → paste its address in **מניין → כתובת דף הרישום (הדבקה)** → settings and shul location on the tools page → share the Sheet with the developer as Editor, for updates and help.
+### The list of minyanim
 
-**What makes a copy independent:**
+`minyanim.json`, in the project folder and git-ignored, lists them: a short name, the Script ID, the page's deployment ID (empty for the template), and whether this folder's `Secrets.gs` goes with it. It is filled by:
 
-- The template has no `Secrets.gs`, so a copy's address comes from the one pasted in **כתובת דף הרישום (הדבקה)** (document property `WEB_URL`).
-- `setup` records the Sheet's ID. If it later finds a different ID (the Sheet was copied, and Google copied the hidden values along), it drops them all and makes new ones: a new page key, a new gabbai code (shown once), no address until one is pasted. The original's links don't open the copy.
-- Copy the **template**, never a minyan's working Sheet: that one has its `Secrets.gs`, people and attendance.
+```powershell
+.\deploy-all.ps1 -Add      # asks: a short name; the Script ID; the page address
+.\deploy-all.ps1 -List
+```
 
+- **Script ID:** that Sheet → **Extensions / תוספים → Apps Script → Project Settings ⚙ / הגדרות הפרויקט → Script ID**.
+- **Page address:** the Web app URL from **Deploy / פריסה → Manage deployments / ניהול פריסות**, or simply the registration link. Leave it empty for the template.
+- **This folder's own minyan:** press Enter at both questions to take the Script ID from `.clasp.json` and the deployment ID from `Secrets.gs`. That entry is the only one uploaded **with** `Secrets.gs`.
+- **An older `.clasp-template.json`** (from the first `template.cmd`) is moved into the list as `template` automatically.
+
+### Updating
+
+```powershell
+.\deploy-all.ps1 "what changed"                 # every minyan + the template
+.\deploy-all.ps1 "what changed" -Only template  # just one
+```
+
+Or double-click **`deploy-all.cmd`** (output in `deploy-all-last.log`), or **`template.cmd`** for the template only.
+
+- **Per minyan,** it uploads the code from a temporary folder (`clasp push -f`), then publishes a new version of the **same** page (`clasp update-deployment`), so the address and the printed QR codes stay valid.
+- **Then it opens the page without its key.** If Google answers with an error page instead (missing permissions, a broken page), it prints a **Check:** line.
+- **One failure doesn't stop the others.** The summary lists what failed; the usual cause is a Sheet not shared with the maintainer account.
+- **After a settings-layout change,** each minyan's gabbai (or the maintainer) runs **מניין → הגדרה ראשונית** once.
+
+### Making the template (once)
+
+1. A new blank Sheet, e.g. `מניין — תבנית (לא לגעת)`, in any account; share it with the maintainer account as Editor. Don't run `setup` in it and don't deploy it: a copy starts from nothing.
+2. `.\deploy-all.ps1 -Add` → name `template`, its Script ID, empty address. Then `template.cmd`.
+3. Sheet → **Share / שיתוף → General access: Anyone with the link, Viewer**. Copy the link and change its end from `/edit…` to **`/copy`**. That link opens Google's "Make a copy" page; the copy includes the script.
+
+`deploy-all` keeps the template current along with the minyanim, so copies made later get the latest code.
+
+### Setting up a minyan
+
+The person with the minyan's Google account follows **[`INSTALL-he.md`](INSTALL-he.md)** (Hebrew, one page): copy → **מניין → הגדרה ראשונית** → publish the web app → paste its address in **מניין → כתובת דף הרישום (הדבקה)** → settings and shul location on the tools page → share the Sheet with the maintainer account as Editor. Then the maintainer authorizes it once (above) and adds it with `.\deploy-all.ps1 -Add`.
+
+### What makes a copy independent
+
+- The template has no `Secrets.gs`, so a copy's address comes from the one pasted in **כתובת דף הרישום (הדבקה)** (document property `WEB_URL`). `deploy-all` never uploads `Secrets.gs` to it.
+- `setup` records the Sheet's ID. If it later finds a different ID (the Sheet was copied, and Google copied the hidden values along), it drops them all and makes new ones: a new page key, a new gabbai code, no address until one is pasted. The original's links don't open the copy.
+- Copy the **template**, never a minyan's working Sheet: that one has people and attendance (and possibly `Secrets.gs`).
+- Signed in to an account the Sheet is shared with, on a device with several Google accounts, the page may open Drive's "Sorry, unable to open the file" page. Worshippers aren't affected; an Incognito tab works around it. A brand-new deployment may also show that page for its first few minutes.
