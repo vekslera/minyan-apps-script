@@ -9,8 +9,8 @@
 //
 //  The topic comes from Maintainer.gs, which deploy\deploy-all.ps1 writes into each minyan's upload (from the
 //  git-ignored deploy\maintainer.json) — never into git, never into the template. Without it nothing is sent.
-//  Messages carry no names, phone numbers or locations: only the minyan, where, and the error text, with long
-//  numbers masked. Expected errors (the Hebrew messages the app shows its users) are never sent.
+//  Messages carry no registrants' names, phone numbers or locations: only the minyan (short name, name and its
+//  Google account), where, and the error text, with long numbers masked. Expected errors (the Hebrew messages the app shows its users) are never sent.
 // ======================================================================================
 
 const NTFY = { SERVER: 'https://ntfy.sh', THROTTLE_S: 3600, CHECK_HOUR: 22, PENDING_MANY: 20, QUIET_DAYS: 3, ENDED_DAYS: 3 };
@@ -35,9 +35,12 @@ function notify_(title, message, priority) {
   try {
     let click = '';
     try { click = SpreadsheetApp.getActive().getUrl(); } catch (e) {}
+    // which minyan's Google account it came from (Account.gs records it in setup)
+    let account = '';
+    try { account = PropertiesService.getDocumentProperties().getProperty('ACCOUNT') || ownerAccount_(SpreadsheetApp.getActive()); } catch (e) {}
     const res = UrlFetchApp.fetch(m.ntfyServer || NTFY.SERVER, {
       method: 'post', contentType: 'application/json', muteHttpExceptions: true,
-      payload: JSON.stringify({ topic: m.ntfyTopic, title: title, message: message, priority: priority || 3,
+      payload: JSON.stringify({ topic: m.ntfyTopic, title: title, message: message + (account ? '\nחשבון: ' + account : ''), priority: priority || 3,
                                 tags: ['synagogue'].concat(m.minyan ? [String(m.minyan)] : []), click: click || undefined }),
     });
     return res.getResponseCode() < 300;
@@ -80,6 +83,17 @@ function clientError(auth, info) {
   const msg = String(info.message || '');
   if (info.kind !== 'page' && !unexpectedError_(msg)) return false;
   return reportError_(String(info.page || 'page') + ' · ' + String(info.where || ''), msg);
+}
+
+/** מניין → שליחת התראת בדיקה למפתח: one notification, to see that alerts arrive. */
+function menuTestAlert() {
+  const ui = SpreadsheetApp.getUi();
+  if (!maintainer_()) {
+    ui.alert('התראות למפתח', 'ההתראות אינן מופעלות בגיליון הזה. הן מופעלות כשהמפתח מעדכן את המניין (deploy-all).', ui.ButtonSet.OK);
+    return;
+  }
+  const ok = notify_('בדיקה · ' + notifyName_(), 'התראת בדיקה מהגיליון. אם היא הגיעה — ההתראות עובדות.', 3);
+  ui.alert('התראות למפתח', ok ? 'התראת הבדיקה נשלחה.' : 'שליחת ההתראה נכשלה. נסו שוב מאוחר יותר.', ui.ButtonSet.OK);
 }
 
 /** setup(): the daily check, once per account that runs setup (dailyCheck skips a second run on the same day). */

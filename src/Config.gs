@@ -38,6 +38,7 @@ const SET = {
   TOL:   'סטיית GPS מותרת (מטרים)',
   GNAME: 'שם הגבאי',
   GPHONE: 'טלפון הגבאי',
+  ACCOUNT: 'חשבון Google של המניין',
 };
 // The developer, on the printable QR sign (with the gabbai, or alone when the gabbai's details aren't set).
 const DEVELOPER = { name: 'אלכס וקסלר', phone: '052-8353205' };
@@ -59,6 +60,7 @@ const SET_ROWS = [
   [SET.DAYS, 'הימים בשבוע שבהם יש מניין, באותיות: א ב ג ד ה ו (ראשון עד שישי), או א-ה. רק בימים אלה יש רישום והם נספרים'],
   [SET.GNAME, 'מופיע בדף ה-QR להדפסה: למי לפנות מי שלא מצליח להירשם. ריק = רק פרטי המפתח'],
   [SET.GPHONE, 'טלפון לסמס, מופיע בדף ה-QR להדפסה'],
+  [SET.ACCOUNT, 'נרשם אוטומטית בהגדרה ראשונית: החשבון שהגיליון שייך לו. לא לעריכה'],
 ];
 
 // Name-matching thresholds (0..1)

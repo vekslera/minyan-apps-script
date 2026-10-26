@@ -186,7 +186,7 @@ Then upload it with `clasp push` (route B: just save the file).
 **The הגדרות sheet.** The sheet is right-to-left, so column A is on the right. Rows are found by their label in column A, so their order doesn't matter, but `setup` keeps them in this order:
 
 | Row | Column A (setting) | Column B |
-| --- | --- | --- |
+|---|---|---|
 | 2 | שם המניין | Shown at the top of the page and in the reports |
 | 3 | תחילת התקופה | First day of the lottery period |
 | 4 | סוף התקופה | Last day of the period |
@@ -198,6 +198,7 @@ Then upload it with `clasp push` (route B: just save the file).
 | 12 | אחוז נוכחות מינימלי לדוח לרבי | Who is included in the report to the Rebbe, e.g. `25` = 25% or more of the minyan days (usually much lower than the lottery threshold). **`0` = no report** (switched off) |
 | 13 | ימי המניין | The weekdays the minyan meets, as Hebrew letters: `א ב ג ד ה ו` (Sunday–Friday, the default) or a range like `א-ה` (Sunday–Thursday). Only these days count toward the percentages, and only on them is registration open (also in gabbai mode and in the WhatsApp import). Shabbat never. Unreadable or empty = Sunday–Friday |
 | 14–15 | שם הגבאי / טלפון הגבאי | Optional. Shown on the printable QR sign as the person to ask when someone can't register. Empty = the sign names only the developer. The phone is kept as text (`050-1234567`) |
+| 16 | חשבון Google של המניין | **Filled in by setup, read-only:** the Google account that owns the Sheet. Editing the cell brings a warning, and a change is put back at once. Information for whoever looks after the minyan; error alerts mention it too |
 
 - **Values go in column B.** Column C is only an explanation, and a value typed there is ignored.
 - **Days with no minyan.** Column **E**, one date per cell, for single dates with no registration (e.g. Yom Tov). They don't count toward the percentage. Weekdays the minyan never meets go in row 13, not here.
@@ -355,7 +356,7 @@ Its closing message lists what moved. After that, `gabbaiPin`, `lotteryThreshold
 ## 10. Troubleshooting
 
 | Symptom | Cause and fix |
-| --- | --- |
+|---|---|
 | Pages break with `ReferenceError: document is not defined` in **Executions**, or functions "not found" | `scripts/*.js` were uploaded as server code because `.clasp.json` lacks `"scriptExtensions": [".gs"]` and `"htmlExtensions": [".html", ".js"]`. Add them (see `.clasp.json.example`) and push again. |
 | `clasp push`: "A file with this name already exists … Admin" | Two files with the same name ignoring extension (e.g. an old `Admin.html` next to `Admin.gs`). Delete the old file and push again. |
 | `clasp push`: "User has not enabled the Apps Script API" | Turn it on at <https://script.google.com/home/usersettings>, wait a minute, retry. |
@@ -396,7 +397,7 @@ Private, git-ignored, only on your computer: `.clasp.json` (your Script ID), `sr
 **`src/`:**
 
 | File | What it holds |
-| --- | --- |
+|---|---|
 | `Setup.gs` | The מניין menu, `setup()` (first-time setup, and moving settings after an update), the הוראות (help) sheet |
 | `Config.gs` | Sheet names, column layouts, settings labels, matching thresholds |
 | `Kiosk.gs` | Server side of the registration page (`doGet`, `kiosk*`); `doGet` also serves the gabbai tools page |
@@ -412,6 +413,7 @@ Private, git-ignored, only on your computer: `.clasp.json` (your Script ID), `sr
 | `Reports.gs` | Weekly and final reports, lottery draw (shared by the Sheet menu and the tools page) |
 | `Duplicates.gs` | Finding and merging duplicate people (shared by the Sheet menu and the tools page) |
 | `Utils.gs` | Dates, settings, keys, private-settings loader, small helpers |
+| `Account.gs` | The read-only row with the minyan's Google account (filled in by setup, put back if edited) |
 | `Notify.gs` | Error alerts and the daily check, sent to the maintainer through ntfy ([§16](#16-error-alerts-to-the-maintainer-ntfy)); also `doGet`, which reports a page that fails to build |
 | `KioskPage.html` | The registration page: markup and styles |
 | `GabbaiPage.html` | The gabbai tools page: markup and styles |
@@ -429,7 +431,7 @@ Private, git-ignored, only on your computer: `.clasp.json` (your Script ID), `sr
 **`deploy/`** (run from anywhere; they work on the project folder above them):
 
 | File | What it holds |
-| --- | --- |
+|---|---|
 | `deploy.ps1`, `deploy.cmd` | Update this project's own minyan: push + new version of its page (through `minyanim.json` when it is listed there, else `src/Secrets.gs`) |
 | `deploy.sh` | The same for macOS/Linux, with the deployment ID from `src/Secrets.gs` |
 | `deploy-all.ps1`, `deploy-all.cmd` | Update every minyan in `minyanim.json` and the template ([§15](#15-more-minyanim-the-template-and-deploy-all)) |
@@ -510,16 +512,18 @@ Each minyan gets **its own copy** of the Sheet, in **its own Google account**: i
 
 ### The list of minyanim
 
-`deploy\minyanim.json` lists them: a short name, the Script ID, and the registration link split into its deployment ID and its key (both empty for the template). **It holds every minyan's full link, so it is private:** git-ignored, never sent to anyone; keep a backup somewhere safe (it can always be rebuilt from each Sheet's **קישור לדף הרישום**). It is filled by:
+`deploy\minyanim.json` lists them: a short name, the Script ID, the registration link split into its deployment ID and its key (both empty for the template), and the Google account that owns the Sheet (its address only, never a password). **It holds every minyan's full link, so it is private:** git-ignored, never sent to anyone; keep a backup somewhere safe (it can always be rebuilt from each Sheet's **קישור לדף הרישום**). It is filled by:
 
 ```powershell
 .\deploy\deploy-all.ps1 -Add          # asks: a short name; the Script ID; the registration link
 .\deploy\deploy-all.ps1 -List         # every minyan with its full registration link
 .\deploy\deploy-all.ps1 -Remove name  # off the list (to re-add it, e.g. with a new link)
+.\deploy\deploy-all.ps1 -SetAccount name  # record or change the Google account that owns its Sheet
 ```
 
 - **Script ID:** that Sheet → **Extensions / תוספים → Apps Script → Project Settings ⚙ / הגדרות הפרויקט → Script ID**.
 - **Registration link:** that Sheet → **מניין → קישור לדף הרישום → העתקה** (it ends with `?k=…`). Leave it empty for the template.
+- **Google account:** the address in that Sheet's הגדרות → **חשבון Google של המניין**. `-List` shows the accounts, or which ones are missing.
 - **This folder's own minyan:** Enter at the Script ID takes it from `.clasp.json`; while `Secrets.gs` exists, Enter at the link takes it from there.
 - **`Secrets.gs` goes only to this folder's own minyan** (the Script ID in `.clasp.json`), and only while the file exists. No copy ever gets it.
 - **An older `.clasp-template.json`** (from the first `template.cmd`) is moved into the list as `template` automatically.
@@ -578,9 +582,10 @@ The maintainer gets a push notification on his phone, through the free **ntfy** 
 **Instant alerts** (`src/Notify.gs`, `src/scripts/common/report.js`):
 
 - **What is sent:** a page that breaks in the browser, a server call that fails with an error nobody meant, and the page failing to build. The alert says where it happened and the error text; tapping it opens that minyan's Sheet.
-- **Which minyan:** every title starts with the minyan's short name from `minyanim.json`, then its own name from הגדרות, e.g. "⚠ steinbach · מניין שחרית" or "בדיקה יומית · mincha · …". So two minyanim with the same name are still told apart. The short name is also an ntfy tag.
+- **Which minyan:** every title starts with the minyan's short name from `minyanim.json`, then its own name from הגדרות, e.g. "⚠ steinbach · מניין שחרית" or "בדיקה יומית · mincha · …". Every message ends with **חשבון:** followed by the minyan's Google account (from its read-only הגדרות row). So two minyanim with the same name are still told apart. The short name is also an ntfy tag.
+- **To test:** **מניין → שליחת התראת בדיקה למפתח** sends one alert (or says that alerts aren't on in this Sheet yet).
 - **What isn't:** the app's own messages to its users (all in Hebrew: a wrong code, closed hours, a wrong date). The same error from the same place is sent at most once an hour.
-- **No personal data leaves Google:** no names, phones or places; long numbers in an error text are masked.
+- **No registrants' data leaves Google:** no names, phones or places of the people who register; long numbers in an error text are masked. The minyan's own Google account is included, as asked.
 
 **The daily check** (about 22:00; a time trigger that **מניין → הגדרה ראשונית** sets up) sends one message only when something is wrong:
 

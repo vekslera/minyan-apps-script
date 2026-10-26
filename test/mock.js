@@ -19,6 +19,15 @@ class Range {
   }
   getValue() { return this.getValues()[0][0]; }
   getSheet() { return this.sh; }
+  getRow() { return this.r; } getColumn() { return this.c; } getLastRow() { return this.r + this.nr - 1; } getLastColumn() { return this.c + this.nc - 1; }
+  // protection: sh.protections lists {row, col, description, warningOnly}; remove() takes one off
+  protect() {
+    const sh = this.sh, p = { row: this.r, col: this.c, description: '', warningOnly: false };
+    const o = { setDescription: d => { p.description = d; return o; }, setWarningOnly: w => { p.warningOnly = w; return o; },
+                getDescription: () => p.description, remove: () => { sh.protections = sh.protections.filter(x => x !== o); }, p: p };
+    (sh.protections = sh.protections || []).push(o);
+    return o;
+  }
   setValues(vals) {
     if (vals.length !== this.nr || vals[0].length !== this.nc) throw new Error(`setValues size mismatch: range ${this.nr}x${this.nc}, data ${vals.length}x${vals[0].length}`);
     vals.forEach((row, i) => row.forEach((v, j) => this.sh.set(this.r + i, this.c + j, v)));
@@ -53,6 +62,7 @@ class Sheet {
     return new Range(this, a, b, c || 1, d || 1);
   }
   clear() { this.data = []; return this; }
+  getProtections() { return (this.protections || []).slice(); }
   activate() { return this; }
 }
 ['setFrozenRows', 'setFrozenColumns', 'setColumnWidth', 'setColumnWidths', 'setRightToLeft'].forEach(m => { Sheet.prototype[m] = function () { return this; }; });
@@ -68,7 +78,8 @@ function makeEnv(opts) {
     getSheets() { return this.sheets.slice(); },
     deleteSheet(s) { this.sheets = this.sheets.filter(x => x !== s); },
     toast(m) { log.push(['toast', m]); },
-    id: 'ss1', getId() { return this.id; }, getUrl() { return 'https://docs.google.com/spreadsheets/d/' + this.id + '/edit'; }, getName() { return 'גיליון'; },                      // set env.ss.id to act as a copy of the Sheet
+    id: 'ss1', getId() { return this.id; }, getUrl() { return 'https://docs.google.com/spreadsheets/d/' + this.id + '/edit'; }, getName() { return 'גיליון'; }, owner: 'minyan-owner@example.com',
+    getOwner() { return this.owner ? { getEmail: () => this.owner } : null; },                      // set env.ss.id to act as a copy of the Sheet
   };
   ss.insertSheet('Sheet1');
   const props = {};
@@ -104,7 +115,7 @@ function makeEnv(opts) {
   const htmlOut = raw => { const s = stripInScripts(raw); const o = { html: s, getContent: () => s }; ['setTitle', 'addMetaTag', 'setWidth', 'setHeight'].forEach(m => o[m] = () => o); return o; };
   const ctx = {
     console, Date: FakeDate, Set, Map, Math, JSON, Intl, Number, String, Array, Object, isNaN, RegExp, Error,
-    SpreadsheetApp: { getActive: () => ss, getActiveSpreadsheet: () => ss, getUi: () => { if (ctx.__webContext) throw new Error('Cannot call SpreadsheetApp.getUi() from this context.'); return ui; }, flush() {} },
+    SpreadsheetApp: { ProtectionType: { RANGE: 'RANGE', SHEET: 'SHEET' }, getActive: () => ss, getActiveSpreadsheet: () => ss, getUi: () => { if (ctx.__webContext) throw new Error('Cannot call SpreadsheetApp.getUi() from this context.'); return ui; }, flush() {} },
     Utilities: {
       formatDate: fmt,
       parseDate: (k, tz) => new FakeDate(k + 'T09:00:00Z'),

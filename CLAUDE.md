@@ -21,7 +21,8 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
   `Admin.gs` Sheet dialogs (`admin*`, admin token) + the shared import/review core, `Reports.gs`,
   `Duplicates.gs`, `Location.gs`, `Auth.gs`, `Data.gs`, `Matching.gs`, `Names.gs`, `WhatsApp.gs`,
   `HebrewCalendar.gs`, `Utils.gs` (settings, page assembly, cache), `Config.gs`, `Setup.gs` (menu, setup, help sheet),
-  `Notify.gs` (ntfy alerts + daily check; owns `doGet`, which wraps `doGet_` in `Kiosk.gs`).
+  `Notify.gs` (ntfy alerts + daily check + test alert; owns `doGet`, which wraps `doGet_` in `Kiosk.gs`),
+  `Account.gs` (the read-only הגדרות row with the owner's Google account; `ACCOUNT` property; onEdit puts it back).
 - `*Page.html` / `*Dialog.html` — pages. `scripts/**/*.js` — browser code. `styles/tools.html` — shared CSS.
 - One implementation per feature, thin wrappers per surface (Sheet menu / dialogs vs. web tools).
 - `test/` — Node tests against a simulated Sheet (`test/mock.js`); never uploaded.
@@ -69,7 +70,8 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
 - `Secrets.gs` (git-ignored) is **legacy**: optional overrides (`ownerAccount`, `deploymentId`, `kioskKey`,
   `locationLog`). `setup` copies `deploymentId`/`kioskKey` into document properties (`WEB_URL`/`KIOSK_KEY`) so it
   can be retired without changing the link (README §15). New code must not need it.
-- `minyanim.json` (git-ignored, private): per minyan name, scriptId, deploymentId, key — the full links.
+- `minyanim.json` (git-ignored, private): per minyan name, scriptId, deploymentId, key (the full link), account
+  (the owning Google account's address — never passwords).
   `deploy-all` opens each page with its key after updating; the bad-link page's title ("הקישור אינו תקין",
   `doGet`) is what it looks for, so keep that title distinct.
 - The page address: `deploymentId`, else `WEB_URL` (pasted in **מניין → כתובת דף הרישום (הדבקה)** — how copies
@@ -105,7 +107,8 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
 - The topic: `minyan-attendance-script` (the owner's choice; with a random ending only if taken), kept in
   `deploy/maintainer.json` (git-ignored) and written as `Maintainer.gs` into minyan uploads only (not the
   template), with the minyan's short name (`minyan`, from `minyanim.json`) that starts every alert's title.
-  Anyone knowing a topic can read/post on ntfy.sh, so alerts never carry personal data. No `MAINTAINER`
+  Every message ends with the minyan's Google account (the owner asked). Anyone knowing a topic can read/post on
+  ntfy.sh, so alerts never carry registrants' data. No `MAINTAINER`
   → nothing is sent.
 
 ## Privacy

@@ -53,6 +53,7 @@ function onOpen() {
     .addSeparator()
     .addItem('שינוי קוד גבאי', 'menuChangePin')
     .addItem('הגדרה ראשונית', 'setup')
+    .addItem('שליחת התראת בדיקה למפתח', 'menuTestAlert')      // Notify.gs
     .addToUi();
 }
 
@@ -62,6 +63,7 @@ function onEdit(e) {
     const name = e && e.range ? e.range.getSheet().getName() : '';
     if (name === SH.PEOPLE || name === SH.SETTINGS) cacheClear_();
     if (name === SH.SETTINGS) { try { onOpen(); } catch (err) {} }        // menu labels follow the thresholds
+    if (name === SH.SETTINGS) guardAccount_(e);                            // Account.gs: the account row is read-only
   } catch (err) {}
 }
 
@@ -86,6 +88,7 @@ function setup() {
 
   const st = ensureSheet_(ss, SH.SETTINGS, null);
   const moved = migrateSettings_(st, tz);
+  recordAccount_(ss);                                          // Account.gs
 
   const people = ensureSheet_(ss, SH.PEOPLE, PEOPLE_HDR);
   people.getRange('D:D').setNumberFormat('@');
@@ -194,7 +197,7 @@ function migrateSettings_(st, tz) {
   const defaults = {};
   defaults[SET.NAME] = 'מניין שחרית'; defaults[SET.START] = keyToDate_(today, tz); defaults[SET.END] = keyToDate_(addDays_(today, 29), tz);
   defaults[SET.PCT] = 75; defaults[SET.REBBE] = 25; defaults[SET.DAYS] = fmtDays_(DEFAULT_DAYS); defaults[SET.FROM] = 5; defaults[SET.TO] = 11;
-  defaults[SET.GNAME] = ''; defaults[SET.GPHONE] = '';
+  defaults[SET.GNAME] = ''; defaults[SET.GPHONE] = ''; defaults[SET.ACCOUNT] = '';
   defaults[SET.LAT] = ''; defaults[SET.LNG] = ''; defaults[SET.RADIUS] = SHUL_SET.NEW_RADIUS; defaults[SET.TOL] = '';
   SET_ROWS.forEach(r => { value[r[0]] = old[r[0]] ? old[r[0]].b : defaults[r[0]]; note[r[0]] = old[r[0]] && String(old[r[0]].c) ? old[r[0]].c : r[1]; });
   if (/שעה עגולה/.test(String(note[SET.FROM]))) note[SET.FROM] = SET_ROWS.find(r => r[0] === SET.FROM)[1];   // older wording
@@ -253,7 +256,8 @@ function writeHelp_(sh) {
     ['בתחתית דף הרישום: "מצב גבאי" + קוד הגבאי. מאפשר לרשום אחרים, גם לתאריכים קודמים ומחוץ לשעות הרישום.'],
     ['הקוד: לפחות 6 תווים. הוא שמור במקום מוסתר (לא בגיליון); בעל הגיליון רואה אותו בתפריט מניין ← קישור לדף הרישום. אפשר להחליף אותו (בכלי הגבאי, או כאן: מניין ← שינוי קוד גבאי). 3 קודים שגויים נועלים את הכניסה לדקה. "יציאה" מנתקת; אחרי 30 דקות ללא פעילות הניתוק אוטומטי.'],
     ['כלי גבאי בדפדפן ובטלפון: במצב גבאי לוחצים "כלי גבאי". שם: רישומים לבדיקה, ייבוא מוואטסאפ, דוחות עם טקסט לוואטסאפ, הגרלה, כפילויות, קישור ו-QR, מיקום בית הכנסת, הגדרות (שם, ימי המניין, שעות רישום, תקופה, אחוזים, פרטי הגבאי, ימים ללא מניין), שינוי קוד.'],
-    ['תקלות: תקלה בדף או בכלי הגבאי נשלחת מיד כהתראה למפתח, ופעם ביום נבדק שהכול תקין (למשל שיש רישומים ושהתקופה לא הסתיימה). בהתראה אין שמות, טלפונים או מיקומים.'],
+    ['חשבון Google של המניין: נרשם אוטומטית בגיליון הגדרות בהגדרה ראשונית, ואינו לעריכה.'],
+    ['תקלות: תקלה בדף או בכלי הגבאי נשלחת מיד כהתראה למפתח (בדיקה: מניין ← שליחת התראת בדיקה למפתח), ופעם ביום נבדק שהכול תקין (למשל שיש רישומים ושהתקופה לא הסתיימה). בהתראה אין שמות, טלפונים או מיקומים.'],
     ['דף QR להדפסה: כלי הגבאי ← קישור ו-QR ← "דף QR להדפסה (PDF)". דף A4 עם שם המניין, קוד QR גדול, הוראות רישום, ולמי לפנות: הגבאי (שם וטלפון מההגדרות) והמפתח. מורידים כ-PDF ומדפיסים, או משתפים. אותם כלים גם בתפריט "מניין" כאן.'],
     ['מיקום בית הכנסת (בכלי הגבאי): עומדים באמצע האולם עם טלפון, "מדידה", ואז "קביעה כמיקום בית הכנסת". שם גם קובעים את הרדיוס (מומלץ 40–60 מ׳) ואת סטיית ה-GPS המותרת, ובודקים מרחק. הכול נשמר בגיליון "הגדרות".'],
     ['במצב גבאי יש כפתור "בדיקת מיקום": מראה את המרחק מבית הכנסת ואת דיוק המיקום. שימושי כדי לבדוק שהרדיוס מתאים.'],

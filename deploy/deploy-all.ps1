@@ -6,14 +6,16 @@
 #   .\deploy-all.ps1 "what changed" -Only x  update only the one named x (e.g. -Only template)
 #   .\deploy-all.ps1 -Add                    add a minyan (asks for a name, its Script ID and its registration link)
 #   .\deploy-all.ps1 -Remove x               take x off the list (nothing changes in its Sheet)
+#   .\deploy-all.ps1 -SetAccount x           record (or change) the Google account that owns x's Sheet
 #   .\deploy-all.ps1 -List                   show the list, with every registration link
 #   .\deploy-all.ps1 -Topic                  show the ntfy topic for error alerts (maintainer.ps1)
 #
 # deploy\minyanim.json (git-ignored, private: it holds the links with their keys) has, per minyan: name, scriptId,
-# deploymentId and key ("" = upload only, like the template). src\Secrets.gs, if it still exists, goes only
+# deploymentId and key ("" = upload only, like the template), and account: the Google account that owns its Sheet
+# (its address only — never a password). src\Secrets.gs, if it still exists, goes only
 # to this project's own minyan (the Script ID in .clasp.json). Everything runs as the Google account clasp is
 # signed in to: every Sheet must be shared with it as Editor, and the pages then run as it.
-param([string]$Description = "update", [string]$Only = "", [switch]$Add, [string]$Remove = "", [switch]$List, [switch]$NoCheck, [switch]$Topic)
+param([string]$Description = "update", [string]$Only = "", [switch]$Add, [string]$Remove = "", [switch]$List, [switch]$NoCheck, [switch]$Topic, [string]$SetAccount = "")
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot                 # the project folder
 $src = Join-Path $root "src"                             # the Apps Script code
@@ -26,7 +28,7 @@ function Read-List {
   if (-not (Test-Path $listFile)) { return @() }
   $parsed = Get-Content -Raw -Encoding UTF8 -Path $listFile | ConvertFrom-Json
   return @($parsed | Where-Object { $_ } | ForEach-Object {
-    [pscustomobject]@{ name = $_.name; scriptId = $_.scriptId; deploymentId = "$($_.deploymentId)"; key = "$($_.key)" }
+    [pscustomobject]@{ name = $_.name; scriptId = $_.scriptId; deploymentId = "$($_.deploymentId)"; key = "$($_.key)"; account = "$($_.account)" }
   })
 }
 function Write-List($items) {
@@ -60,7 +62,7 @@ $items = @(Read-List)
 $oldTemplate = Join-Path $root ".clasp-template.json"
 if ((Test-Path $oldTemplate) -and -not ($items | Where-Object { $_.name -eq "template" })) {
   $tid = (Get-Content -Raw $oldTemplate | ConvertFrom-Json).scriptId
-  $items += [pscustomobject]@{ name = "template"; scriptId = $tid; deploymentId = ""; key = "" }
+  $items += [pscustomobject]@{ name = "template"; scriptId = $tid; deploymentId = ""; key = ""; account = "" }
   Write-List $items
   Write-Host "The template (from .clasp-template.json) was added to minyanim.json as 'template'."
 }
@@ -71,9 +73,26 @@ if ($List) {
     $link = Link-Of $m
     $what = if (-not $link) { "(upload only)" } elseif (-not $m.key) { "$link   <- no key: -Remove and -Add again with the registration link" } else { $link }
     $sec = if (Uses-Secrets $m) { "  [+ Secrets.gs]" } else { "" }
-    Write-Host ("{0,-14} script {1}...{2}" -f $m.name, $m.scriptId.Substring(0, 10), $sec)
+    $acc = if ($m.account) { "  account $($m.account)" } else { "  (account not recorded: -SetAccount $($m.name))" }
+    Write-Host ("{0,-14} script {1}...{2}{3}" -f $m.name, $m.scriptId.Substring(0, 10), $acc, $sec)
     Write-Host "               $what"
   }
+  exit 0
+}
+
+# A Google account's address (never a password); "" = not given.
+function Read-Account($prompt) {
+  $a = (Read-Host $prompt).Trim()
+  if ($a -and $a -notmatch '^[^@\s]+@[^@\s]+\.[^@\s]+$') { throw "That isn't an email address." }
+  return $a.ToLower()
+}
+
+if ($SetAccount) {
+  $m = $items | Where-Object { $_.name -eq $SetAccount }
+  if (-not $m) { Write-Error "No minyan named '$SetAccount' in minyanim.json."; exit 1 }
+  $m.account = Read-Account "Google account that owns the Sheet of '$SetAccount' (its address, e.g. minyan.example@gmail.com)"
+  Write-List $items
+  Write-Host "'$SetAccount': account $(if ($m.account) { $m.account } else { 'cleared' })."
   exit 0
 }
 
@@ -108,7 +127,9 @@ if ($Add) {
     if (-not $p) { Write-Error "That isn't a registration link (https://script.google.com/macros/s/.../exec?k=...)."; exit 1 }
     $did = $p[0]; $key = $p[1]
   }
-  $items += [pscustomobject]@{ name = $name; scriptId = $sid; deploymentId = $did; key = $key }
+  Write-Host "Google account: the one that owns its Sheet (in its Sheet: הגדרות -> חשבון Google של המניין). Address only, never a password."
+  $acc = Read-Account "Google account (Enter = skip)"
+  $items += [pscustomobject]@{ name = $name; scriptId = $sid; deploymentId = $did; key = $key; account = $acc }
   Write-List $items
   Write-Host "Added '$name'."
   if ($did) {

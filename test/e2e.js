@@ -795,7 +795,8 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   assert.equal(envN.sent.length, 1);
   const m = envN.sent[0];
   assert.equal(m.url, 'https://ntfy.example'); assert.equal(m.body.topic, 'test-topic-0001');
-  assert(/^⚠ shulA · מניין שחרית$/.test(m.body.title), m.body.title); assert.deepEqual(m.body.tags, ['synagogue', 'shulA']); assert(/kiosk · kioskSubmit: TypeError/.test(m.body.message), m.body.message);
+  assert(/^⚠ shulA · מניין שחרית$/.test(m.body.title), m.body.title); assert.deepEqual(m.body.tags, ['synagogue', 'shulA']);
+  assert(/\nחשבון: minyan-owner@example\.com$/.test(m.body.message), 'which Google account: ' + m.body.message); assert(/kiosk · kioskSubmit: TypeError/.test(m.body.message), m.body.message);
   assert.equal(m.body.priority, 4); assert(/spreadsheets\/d\//.test(m.body.click), 'opens the Sheet');
   N.clientError(k, { kind: 'call', page: 'kiosk', where: 'kioskSubmit', message: 'TypeError: Cannot read properties of undefined (reading \'id\')' });
   assert.equal(envN.sent.length, 1, 'once an hour');
@@ -843,6 +844,20 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   assert(N.dailyProblems_(envN.ss, today).some(x => /התקופה הסתיימה/.test(x)));
   setRow('סוף התקופה', N.keyToDate_(N.addDays_(today, -10), tz));
   assert(!N.dailyProblems_(envN.ss, today).some(x => /התקופה הסתיימה/.test(x)));
+  // the test alert from the menu
+  let before = envN.sent.length; N.menuTestAlert();
+  assert.equal(envN.sent.length, before + 1); assert(/^בדיקה · shulA/.test(envN.sent[envN.sent.length - 1].body.title));
+  assert(/נשלחה/.test(envN.log.filter(l => l[0] === 'alert').slice(-1)[0][1]));
+  env0.ctx.menuTestAlert(); assert(/אינן מופעלות/.test(env0.log.filter(l => l[0] === 'alert').slice(-1)[0][1]), 'no channel: says so');
+  // the minyan's Google account: recorded by setup in its own row, read-only, put back after a manual change
+  const acc = row('חשבון Google של המניין');
+  assert(acc > row('טלפון הגבאי'), 'at the end'); assert.equal(sh.data[acc - 1][1], 'minyan-owner@example.com');
+  const locks = sh.getProtections('RANGE').filter(p => p.getDescription() === 'חשבון Google של המניין — נרשם אוטומטית');
+  assert.equal(locks.length, 1); assert.equal(locks[0].p.row, acc); assert.equal(locks[0].p.col, 2); assert.equal(locks[0].p.warningOnly, true);
+  envN.userEdit('הגדרות', 'B' + acc, 'someone@example.com');
+  assert.equal(sh.data[acc - 1][1], 'minyan-owner@example.com', 'a manual change is put back');
+  envN.userEdit('הגדרות', 'B' + row('שם הגבאי'), 'ישראל'); assert.equal(sh.data[row('שם הגבאי') - 1][1], 'ישראל', 'other rows stay editable');
+  N.setup(); assert.equal(sh.getProtections('RANGE').filter(p => p.getDescription() === 'חשבון Google של המניין — נרשם אוטומטית').length, 1, 'one protection, also after setup again');
   console.log('notifications OK');
 }
 
