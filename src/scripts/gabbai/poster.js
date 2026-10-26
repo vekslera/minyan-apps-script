@@ -89,7 +89,8 @@ function drawPoster(r) {
     y += 13 * mm;
     x.direction = 'ltr'; text(t.phone, y, 26, true, '#111'); x.direction = 'rtl';
   }
-  if (t.dev) { y += 12 * mm; text(t.dev, y, 11, false, '#555', 180 * mm); }
+  // the developer: clearly readable, still smaller than the gabbai's lines (21 pt, phone 26 pt)
+  if (t.dev) { y += 15 * mm; text(t.dev, y, 16, true, '#222', 180 * mm); }
   return c;
 }
 
