@@ -113,7 +113,8 @@ function makeEnv(opts) {
                                               getProperties: () => Object.assign({}, props), deleteAllProperties: () => { Object.keys(props).forEach(k => delete props[k]); } }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     HtmlService: { createHtmlOutput: htmlOut },
-    ScriptApp: { getService: () => ({ getUrl: () => web.url }) },     // set env.web.url = what Google would return
+    // Google reported a wrong /exec address in a copy of the Sheet; the code must never use it (see kioskLink_).
+    ScriptApp: { getService: () => ({ getUrl: () => web.url || 'https://script.google.com/macros/s/AKfycbWRONG_reported_address/exec' }) },
     Logger: { log: m => log.push(['log', m]) },
     Session: { getEffectiveUser: () => ({ getEmail: () => 'test@example.com' }) },
     CacheService: { getScriptCache: () => ({

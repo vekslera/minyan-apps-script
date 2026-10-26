@@ -197,12 +197,11 @@ function resolvePending_(decisions) {
 
 /**
  * The registration link with its key, or '' while the address is not known yet. The address: Secrets.gs
- * (deploymentId), else the one pasted once in the Sheet (WEB_URL — how a copy made from the template gets it),
- * else what Google reports for the script.
+ * (deploymentId), else the one pasted in the Sheet (WEB_URL — how a copy made from the template gets it).
+ * Never ScriptApp.getService().getUrl(): in a copy it returned an /exec address that opens a Drive error page.
  */
 function kioskLink_(settings) {
-  let url = settings.url || PropertiesService.getDocumentProperties().getProperty('WEB_URL') || '';
-  if (!url) { try { url = ScriptApp.getService().getUrl() || ''; } catch (e) { url = ''; } }
+  const url = settings.url || PropertiesService.getDocumentProperties().getProperty('WEB_URL') || '';
   return /^https:\/\/script\.google\.com\/.+\/exec/.test(url) ? url.split('?')[0] + '?k=' + kioskKey_() : '';
 }
 
@@ -231,6 +230,16 @@ function askWebUrl_(ui) {
   }
   PropertiesService.getDocumentProperties().setProperty('WEB_URL', url);
   return true;
+}
+
+/** מניין → כתובת דף הרישום: paste (or replace) the web-app address, then show the link. */
+function menuWebUrl() {
+  const ui = SpreadsheetApp.getUi();
+  if (secret_('deploymentId')) {
+    ui.alert('כתובת דף הרישום', 'הכתובת נקבעת בקובץ Secrets.gs (deploymentId) ולא כאן.', ui.ButtonSet.OK);
+    return;
+  }
+  if (askWebUrl_(ui)) menuKioskLink();
 }
 
 function menuKioskLink() {

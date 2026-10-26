@@ -136,8 +136,11 @@ console.log(env.log.filter(l => l[0] === 'alert').slice(-1)[0]);
 
 G.menuFindDuplicates();
 console.log('dups:', JSON.stringify(rows('כפילויות')));
-G.menuKioskLink(); console.log(env.log.slice(-1)[0]);
-env.web.url = 'https://script.google.com/macros/s/ABC/exec';
+const before = env.log.length;
+env.ui.nextPromptButton = 'CANCEL'; G.menuKioskLink(); console.log(env.log.slice(-1)[0]);
+assert(!env.log.slice(before).some(l => l[0] === 'dialog') && env.log.slice(before).some(l => l[0] === 'prompt'),
+       "Google's reported address is never used: the address is asked for");
+env.ui.nextPromptButton = 'OK'; env.props.WEB_URL = 'https://script.google.com/macros/s/ABC/exec';
 G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console.log('link dialog ok');
 
 // ---------- Secrets.gs overrides ----------
@@ -363,7 +366,7 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   const day = T.todayKey_('Asia/Jerusalem');
   envT.userEdit('הגדרות', 'B6', 0); envT.userEdit('הגדרות', 'B7', 24);
   envT.userEdit('הגדרות', 'B3', T.keyToDate_(T.addDays_(day, -9), 'Asia/Jerusalem'));
-  envT.web.url = 'https://script.google.com/macros/s/AKfyc_EXAMPLE/exec';
+  envT.props.WEB_URL = 'https://script.google.com/macros/s/AKfyc_EXAMPLE/exec';
   // pages: the tools page is complete; the registration page links to it
   const page = W('doGet', { parameter: { k: k, view: 'gabbai' } }).html;
   assert(page.includes("var KEY = '" + k + "'") && page.includes('function startGabbai') && page.includes('function loadReview'));
@@ -709,6 +712,7 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   Q.setup();
   assert(/פריסה חדשה/.test(envC.log.filter(l => l[0] === 'alert').slice(-1)[0][1]), 'setup explains how to publish');
   assert(/קוד הגבאי הראשוני: \d{6}/.test(envC.log.filter(l => l[0] === 'alert').slice(-1)[0][1]), 'the new code is shown once');
+  assert(/כתובת דף הרישום \(הדבקה\)/.test(envC.log.filter(l => l[0] === 'alert').slice(-1)[0][1]), 'setup says where to paste');
   envC.ui.nextPromptButton = 'CANCEL'; Q.menuKioskLink();
   assert(!envC.log.some(l => l[0] === 'dialog'), 'cancelled: no link');
   envC.ui.nextPromptButton = 'OK'; envC.ui.nextPrompt = 'not an address'; Q.menuKioskLink();
@@ -720,6 +724,9 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   assert.equal(Q.kioskLink_(Q.readSettings_(envC.ss, 'Asia/Jerusalem')), 'https://script.google.com/macros/s/AKfycbCOPY_example_0001/exec?k=' + key1);
   const n = envC.log.length; Q.menuKioskLink();
   assert(!envC.log.slice(n).some(l => l[0] === 'prompt'), 'asked only once');
+  envC.ui.nextPrompt = 'https://script.google.com/macros/s/AKfycbCOPY_example_0002/exec'; Q.menuWebUrl();
+  assert(/AKfycbCOPY_example_0002\/exec\?k=/.test(envC.ui.lastDialog), 'the address can be replaced');
+  envC.ui.nextPrompt = 'https://script.google.com/macros/s/AKfycbCOPY_example_0001/exec'; Q.menuWebUrl();
   Q.setup();
   assert.equal(Q.kioskKey_(), key1, 'setup again: same key'); assert.equal(Q.gabbaiPin_(), pin1, 'same code');
   assert(/קישור לדף הרישום/.test(envC.log.filter(l => l[0] === 'alert').slice(-1)[0][1]));

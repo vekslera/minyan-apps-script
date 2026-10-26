@@ -153,7 +153,7 @@ const shim = `
   await a.close();
 
   // ---------- Other dialogs ----------
-  env.web.url = 'https://script.google.com/macros/s/AKfyc_EXAMPLE/exec';
+  env.props.WEB_URL = 'https://script.google.com/macros/s/AKfyc_EXAMPLE/exec';
   G.menuKioskLink();
   a = await page(env.ui.lastDialog, { width: 560, height: 470 }, false); await a.screenshot({ path: 'shots/d1-link.png' }); await a.close();
   env.ui.nextPrompt = ''; G.menuWeekly();

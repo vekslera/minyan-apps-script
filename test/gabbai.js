@@ -7,7 +7,7 @@ const env = makeEnv(); const G = env.ctx; G.setup(); G.setPin_('1234');   // an 
 env.userEdit('הגדרות', 'B6', 0); env.userEdit('הגדרות', 'B7', 24);
 const today = G.todayKey_('Asia/Jerusalem');
 env.userEdit('הגדרות', 'B3', G.keyToDate_(G.addDays_(today, -9), 'Asia/Jerusalem'));
-env.web.url = 'https://script.google.com/macros/s/AKfyc_EXAMPLE/exec';
+env.props.WEB_URL = 'https://script.google.com/macros/s/AKfyc_EXAMPLE/exec';
 const key = env.props.KIOSK_KEY, pin = env.ctx.gabbaiPin_();
 const sess = G.kioskLogin(key, pin).token;
 const sub = d => G.kioskSubmit(key, Object.assign({ device: 'tablet' }, d));

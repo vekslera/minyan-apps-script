@@ -155,7 +155,7 @@ Create a **new** deployment only this once. Later code updates go to the **same*
 
 Route A alternative: `clasp create-deployment -d "registration page"` prints the deployment ID.
 
-**Without `Secrets.gs`** (route B, or a copy made from the template): **מניין → קישור לדף הרישום** asks once for the Web app URL; paste it. It is kept in the script's properties, not in the sheet.
+**Without `Secrets.gs`** (route B, or a copy made from the template): **מניין → כתובת דף הרישום (הדבקה)** → paste the Web app URL. It is kept in the script's properties, not in the sheet, and can be replaced the same way. (**קישור לדף הרישום** also asks for it while none is known.) The address Google itself reports for the script is never used: in a copy it opened a Drive error page.
 
 ---
 
@@ -353,6 +353,7 @@ Its closing message lists what moved. After that, `gabbaiPin`, `lotteryThreshold
 | setup() "Exceeded maximum execution time" | The "ההגדרה הושלמה" popup in the Sheet tab wasn't clicked. Run it again and click OK in the Sheet. |
 | No **מניין** menu | Reload the Sheet. If it's still missing, setup() hasn't run successfully ([§4](#4-run-setup-and-grant-permissions)). |
 | "חיבור דף הרישום" asks for an address | No web-app address is known yet. Paste the Web app URL from the deployment ([§5](#5-publish-the-registration-page-web-app)), or set `deploymentId` in `Secrets.gs` and push the code. |
+| The link opens "Sorry, unable to open the file at this time" (Drive) | A wrong address. **מניין → כתובת דף הרישום (הדבקה)** → paste the Web app URL from **Deploy / פריסה → Manage deployments / ניהול פריסות**. |
 | Page says "הקישור אינו תקין" | You opened the bare `/exec` address. Use the full link from **מניין → קישור לדף הרישום**. |
 | Google page: "Sorry, unable to open the file at this time / מצטערים, לא ניתן לפתוח את הקובץ כרגע" | The address doesn't belong to an *active* deployment (an old or archived one, or a typo), or several Google accounts are signed in. Check **Deploy → Manage deployments** and compare the deployment ID with yours. Try a private window. In the editor, **Executions / ביצועים** shows a `doGet` row for every request that actually reached the script. |
 | A registration shows "הרישום התקבל ויאושר על ידי הגבאי" | The system wasn't sure who it was, or the person sent it for approval from outside the shul. The entry waits in **מניין → רישומים לבדיקה**; its note says why. |
@@ -425,7 +426,7 @@ Apps Script cannot serve a `.js` file to the browser: a page is one HTML documen
 
 - **Where they live.** Private values live in `Secrets.gs`. It is in `.gitignore`, so it never reaches git, but `clasp push` uploads it and the script reads it at run time.
 - **What it holds.** Only values set once: the owner account, the web-app deployment ID (the single source of the page address) and, optionally, a fixed link key. What the gabbai may change is in the הגדרות sheet; the gabbai code is in the script's properties.
-- **Every value is optional.** An empty `deploymentId` falls back to the address pasted once in **מניין → קישור לדף הרישום**, then to the address Google reports; an empty `kioskKey` to an automatically generated key.
+- **Every value is optional.** An empty `deploymentId` falls back to the address pasted in **מניין → כתובת דף הרישום (הדבקה)**; an empty `kioskKey` to an automatically generated key.
 - **Other private files.** `.clasp.json` (your Script ID) and `.clasp-template.json` (the template's) are also git-ignored.
 - **No passwords.** None are stored anywhere in the project. `clasp login` keeps its token in your user folder (`~/.clasprc.json`), outside the repo.
 
@@ -475,11 +476,11 @@ Each minyan gets **its own copy** of the Sheet, in **its own Google account**: i
 
 **After a code change:** run `template.cmd` again, so copies made from then on get the current code. (Existing copies are updated by `deploy-all`, planned.)
 
-**Setting up a minyan from it:** the person with the minyan's Google account follows **[`INSTALL-he.md`](INSTALL-he.md)** (Hebrew, one page): copy → **מניין → הגדרה ראשונית** → publish the web app → paste its address in **מניין → קישור לדף הרישום** → settings and shul location on the tools page → share the Sheet with the developer as Editor, for updates and help.
+**Setting up a minyan from it:** the person with the minyan's Google account follows **[`INSTALL-he.md`](INSTALL-he.md)** (Hebrew, one page): copy → **מניין → הגדרה ראשונית** → publish the web app → paste its address in **מניין → כתובת דף הרישום (הדבקה)** → settings and shul location on the tools page → share the Sheet with the developer as Editor, for updates and help.
 
 **What makes a copy independent:**
 
-- The template has no `Secrets.gs`, so a copy's address comes from the one pasted in **קישור לדף הרישום** (document property `WEB_URL`).
+- The template has no `Secrets.gs`, so a copy's address comes from the one pasted in **כתובת דף הרישום (הדבקה)** (document property `WEB_URL`).
 - `setup` records the Sheet's ID. If it later finds a different ID (the Sheet was copied, and Google copied the hidden values along), it drops them all and makes new ones: a new page key, a new gabbai code (shown once), no address until one is pasted. The original's links don't open the copy.
 - Copy the **template**, never a minyan's working Sheet: that one has its `Secrets.gs`, people and attendance.
 

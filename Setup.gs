@@ -38,6 +38,7 @@ function onOpen() {
   try { const ss = SpreadsheetApp.getActive(), s = readSettings_(ss, ss.getSpreadsheetTimeZone()); lotteryOn = s.threshold > 0; rebbeOn = s.rebbe > 0; } catch (e) {}
   SpreadsheetApp.getUi().createMenu('מניין')
     .addItem('קישור לדף הרישום', 'menuKioskLink')
+    .addItem('כתובת דף הרישום (הדבקה)', 'menuWebUrl')
     .addItem('רישומים לבדיקה', 'menuReview')
     .addItem('ייבוא רשימה מוואטסאפ', 'menuImport')
     .addSeparator()
@@ -114,12 +115,13 @@ function setup() {
   if (copied) moved.unshift('זהו עותק של גיליון אחר: נוצרו לו קישור וקוד גבאי משלו.');
   ui.alert('ההגדרה הושלמה',
     (moved.length ? 'עודכן:\n• ' + moved.join('\n• ') + '\n\n' : '') +
-    (kioskLink_(readSettings_(ss, tz)) ? 'תפריט מניין ← קישור לדף הרישום.' :
+    'קוד הגבאי והקישור לדף הרישום: תפריט מניין ← קישור לדף הרישום. שינוי הקוד: מניין ← שינוי קוד גבאי.\n\n' +
+    (kioskLink_(readSettings_(ss, tz)) ? '' :
     'השלב הבא — פרסום דף הרישום:\n\n' +
     '1. תוספים (Extensions) ← Apps Script ← פריסה (Deploy) ← פריסה חדשה (New deployment) ← סוג: אפליקציית אינטרנט (Web app).\n' +
     '2. הפעלה בתור (Execute as): אני (Me).  גישה (Who has access): כל אחד (Anyone).\n' +
     '3. לחצו "פריסה" (Deploy) ואשרו את ההרשאות. העתיקו את כתובת אפליקציית האינטרנט (Web app URL).\n' +
-    '4. כאן: תפריט מניין ← קישור לדף הרישום ← הדביקו את הכתובת.'),
+    '4. כאן: תפריט מניין ← כתובת דף הרישום (הדבקה) ← הדביקו את הכתובת.'),
     ui.ButtonSet.OK);
 }
 
@@ -146,7 +148,7 @@ function forgetIfCopied_(ss) {
  *  - the shul's location → the sheet (from the gabbai's measurement in script properties, or Secrets.gs);
  *  - the lottery threshold → the sheet (from Secrets.gs lotteryThreshold);
  *  - the old "כתובת דף הרישום" row is dropped: the address comes from Secrets.gs deploymentId, or is
- *    pasted once (מניין → קישור לדף הרישום).
+ *    pasted (מניין → כתובת דף הרישום (הדבקה)).
  * Safe to run again. Returns what it changed, in Hebrew, for the closing message.
  */
 function migrateSettings_(st, tz) {

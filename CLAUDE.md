@@ -59,8 +59,9 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
 
 - `Secrets.gs` (git-ignored): only set-once values — `ownerAccount`, `deploymentId`, `kioskKey`, `locationLog`
   (reserved). Every value is optional. Template: `Secrets.gs.example`.
-- The page address: `deploymentId`, else `WEB_URL` (pasted once in **קישור לדף הרישום** — how copies get it),
-  else `ScriptApp.getService().getUrl()`.
+- The page address: `deploymentId`, else `WEB_URL` (pasted in **מניין → כתובת דף הרישום (הדבקה)** — how copies
+  get it). **Never `ScriptApp.getService().getUrl()`**: in a copy it returned an /exec address that opens a Drive
+  error page (the mock returns a wrong address on purpose).
 - The הגדרות sheet: everything the gabbai changes (name, period, thresholds, hours, minyan weekdays, shul point,
   radius, GPS tolerance, no-minyan dates in column E). Rows are found by label (`SET`, `SET_ROWS` in `Config.gs`);
   new rows go **at the end** so existing rows keep their places. `setup()` (`migrateSettings_`) puts the
