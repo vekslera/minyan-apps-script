@@ -78,10 +78,13 @@ clasp login                # opens a browser: choose the minyan account and allo
 
 1. In the script editor: **Project Settings / הגדרות הפרויקט** (⚙ in the side bar) → **IDs / מזהים → Script ID / מזהה סקריפט** → **Copy**.
 2. In this folder:
+
    ```bash
    cp .clasp.json.example .clasp.json          # Windows: copy .clasp.json.example .clasp.json
    ```
+
    Paste the Script ID into `.clasp.json`. Keep the two extension lines as they are:
+
    ```json
    {
      "scriptId": "1AbC…your-script-id…",
@@ -90,6 +93,7 @@ clasp login                # opens a browser: choose the minyan account and allo
      "htmlExtensions": [".html", ".js"]
    }
    ```
+
    **`"rootDir": "src"` is required:** the Apps Script project is the `src/` folder; the rest (docs, tests, deploy scripts) stays on your computer. **The extension lines are required too.** By default clasp uploads `.js` files as *server* code. These two lines make it upload the browser scripts in `scripts/` as HTML-type files instead ([§11](#11-files)). `deploy.ps1` / `deploy.sh` refuse to run without them.
    `.clasp.json` is git-ignored. No `Secrets.gs` is needed ([§12](#12-private-settings-secretsgs)).
 
@@ -143,7 +147,7 @@ In the script editor (all the files are in the `src/` folder):
 2. Click the ⚙ next to **Select type / בחירת סוג** → **Web app / אפליקציית אינטרנט**.
 3. Set:
    - **Description:** e.g. `registration page`
-   - **Execute as / הפעלה בתור:** **Me / אני (your-account@gmail.com)**
+   - **Execute as / הפעלה בתור:** **Me / אני (<your-account@gmail.com>)**
    - **Who has access / למי יש גישה:** **Anyone / כל אחד**. Not "Anyone with a Google account", because people's phones need not be signed in to Google.
 4. **Deploy / פריסה** (authorize again if asked).
 5. Copy two things from the result screen:
@@ -321,6 +325,7 @@ Menus and dialogs in the Sheet always use the latest uploaded code. The **regist
 ```powershell
 .\deploy\deploy.ps1 "what changed"      # Windows PowerShell
 ```
+
 ```bash
 ./deploy/deploy.sh "what changed"       # macOS / Linux
 ```
@@ -373,7 +378,7 @@ Its closing message lists what moved. After that, `gabbaiPin`, `lotteryThreshold
 
 ## 11. Files
 
-```
+```text
 README.md, CLAUDE.md, LICENSE      this manual; notes for AI coding sessions; the license
 .clasp.json.example, .claspignore  clasp settings ("rootDir": "src"); .markdownlint.json: Markdown checker settings
 src/                               the Apps Script project — everything clasp uploads
@@ -560,4 +565,3 @@ The minyan installed first keeps its page address and link key in `Secrets.gs`. 
 5. **Update again** (`deploy-all.cmd`). The upload now replaces the script's files without `Secrets.gs`, and the check opens the page with the key from the list. "the registration link opens the page" → done; `Secrets.gs` may be deleted. A **Check: THE REGISTRATION LINK NO LONGER WORKS** → put `Secrets.gs` back, update, and run step 2 again.
 
 From then on `deploy.cmd` updates this folder's minyan through `minyanim.json` (the entry with the Script ID in `.clasp.json`).
-

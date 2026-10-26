@@ -104,6 +104,7 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
 node test/e2e.js        # → "ALL OK" (server logic, every feature block)
 node test/ui.js         # Playwright pages; also: gabbai.js, mobile.js, location.js, device.js, profile.js
 ```
+
 The mock imitates Google's quirks (comment stripping, `<` escaping, no UI in web context, Date detector).
 When the live app behaves differently from the tests, first teach the mock the quirk and reproduce it.
 
