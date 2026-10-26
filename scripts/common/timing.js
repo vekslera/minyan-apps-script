@@ -11,13 +11,19 @@ function timingStart(debugMs) {
   var box = document.createElement('div');
   box.id = 'timing';
   box.setAttribute('dir', 'ltr');
-  box.setAttribute('style', 'position:fixed;left:6px;bottom:6px;z-index:998;max-width:min(94vw,420px);max-height:45vh;overflow:auto;' +
-    'background:rgba(255,255,255,.95);border:1px solid #999;border-radius:8px;padding:6px 8px;font:12px/1.4 monospace;color:#111;box-shadow:0 2px 8px rgba(0,0,0,.2)');
-  box.innerHTML = '<div style="display:flex;gap:6px;align-items:center;margin-bottom:4px"><b style="flex:1">timing (ms)</b>' +
-    '<button type="button" id="timingCopy" style="font:inherit">copy</button><button type="button" id="timingHide" style="font:inherit">hide</button></div>' +
-    '<div id="timingRows"></div>';
+  // Small on purpose: about 4 lines with their own scroll bar, so it doesn't cover the form on a phone.
+  box.setAttribute('style', 'position:fixed;left:6px;bottom:6px;z-index:998;width:min(92vw,380px);' +
+    'background:rgba(255,255,255,.95);border:1px solid #999;border-radius:8px;padding:3px 6px;font:11px/1.35 monospace;color:#111;box-shadow:0 2px 8px rgba(0,0,0,.2)');
+  box.innerHTML = '<div style="display:flex;gap:6px;align-items:center"><b style="flex:1">timing (ms)</b>' +
+    '<button type="button" id="timingCopy" style="font:inherit;padding:1px 6px">copy</button><button type="button" id="timingHide" style="font:inherit;padding:1px 6px">hide</button></div>' +
+    '<div id="timingRows" style="max-height:5.6em;overflow-y:auto"></div>';
   document.body.appendChild(box);
-  document.getElementById('timingHide').onclick = function () { box.hidden = true; };
+  var tab = document.createElement('button');                 // "hide" leaves this small tab to bring it back
+  tab.type = 'button'; tab.id = 'timingShow'; tab.textContent = 'timing'; tab.hidden = true;
+  tab.setAttribute('style', 'position:fixed;left:6px;bottom:6px;z-index:998;font:11px monospace;padding:2px 8px;opacity:.85');
+  document.body.appendChild(tab);
+  document.getElementById('timingHide').onclick = function () { box.hidden = true; tab.hidden = false; };
+  tab.onclick = function () { box.hidden = false; tab.hidden = true; };
   document.getElementById('timingCopy').onclick = function () {
     var text = TIMING.rows.map(timingLine).join('\n');
     try { navigator.clipboard.writeText(text).then(function () { document.getElementById('timingCopy').textContent = 'copied'; }); } catch (e) {}
@@ -35,7 +41,7 @@ function tmark(label, ms) {
   var r = { at: tnow(), label: label, ms: ms == null ? null : Math.round(ms) };
   TIMING.rows.push(r);
   var el = document.getElementById('timingRows');
-  if (el) { var d = document.createElement('div'); d.textContent = timingLine(r); el.appendChild(d); el.parentNode.scrollTop = 1e6; }
+  if (el) { var d = document.createElement('div'); d.textContent = timingLine(r); el.appendChild(d); el.scrollTop = el.scrollHeight; }
 }
 
 /** Starts a clock; the returned function records "<label> N ms" (+ the server's share, if the result has _ms). */

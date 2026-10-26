@@ -444,7 +444,7 @@ node test/profile.js       # counts Google-service calls per action on a month o
   - every **server call** (`kioskInit`, `kioskSubmit`, `gabbai…`), its total and, in brackets, the server's own share — the rest is Google's overhead and the network;
   - **GPS** and its accuracy, **form ready**, **tap: register**, **confirmation shown**.
 
-  **copy** puts the list on the clipboard (to send it on). Without `&debug=1` nothing is shown or recorded. Not covered: the time before the page frame starts (Google's outer page loading).
+  The panel shows about 4 lines and scrolls (the newest at the bottom); **hide** leaves a small "timing" tab to bring it back. **copy** puts the whole list on the clipboard (to send it on). The flag stays when moving between the registration page and the gabbai tools; the link for sharing (קישור ו-QR) never gets it. Without `&debug=1` nothing is shown or recorded. Not covered: the time before the page frame starts (Google's outer page loading).
 - **Each call to a Google service is the main cost**, roughly 30–150 ms on Google's servers. `test/profile.js` counts them per action.
 - **Name suggestions run in the page.** The registration page matches names itself, against the list of names it gets once on load and refreshes every 5 minutes. That list never includes phone numbers. Typing never waits for the server; only a complete phone number is checked there.
 - **Cache for read-only lookups.** People and settings are kept in the script cache for up to 10 minutes. The cache is cleared whenever the script writes, and by the `onEdit` trigger whenever someone edits the אנשים or הגדרות sheet by hand. Every write reads the sheet fresh, so the cache can never overwrite data.

@@ -46,7 +46,11 @@ const sent = [];
   console.log('timing panel:\n  ' + rows.join('\n  '));
   ['server built the page', 'page code running', 'kioskInit (server ', 'form ready', 'tap: register', 'GPS', 'kioskSubmit (server ', 'confirmation shown']
     .forEach(l => assert(rows.some(r => r.includes(l)), 'timing row: ' + l));
+  const ph = await p.$eval('#timing', b => b.getBoundingClientRect().height);
+  assert(ph < 110, 'compact panel (about 4 lines): ' + ph + ' px');
   await p.screenshot({ path: 'test/shots/l0-timing.png' });
+  await p.click('#timingHide'); assert(await p.isVisible('#timingShow')); assert(await p.isHidden('#timing'));
+  await p.click('#timingShow'); assert(await p.isVisible('#timing'));
   await ctx.close();
   ({ ctx, p } = await open(Object.assign({ geolocation: north(30) }, phone)));
   assert.equal(await p.$('#timing'), null, 'no panel without &debug=1');

@@ -449,6 +449,11 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   assert(/var DEBUG_MS = '\d+';/.test(W('doGet', { parameter: { k: k, debug: '1' } }).html));
   assert(/var DEBUG_MS = '';/.test(W('doGet', { parameter: { k: k } }).html), 'off without &debug=1');
   assert(/DEBUG_MS = '\d+'/.test(W('doGet', { parameter: { k: k, view: 'gabbai', debug: '1' } }).html));
+  // moving between the pages keeps the flag (but the link for sharing doesn't get it)
+  assert(/TOOLS_URL = '[^']+&view=gabbai&debug=1'/.test(W('doGet', { parameter: { k: k, debug: '1' } }).html), 'כלי גבאי keeps &debug=1');
+  assert(/HOME_URL = '[^']+\?k=\w+&debug=1'/.test(W('doGet', { parameter: { k: k, view: 'gabbai', debug: '1' } }).html), 'back to registration keeps it');
+  assert(!/debug=1/.test(W('doGet', { parameter: { k: k } }).html.match(/TOOLS_URL = '[^']*'/)[0]), 'not added without the flag');
+  assert(!/debug/.test(W('gabbaiLink', k, ch.token).link), 'the link for sharing stays clean');
   assert.equal(typeof W('kioskInit', k)._ms, 'number'); assert.equal(typeof W('gabbaiInit', k, '')._ms, 'number');
   console.log('gabbai tools OK');
 }

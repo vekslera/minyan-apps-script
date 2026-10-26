@@ -14,11 +14,13 @@ function doGet(e) {
   let link = '';
   if (ok) { const ss = SpreadsheetApp.getActive(); link = kioskLink_(readSettings_(ss, ss.getSpreadsheetTimeZone())); }
   // "&debug=1": the page shows a timing panel (scripts/common/timing.js); DEBUG_MS = the time spent here.
+  // The links between the registration page and the tools keep it, so the panel stays while moving between them.
   const debug = ok && e.parameter.debug === '1';
+  const keep = debug ? '&debug=1' : '';
   let html = !ok ? page_('BadLinkPage')
-    : tools ? page_('GabbaiPage').replace('__KEY__', () => key).replace(/__HOME__/g, () => link)
+    : tools ? page_('GabbaiPage').replace('__KEY__', () => key).replace(/__HOME__/g, () => link ? link + keep : '')
     : page_('KioskPage').replace('__KEY__', () => key).replace('__DEVICE__', () => forced)
-                        .replace('__TOOLS__', () => link ? link + '&view=gabbai' : '');
+                        .replace('__TOOLS__', () => link ? link + '&view=gabbai' + keep : '');
   html = html.replace('__DEBUG__', () => debug ? String(Date.now() - t0) : '');
   return HtmlService.createHtmlOutput(html)
     .setTitle(tools ? 'כלי גבאי — מניין' : 'רישום נוכחות במניין')
