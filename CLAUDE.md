@@ -73,7 +73,8 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
 - `minyanim.json` (git-ignored, private): per minyan name, scriptId, deploymentId, key (the full link), account
   (the owning Google account's address — never passwords).
   `deploy-all` opens each page with its key after updating; the bad-link page's title ("הקישור אינו תקין",
-  `doGet`) is what it looks for, so keep that title distinct.
+  `doGet`) is what it looks for, so keep that title distinct. The check reads only the `<title>`: Google's wrapper
+  page is full of its own JavaScript, so never search its text for words like "TypeError" (that gave false alarms).
 - The page address: `deploymentId`, else `WEB_URL` (pasted in **מניין → כתובת דף הרישום (הדבקה)** — how copies
   get it). **Never `ScriptApp.getService().getUrl()`**: in a copy it returned an /exec address that opens a Drive
   error page (the mock returns a wrong address on purpose).

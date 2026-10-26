@@ -538,7 +538,7 @@ Each minyan gets **its own copy** of the Sheet, in **its own Google account**: i
 Or double-click **`deploy\deploy-all.cmd`** (output in `deploy\deploy-all-last.log`), or **`deploy\template.cmd`** for the template only.
 
 - **Per minyan,** it uploads the code from a temporary folder (`clasp push -f`), then publishes a new version of the **same** page (`clasp update-deployment`), so the address and the printed QR codes stay valid.
-- **Then it opens the registration link, with its key**, as a worshipper would. If the page doesn't open (missing permissions, an error page, or the key no longer opens it), it prints a **Check:** line; "the registration link opens the page" means all is well.
+- **Then it opens the registration link, with its key**, as a worshipper would, and reads the page's title. "רישום נוכחות במניין" means all is well ("the registration link opens the page"). "הקישור אינו תקין" means the key no longer opens it. Anything else is one of Google's pages, usually missing permissions right after a first update; it prints a **Check:** line with the HTTP code and the title it found.
 - **One failure doesn't stop the others.** The summary lists what failed; the usual cause is a Sheet not shared with the maintainer account.
 - **After a settings-layout change,** each minyan's gabbai (or the maintainer) runs **מניין → הגדרה ראשונית** once.
 
@@ -583,7 +583,7 @@ The maintainer gets a push notification on his phone, through the free **ntfy** 
 
 - **What is sent:** a page that breaks in the browser, a server call that fails with an error nobody meant, and the page failing to build. The alert says where it happened and the error text; tapping it opens that minyan's Sheet.
 - **Which minyan:** every title starts with the minyan's short name from `minyanim.json`, then its own name from הגדרות, e.g. "⚠ steinbach · מניין שחרית" or "בדיקה יומית · mincha · …". Every message ends with **חשבון:** followed by the minyan's Google account (from its read-only הגדרות row). So two minyanim with the same name are still told apart. The short name is also an ntfy tag.
-- **To test:** **מניין → שליחת התראת בדיקה למפתח** sends one alert (or says that alerts aren't on in this Sheet yet).
+- **To test:** **מניין → שליחת התראת בדיקה למפתח** sends one alert, or says that alerts aren't on in this Sheet yet. If sending fails, it shows the reason: ntfy's answer code and text, or Google's error.
 - **What isn't:** the app's own messages to its users (all in Hebrew: a wrong code, closed hours, a wrong date). The same error from the same place is sent at most once an hour.
 - **No registrants' data leaves Google:** no names, phones or places of the people who register; long numbers in an error text are masked. The minyan's own Google account is included, as asked.
 

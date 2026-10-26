@@ -132,7 +132,7 @@ function makeEnv(opts) {
                  newTrigger: fn => { const t = { fn: fn }; const b = { timeBased: () => b, everyDays: n => { t.days = n; return b; }, atHour: h => { t.hour = h; return b; },
                                                                       create: () => { triggers.push({ getHandlerFunction: () => fn, spec: t }); } }; return b; } },
     // ntfy: env.sent lists every request; env.ntfyStatus is the answer's code
-    UrlFetchApp: { fetch: (url, o) => { sent.push({ url: url, body: JSON.parse(o.payload) }); return { getResponseCode: () => ntfy.status }; } },
+    UrlFetchApp: { fetch: (url, o) => { sent.push({ url: url, body: JSON.parse(o.payload) }); return { getResponseCode: () => ntfy.status, getContentText: () => ntfy.status < 300 ? '{}' : '{"error":"test"}' }; } },
     Logger: { log: m => log.push(['log', m]) },
     Session: { getEffectiveUser: () => ({ getEmail: () => 'test@example.com' }) },
     CacheService: { getScriptCache: () => ({

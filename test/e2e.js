@@ -813,7 +813,10 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   N.doGet_ = real;
   assert(/doGet: Exception: Service Spreadsheets failed/.test(envN.sent[envN.sent.length - 1].body.message));
   // ntfy down: nothing breaks
-  envN.ntfy.status = 500; assert.equal(N.reportError_('x', 'Error: another'), false); envN.ntfy.status = 200;
+  envN.ntfy.status = 500; assert.equal(N.reportError_('x', 'Error: another'), false); assert(/^ntfy 500/.test(N.notify_.why), N.notify_.why);
+  N.UrlFetchApp.fetch = (orig => (u, o) => { if (envN.ntfy.status === 'throw') throw new Error('Exception: Address unavailable'); return orig(u, o); })(N.UrlFetchApp.fetch);
+  envN.ntfy.status = 'throw'; N.menuTestAlert(); assert(/הסיבה.*Address unavailable/.test(envN.log.filter(l => l[0] === 'alert').slice(-1)[0][1]), 'the test alert says why');
+  envN.ntfy.status = 200;
 
   // the daily check: nothing to say → nothing sent
   const sh = envN.ss.getSheetByName('הגדרות');

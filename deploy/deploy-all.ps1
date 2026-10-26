@@ -167,19 +167,31 @@ function Invoke-Clasp {
   & clasp @args 2>&1 | ForEach-Object { Write-Host "    $_" }
   return $LASTEXITCODE
 }
-# Opens the page as a worshipper would (with its key, when known). The bad-link page has its own title
-# (Kiosk.gs), and Google's own error pages mean trouble.
+# Opens the page as a worshipper would, with its key, and reads the page's title (set in Kiosk.gs doGet_):
+# "רישום נוכחות במניין" = the registration page; "הקישור אינו תקין" = the key doesn't open it; anything else is
+# one of Google's pages (an error, or permissions not yet allowed). Google's wrapper page is full of its own
+# JavaScript, so its text is never searched for error words.
 function Check-Page($m) {
   $url = Link-Of $m
+  $body = ""; $code = 200
   try { $r = Invoke-WebRequest -UseBasicParsing -Uri $url -TimeoutSec 60; $body = "$($r.Content)" }
-  catch { return "the page did not answer ($($_.Exception.Message))" }
-  if ($body -match 'Authorization is required') { return "needs permissions: open its Sheet as the clasp account, מניין -> קישור לדף הרישום, allow" }
-  if ($body -match 'unable to open the file|Script function not found|ReferenceError|TypeError') { return "the page shows an error" }
+  catch {
+    $code = 0; try { $code = [int]$_.Exception.Response.StatusCode } catch {}
+    try { $body = (New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())).ReadToEnd() } catch {}
+    if (-not $body) { return "the page did not answer ($($_.Exception.Message))" }
+  }
   $t = [regex]::Match($body, '<title>([^<]*)</title>')
-  $title = if ($t.Success) { [System.Net.WebUtility]::HtmlDecode($t.Groups[1].Value) } else { "" }
-  if ($m.key -and $title -match 'הקישור אינו תקין') { return "THE REGISTRATION LINK NO LONGER WORKS (wrong key). If Secrets.gs was just removed: put it back, run deploy-all again, then run מניין -> הגדרה ראשונית in that Sheet" }
-  if (-not $m.key) { return "no key in minyanim.json, so only the address was checked (-Remove and -Add again with the registration link)" }
-  return ""
+  $title = if ($t.Success) { [System.Net.WebUtility]::HtmlDecode($t.Groups[1].Value).Trim() } else { "" }
+  if ($title -match 'רישום נוכחות במניין') {
+    if (-not $m.key) { return "no key in minyanim.json, so only the address was checked (-Remove and -Add again with the registration link)" }
+    return ""
+  }
+  if ($title -match 'הקישור אינו תקין') {
+    if (-not $m.key) { return "no key in minyanim.json, so only the address was checked (-Remove and -Add again with the registration link)" }
+    return "THE REGISTRATION LINK NO LONGER WORKS (wrong key). If Secrets.gs was just removed: put it back, run deploy-all again, then run מניין -> הגדרה ראשונית in that Sheet"
+  }
+  $hint = if ($body -match 'Authorization is required' -or $code -eq 403) { " - probably permissions: open its Sheet as the clasp account, מניין -> הגדרה ראשונית, allow" } else { "" }
+  return "the page is not the registration page (HTTP $code, title: '$title')$hint"
 }
 
 $ok = @(); $warn = @(); $failed = @()

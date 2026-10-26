@@ -28,9 +28,10 @@ function maintainer_() {
   return m && /^[\w-]{6,64}$/.test(String(m.ntfyTopic || '')) ? m : null;
 }
 
-/** Sends one notification. Returns true when ntfy accepted it. Never throws. */
+/** Sends one notification. Returns true when ntfy accepted it. Never throws; why it failed is in notify_.why. */
 function notify_(title, message, priority) {
   const m = maintainer_();
+  notify_.why = '';
   if (!m) return false;
   try {
     let click = '';
@@ -43,8 +44,10 @@ function notify_(title, message, priority) {
       payload: JSON.stringify({ topic: m.ntfyTopic, title: title, message: message + (account ? '\nחשבון: ' + account : ''), priority: priority || 3,
                                 tags: ['synagogue'].concat(m.minyan ? [String(m.minyan)] : []), click: click || undefined }),
     });
-    return res.getResponseCode() < 300;
-  } catch (e) { return false; }
+    const code = res.getResponseCode();
+    if (code >= 300) notify_.why = 'ntfy ' + code + ': ' + String(res.getContentText ? res.getContentText() : '').slice(0, 200);
+    return code < 300;
+  } catch (e) { notify_.why = String(e && e.message || e).slice(0, 200); return false; }
 }
 
 /** No personal data in a notification: long numbers (phones, coordinates) masked, length limited. */
@@ -93,7 +96,7 @@ function menuTestAlert() {
     return;
   }
   const ok = notify_('בדיקה · ' + notifyName_(), 'התראת בדיקה מהגיליון. אם היא הגיעה — ההתראות עובדות.', 3);
-  ui.alert('התראות למפתח', ok ? 'התראת הבדיקה נשלחה.' : 'שליחת ההתראה נכשלה. נסו שוב מאוחר יותר.', ui.ButtonSet.OK);
+  ui.alert('התראות למפתח', ok ? 'התראת הבדיקה נשלחה.' : 'שליחת ההתראה נכשלה.\n\nהסיבה (להעביר למפתח): ' + (notify_.why || 'לא ידועה'), ui.ButtonSet.OK);
 }
 
 /** setup(): the daily check, once per account that runs setup (dailyCheck skips a second run on the same day). */
