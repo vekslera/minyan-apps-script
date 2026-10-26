@@ -34,7 +34,26 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
 - File names unique **ignoring the extension** (`Admin.gs` vs `AdminPage.html`).
 - Web context: no `SpreadsheetApp.getUi()`, no `sheet.activate()`, never return `Date` objects to the page.
 - Sheets turns `8:30` typed into a cell into a 1899 time value — hour cells are text (`parseHour_`, `fmtHour_`).
-- `doGet` completing in Executions with no follow-up `kioskInit` = a browser-side error (each page shows a red bar).
+- A browser-side error shows as a red bar on the page; in Executions, `doGet` completes and nothing follows.
+- Data a page needs at once goes **into the page** from `doGet` (`INIT`, via `scriptJson_` — safe inside `<script>`),
+  not a second call: each `google.script.run` call costs about a second of Apps Script overhead.
+
+## Speed and measuring
+
+- `&debug=1` on any link shows a small timing panel (`scripts/common/timing.js`): page build, each call with the
+  server's share (`_ms`, added by `withMs_`), GPS, form ready, confirmation. Ask the owner for a "copy" from a real
+  phone before optimizing; the flag is kept on the links between the pages, never on the link for sharing.
+- One registration takes ~3 s on Google; most of it is one unavoidable server call.
+
+## UX lessons from real users
+
+- **People press the big button without reading.** Never leave a screen whose main button can't succeed
+  (a web page can't switch the phone's location on): the main button must always lead somewhere —
+  e.g. "שלח לאישור הגבאי"; instructions go folded ("איך מפעילים מיקום?") under a smaller retry.
+- **One location request at a time**: a fresh reading stops the early `watchPosition` first (a parallel request
+  can hang). The early reading starts on load only if permission is already granted, else on the first tap into
+  a field; it is used if under 2 minutes old; retries always take a fresh one.
+- Small debug or helper overlays must not cover the form on a phone (the timing panel is ~4 lines and hideable).
 
 ## Settings and secrets
 
@@ -45,7 +64,10 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
   new rows go **at the end** so existing rows keep their places. `setup()` (`migrateSettings_`) puts the
   sheet in the current layout, keeps values, and is safe to re-run.
 - The gabbai code: document properties only (`GABBAI_PIN`) — never in the Sheet, never in git.
-- Thresholds: lottery and report to the Rebbe; **0 = switched off** (tool stays visible, marked "כבוי").
+- Thresholds: lottery and report to the Rebbe (default 25); **0 = switched off** (tool stays visible, marked
+  "כבוי", in the tools and in the Sheet menu). Hours are text in half-hour steps (`8:30`).
+- Scaling: decided on **option C** — a copy per minyan in the minyan's own Google account, updated centrally
+  (`deploy-all`, planned). The analysis is a doc the owner keeps; next: a "ימי המניין" setting (weekdays).
 
 ## Privacy
 
