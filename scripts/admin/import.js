@@ -15,7 +15,7 @@ function parseImport() {
       if (r.shifted) byDate[k].shifted = true;
       byDate[k].names.push({ name: r.name, off: false });
     });
-    S.imp = { groups: groups, today: res.today, info: res.dateInfo };
+    S.imp = { groups: groups, today: res.today, info: res.dateInfo, days: res.days };
     renderImport();
   });
 }
@@ -24,6 +24,7 @@ function groupIssue(g) {
   if (!g.date) return { level: 'e', text: 'חסר תאריך — בחרו תאריך' };
   if (g.date > S.imp.today) return { level: 'e', text: 'תאריך עתידי' };
   if (dow(g.date) === 6) return { level: 'e', text: 'שבת — תקנו את התאריך' };
+  if (S.imp.days && S.imp.days.indexOf(dow(g.date)) < 0) return { level: 'e', text: 'ביום זה אין מניין (' + daysLabel_(S.imp.days) + ') — תקנו את התאריך' };
   if (g.shifted && g.date === g.orig) return { level: 'w', text: 'ההודעה נשלחה בשבת/מוצאי שבת — נרשם ליום שישי. בדקו.' };
   var info = S.imp.info[g.date];
   if (info && info.noMinyan) return { level: 'w', text: 'מסומן כיום ללא מניין' };
@@ -82,7 +83,7 @@ function queueImport() {
     busy(false);
     S.imp = null; $('waText').value = ''; $('preview').innerHTML = '';
     go('review');
-    flash('revNote', 'ok', 'נוספו ' + res.added + ' רישומים לבדיקה' + (res.rejected ? ' (' + res.rejected + ' נדחו בגלל תאריך לא תקין)' : '') +
+    flash('revNote', 'ok', 'נוספו ' + res.added + ' רישומים לבדיקה' + (res.rejected ? ' (' + res.rejected + ' נדחו: תאריך לא תקין או יום בלי מניין)' : '') +
           '. לכל שם: בחרו את האדם הנכון, אשרו או הוסיפו טלפון, ולחצו "שמירה".');
   });
 }

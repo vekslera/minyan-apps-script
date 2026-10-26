@@ -82,16 +82,16 @@ function gabbaiLink(key, session) {
   return { link: link, tools: link ? link + '&view=gabbai' : '' };
 }
 
-// ---- Settings: name, registration hours, period, lottery threshold, days without a minyan ----
+// ---- Settings: name, minyan weekdays, registration hours, period, thresholds, days without a minyan ----
 function settingsForPage_() {
   const ss = SpreadsheetApp.getActive(), tz = ss.getSpreadsheetTimeZone();
   const s = readSettings_(ss, tz);
-  return { name: s.name, from: s.from, to: s.to, start: s.start, end: s.end, threshold: s.threshold, rebbe: s.rebbe,
+  return { name: s.name, from: s.from, to: s.to, start: s.start, end: s.end, threshold: s.threshold, rebbe: s.rebbe, days: s.days,
            excluded: Array.from(s.excluded).sort(), today: todayKey_(tz) };
 }
 function gabbaiSettings(key, session) { checkSession_(key, session); return settingsForPage_(); }
 
-/** d = {name, from, to, start, end, threshold}. Checks everything first; saves all or nothing. */
+/** d = {name, days, from, to, start, end, threshold, rebbe}. Checks everything first; saves all or nothing. */
 function gabbaiSaveSettings(key, session, d) {
   checkSession_(key, session);
   d = d || {};
@@ -107,7 +107,11 @@ function gabbaiSaveSettings(key, session, d) {
   if (start > end) throw new Error('תחילת התקופה אחרי סופה');
   if (!(thr >= 0 && thr <= 100)) throw new Error('אחוז הנוכחות להגרלה צריך להיות בין 0 (כבוי) ל-100');
   if (!(reb >= 0 && reb <= 100)) throw new Error('אחוז הנוכחות לדוח לרבי צריך להיות בין 0 (כבוי) ל-100');
+  // days: weekday numbers 0 (Sunday) … 5 (Friday); left out = unchanged
+  const days = d.days === undefined ? null : Array.from(new Set((d.days || []).map(Number))).filter(x => x >= 0 && x <= 5).sort();
+  if (days && !days.length) throw new Error('יש לבחור לפחות יום מניין אחד');
   const v = {};
+  if (days) v[SET.DAYS] = fmtDays_(days);
   v[SET.NAME] = name; v[SET.FROM] = fmtHour_(from); v[SET.TO] = fmtHour_(to); v[SET.PCT] = Math.round(thr * 10) / 10; v[SET.REBBE] = Math.round(reb * 10) / 10;
   v[SET.START] = keyToDate_(start, tz); v[SET.END] = keyToDate_(end, tz);
   withLock_(() => { textFormatHours_(); setSettings_(v); });

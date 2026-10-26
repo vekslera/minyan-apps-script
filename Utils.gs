@@ -35,6 +35,7 @@ function readSettings_(ss, tz) {
   const num = (x, d) => (x === '' || x == null || isNaN(Number(x))) ? d : Number(x);
   const excluded = new Set(raw.excluded);
   return { name: String(map[SET.NAME] || 'מניין שחרית').trim(), start: toKey_(map[SET.START], tz), end: toKey_(map[SET.END], tz),
+           days: parseDays_(map[SET.DAYS]) || DEFAULT_DAYS.slice(),       // weekdays 0 (Sunday) … 5 (Friday)
            threshold: num(map[SET.PCT], 75), rebbe: num(map[SET.REBBE], 25), from: num(map[SET.FROM], 5), to: num(map[SET.TO], 11),   // hours; 8.5 = 8:30
            // The gabbai code is kept out of sight (script properties). Until setup() moves it there,
            // the old places still work: Secrets.gs, then the old "קוד גבאי" row.
@@ -198,6 +199,33 @@ function scriptJson_(v) {
 function withMs_(t0, r) { if (r && typeof r === 'object') r._ms = Date.now() - t0; return r; }
 
 function fmtShort_(k) { return k.slice(8, 10) + '/' + k.slice(5, 7); }
+// ---- Minyan weekdays: 0 = Sunday … 5 = Friday (never Shabbat). Written in the sheet as Hebrew letters. ----
+const DAY_LETTERS = ['א', 'ב', 'ג', 'ד', 'ה', 'ו'];
+const DEFAULT_DAYS = [0, 1, 2, 3, 4, 5];
+/** "א ב ג ד ה", "א-ה", "א,ג,ה" → [0, 1, 2, 3, 4] etc.; null when nothing valid is written (→ the default). */
+function parseDays_(v) {
+  const t = String(v == null ? '' : v).replace(/[׳'"]/g, '').trim();
+  if (!t) return null;
+  const set = new Set();
+  t.split(/[\s,]+/).filter(Boolean).forEach(part => {
+    const m = part.match(/^([א-ו])(?:[-–]([א-ו]))?$/);
+    if (!m) return;
+    const a = DAY_LETTERS.indexOf(m[1]), b = m[2] ? DAY_LETTERS.indexOf(m[2]) : a;
+    for (let d = Math.min(a, b); d <= Math.max(a, b); d++) set.add(d);
+  });
+  return set.size ? Array.from(set).sort() : null;
+}
+/** [0..4] → "א ב ג ד ה" (as written to the sheet). */
+function fmtDays_(days) { return days.map(d => DAY_LETTERS[d]).join(' '); }
+/** "א–ה" style label for messages: a run as a range, otherwise the letters. (Also sent to the pages.) */
+function daysLabel_(days) {
+  const run = days.every((d, i) => i === 0 || d === days[i - 1] + 1);
+  const L = ['א', 'ב', 'ג', 'ד', 'ה', 'ו'];
+  return run && days.length > 2 ? L[days[0]] + '׳–' + L[days[days.length - 1]] + '׳' : days.map(d => L[d] + '׳').join(', ');
+}
+/** Is this date a minyan day (a minyan weekday and not marked "no minyan")? */
+function isMinyanDay_(s, key) { return s.days.indexOf(dow_(key)) >= 0 && !s.excluded.has(key); }
+
 /** Hours as shown and written to the sheet: 8.5 → "8:30", 11 → "11:00". (Also sent to the pages.) */
 function fmtHour_(h) { const m = Math.round(Number(h) * 60); return Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0'); }
 function ymd_(y, m, d) { return new Date(Date.UTC(y, m - 1, d)).toISOString().slice(0, 10); }
@@ -262,7 +290,7 @@ function clientScript_(file) {
  * logic. Only self-contained functions belong here.
  */
 function sharedJs_() {
-  const fns = [normPhone_, validPhone_, fmtPhone_, fmtHour_,
+  const fns = [normPhone_, validPhone_, fmtPhone_, fmtHour_, daysLabel_,
                clean_, norm_, skel_, levRatio_, sim_, splitFull_, nameVariants_, knownFulls_, nameScore_, suggest_,
                nickCanon_, firstNames_, alsoSurnames_, isFirstName_, canonFirst_, firstSim_];
   const consts = { FINALS: FINALS, NICKNAMES: NICKNAMES, FIRST_NAMES_EXTRA: FIRST_NAMES_EXTRA };

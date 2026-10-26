@@ -123,7 +123,7 @@ function computeStats_(ctx, startKey, endKey) {
   const last = endKey < today ? endKey : today;
   const days = [];
   for (let k = startKey; k <= last; k = addDays_(k, 1)) {
-    if (dow_(k) !== 6 && !ctx.excluded.has(k)) days.push(k);
+    if (isMinyanDay_(ctx.settings, k)) days.push(k);                 // the minyan's weekdays, minus "no minyan" dates
   }
   const daySet = new Set(days);
   const byPerson = {}, recorded = new Set();

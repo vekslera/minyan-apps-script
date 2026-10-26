@@ -33,9 +33,10 @@ function parseImport_(text, defaultDate) {
   ctx.attRows.forEach(r => { const k = toKey_(r[0], tz); counts[k] = (counts[k] || 0) + 1; });
   const dateInfo = {};
   rows.forEach(r => {
-    if (r.date && !dateInfo[r.date]) dateInfo[r.date] = { recorded: counts[r.date] || 0, noMinyan: ctx.excluded.has(r.date) };
+    if (r.date && !dateInfo[r.date]) dateInfo[r.date] = { recorded: counts[r.date] || 0, noMinyan: ctx.excluded.has(r.date),
+                                                          offDay: ctx.settings.days.indexOf(dow_(r.date)) < 0 };
   });
-  return { rows: rows, today: today, dateInfo: dateInfo };
+  return { rows: rows, today: today, dateInfo: dateInfo, days: ctx.settings.days };
 }
 
 /** Step 2 of the import: put the checked rows into the review queue. */
@@ -50,7 +51,7 @@ function queueImport_(rows) {
     (rows || []).forEach(r => {
       const date = toKey_(r.date, ctx.tz), raw = clean_(r.name);
       if (!raw) return;
-      if (!date || dow_(date) === 6 || date > today) { rejected++; return; }
+      if (!date || dow_(date) === 6 || ctx.settings.days.indexOf(dow_(date)) < 0 || date > today) { rejected++; return; }
       const k = date + '|' + norm_(raw);
       if (seen.has(k)) return;
       seen.add(k);

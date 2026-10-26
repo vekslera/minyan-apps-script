@@ -192,7 +192,20 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
   console.log('settings:', (await p.textContent('#settingsNote')).trim(), '| header:', await p.textContent('#sub'));
   const sNow = G.readSettings_(env.ss, 'Asia/Jerusalem');
   assert.equal(sNow.from, 8.5); assert.equal(sNow.to, 11); assert.equal(sNow.rebbe, 30);
-  assert(/8:30–11:00/.test(await p.textContent('#settingsNote'))); assert.equal(sNow.threshold, 70); assert.equal(sNow.name, 'מניין סטיינבך');
+  assert(/מ-8:30 עד 11:00/.test(await p.textContent('#settingsNote'))); assert.equal(sNow.threshold, 70); assert.equal(sNow.name, 'מניין סטיינבך');
+  // minyan weekdays: six boxes, at least one, Sunday–Thursday saved as letters
+  assert.equal(await p.$$eval('.dayBox:checked', b => b.length), 6, 'Sunday–Friday by default');
+  for (const b of await p.$$('.dayBox')) await b.uncheck();
+  await p.click('#setSave'); await p.waitForTimeout(200);
+  assert(/לפחות יום מניין אחד/.test(await p.textContent('#settingsNote')), 'at least one day, checked in the page');
+  for (const b of (await p.$$('.dayBox')).slice(0, 5)) await b.check();
+  await p.click('#setSave'); await p.waitForTimeout(400);
+  assert(/ימי מניין: א׳–ה׳/.test(await p.textContent('#settingsNote')), await p.textContent('#settingsNote'));
+  assert.deepEqual(Array.from(G.readSettings_(env.ss, 'Asia/Jerusalem').days), [0, 1, 2, 3, 4]);
+  assert.equal(await p.$$eval('label.opt.sel', l => l.length), 5, 'chosen days highlighted');
+  await p.screenshot({ path: 'test/shots/g13-phone-days.png', fullPage: true });
+  await (await p.$$('.dayBox'))[5].check(); await p.click('#setSave'); await p.waitForTimeout(400);
+  assert.equal(G.readSettings_(env.ss, 'Asia/Jerusalem').days.length, 6);
   const nm = G.addDays_(today, 1);
   await p.fill('#noMinyanDate', nm); await p.click('#noMinyanAdd'); await p.waitForTimeout(400);
   assert(G.readSettings_(env.ss, 'Asia/Jerusalem').excluded.has(nm));

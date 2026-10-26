@@ -93,11 +93,28 @@ const shim = `
   await k.close();
   // closed state (Shabbat simulated by hours)
   env.userEdit('הגדרות', 'B6', 5); env.userEdit('הגדרות', 'B7', 5);
-  k = await page(kioskHtml, { width: 800, height: 700 }, true);
+  const freshKiosk = () => G.doGet({ parameter: { k: key, device: 'kiosk' } }).html;   // today's data is built into the page
+  k = await page(freshKiosk(), { width: 800, height: 700 }, true);
   console.log('closed:', (await k.textContent('#closed')).trim());
   await k.screenshot({ path: 'shots/k8-closed.png' });
   await k.close();
   env.userEdit('הגדרות', 'B6', 0); env.userEdit('הגדרות', 'B7', 24);
+  // closed: today is not one of the minyan's weekdays
+  {
+    const dRow = env.ss.getSheetByName('הגדרות').data.findIndex(x => x[0] === 'ימי המניין') + 1;
+    const dw = G.dow_(G.todayKey_('Asia/Jerusalem'));
+    if (dw !== 6) {
+      env.userEdit('הגדרות', 'B' + dRow, ['א', 'ב', 'ג', 'ד', 'ה', 'ו'].filter((_, i) => i !== dw).join(' '));
+      k = await page(freshKiosk(), { width: 390, height: 700 }, true);
+      const why = (await k.textContent('#closed')).trim();
+      console.log('closed (not a minyan day):', why);
+      if (!/היום אין מניין/.test(why) || !/המניין מתקיים בימים/.test(why)) throw new Error('not-a-minyan-day screen: ' + why);
+      if (await k.isVisible('#form')) throw new Error('form shown on a day without a minyan');
+      await k.screenshot({ path: 'shots/k8b-not-minyan-day.png' });
+      await k.close();
+      env.userEdit('הגדרות', 'B' + dRow, 'א ב ג ד ה ו');
+    }
+  }
 
   // ---------- Admin: import ----------
   const adminHtml = G.ADMIN_HTML_FOR_TEST || null;

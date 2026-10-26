@@ -1,4 +1,4 @@
-// Gabbai tools page — settings: minyan name, self-registration hours, period, lottery threshold, and the
+// Gabbai tools page — settings: minyan name, minyan weekdays, self-registration hours, period, lottery threshold, and the
 // days without a minyan. All of them live in the הגדרות sheet (the gabbai code does not).
 // Declarations only — nothing runs when the file loads; the page calls the start function.
 
@@ -16,8 +16,24 @@ function fillHours() {
     if (h > 0) $('setTo').add(new Option(label, String(h)));
   }
 }
+var DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי'];
+/** One checkbox per weekday (Sunday … Friday); days = the chosen weekday numbers. */
+function renderDays(days) {
+  $('setDays').innerHTML = DAY_NAMES.map(function (n, i) {
+    var on = days.indexOf(i) >= 0;
+    return '<label class="opt' + (on ? ' sel' : '') + '"><input type="checkbox" class="dayBox" value="' + i + '"' + (on ? ' checked' : '') + '>' + n + '</label>';
+  }).join('');
+  Array.prototype.forEach.call(document.querySelectorAll('.dayBox'), function (c) {
+    c.onchange = function () { c.parentNode.classList.toggle('sel', c.checked); };
+  });
+}
+function chosenDays() {
+  return Array.prototype.filter.call(document.querySelectorAll('.dayBox'), function (c) { return c.checked; })
+    .map(function (c) { return Number(c.value); });
+}
 function renderSettings(g) {
   SETTINGS = g;
+  renderDays(g.days || [0, 1, 2, 3, 4, 5]);
   $('setName').value = g.name;
   $('setFrom').value = String(g.from); $('setTo').value = String(g.to);
   $('setStart').value = g.start || ''; $('setEnd').value = g.end || '';
@@ -37,14 +53,15 @@ function renderSettings(g) {
 function saveSettings() {
   var d = { name: $('setName').value.trim(), from: Number($('setFrom').value), to: Number($('setTo').value),
             start: $('setStart').value, end: $('setEnd').value, threshold: Number($('setPct').value),
-            rebbe: Number($('setRebbe').value) };
+            rebbe: Number($('setRebbe').value), days: chosenDays() };
+  if (!d.days.length) return flash('settingsNote', 'err', 'יש לבחור לפחות יום מניין אחד');
   if (d.from >= d.to) return flash('settingsNote', 'err', '"משעה" צריכה להיות לפני "עד שעה"');
   if (d.start && d.end && d.start > d.end) return flash('settingsNote', 'err', 'תחילת התקופה אחרי סופה');
   wait('setSave');
   call('SaveSettings', [d], function (g) {
     unwait(); renderSettings(g);
     if (S.info) { S.info.name = g.name; $('sub').textContent = g.name; S.info.at = 0; S.info.lotteryOn = g.threshold > 0; S.info.rebbeOn = g.rebbe > 0; }
-    flash('settingsNote', 'ok', 'ההגדרות נשמרו. רישום עצמי: ' + fmtHour_(g.from) + '–' + fmtHour_(g.to) + '.' +
+    flash('settingsNote', 'ok', 'ההגדרות נשמרו. ימי מניין: ' + daysLabel_(g.days) + '. רישום עצמי מ-' + fmtHour_(g.from) + ' עד ' + fmtHour_(g.to) + '.' +
           (g.threshold > 0 ? '' : ' ההגרלה כבויה.') + (g.rebbe > 0 ? '' : ' הדוח לרבי כבוי.'));
   });
 }

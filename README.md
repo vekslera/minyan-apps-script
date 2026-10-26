@@ -189,9 +189,10 @@ Then upload it with `clasp push` (route B: just save the file).
 | 10 | רדיוס מותר (מטרים) | Self-registration only within this distance; 40–60 is usually right |
 | 11 | סטיית GPS מותרת (מטרים) | How much GPS inaccuracy is forgiven beyond the radius. Empty = half the radius |
 | 12 | אחוז נוכחות מינימלי לדוח לרבי | Who is included in the report to the Rebbe, e.g. `25` = 25% or more of the minyan days (usually much lower than the lottery threshold). **`0` = no report** (switched off) |
+| 13 | ימי המניין | The weekdays the minyan meets, as Hebrew letters: `א ב ג ד ה ו` (Sunday–Friday, the default) or a range like `א-ה` (Sunday–Thursday). Only these days count toward the percentages, and only on them is registration open (also in gabbai mode and in the WhatsApp import). Shabbat never. Unreadable or empty = Sunday–Friday |
 
 - **Values go in column B.** Column C is only an explanation, and a value typed there is ignored.
-- **Days with no minyan.** Column **E**, one date per cell, for weekdays with no registration (e.g. Yom Tov). They don't count toward the percentage.
+- **Days with no minyan.** Column **E**, one date per cell, for single dates with no registration (e.g. Yom Tov). They don't count toward the percentage. Weekdays the minyan never meets go in row 13, not here.
 - **Switching the lottery or the report off.** A threshold of `0` switches it off. The tool stays in the gabbai tools (greyed out, marked **כבוי**) and in the מניין menu (marked "(כבוי)"); choosing it explains how to switch it on again. With the lottery off, the period summary lists attendance without ✓ marks.
 - **The gabbai code is not in this sheet.** A new installation gets a random 6-digit code; `setup` shows it once. Change it with **מניין → שינוי קוד גבאי**.
 
@@ -289,7 +290,7 @@ A web page with the gabbai's work, for when the Sheet isn't at hand. It needs th
   - **הגרלה** — shows who takes part, warns about entries still waiting for review and about an earlier draw, and asks for a second tap before drawing. The draw is logged in **הגרלות**.
   - **כפילויות** — pairs that look like one person. Tick "למזג" and choose which record to keep (the one with more days is preselected); attendance moves to it.
   - **קישור ו-QR** — the registration link with a QR code, copy and share.
-  - **הגדרות** — the minyan's name, the self-registration hours (half-hour steps: 8:00, 8:30, 9:00 …), the period, the lottery threshold, the report-to-the-Rebbe threshold, and the days without a minyan (add or remove dates). Saved to the הגדרות sheet.
+  - **הגדרות** — the minyan's name, the minyan's weekdays (a box per day, Sunday to Friday; at least one), the self-registration hours (half-hour steps: 8:00, 8:30, 9:00 …), the period, the lottery threshold, the report-to-the-Rebbe threshold, and the days without a minyan (add or remove dates). Saved to the הגדרות sheet.
   - **שינוי קוד גבאי** — asks for the current code; everyone else is logged out of gabbai mode, you stay in.
   - **יציאה** — logs out. After 30 minutes without activity the page logs out by itself.
 - **What stays in the Sheet only:** editing the tabs by hand. Every setting can be changed on the tools page.

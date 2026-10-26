@@ -637,4 +637,60 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   console.log('gabbai settings OK');
 }
 
+// ---------- Minyan weekdays (ימי המניין): which days count and when registration is open ----------
+{
+  const envD = makeEnv(); const Q = envD.ctx; Q.setup();
+  const k = envD.props.KIOSK_KEY, tz = 'Asia/Jerusalem';
+  const W = (fn, ...a) => { Q.__webContext = true; try { return noDates(Q[fn](...a)); } finally { Q.__webContext = false; } };
+  const s = W('kioskLogin', k, Q.gabbaiPin_()).token;
+  // what a gabbai may write in the sheet
+  const P = v => Q.parseDays_(v) && Array.from(Q.parseDays_(v));
+  assert.deepEqual(P('א ב ג ד ה'), [0, 1, 2, 3, 4]); assert.deepEqual(P('א-ה'), [0, 1, 2, 3, 4]);
+  assert.deepEqual(P('א׳–ה׳'), [0, 1, 2, 3, 4]); assert.deepEqual(P('א,ג, ו'), [0, 2, 5]);
+  assert.equal(Q.parseDays_(''), null); assert.equal(Q.parseDays_('ש'), null, 'Shabbat is never a minyan day');
+  assert.equal(Q.daysLabel_([0, 1, 2, 3, 4, 5]), 'א׳–ו׳'); assert.equal(Q.daysLabel_([0, 2]), 'א׳, ג׳');
+  // default: Sunday to Friday, written in the sheet
+  const sh = envD.ss.getSheetByName('הגדרות');
+  const row = sh.data.findIndex(x => x[0] === 'ימי המניין') + 1;
+  assert(row > 0, 'the setting row exists'); assert.equal(sh.data[row - 1][1], 'א ב ג ד ה ו');
+  assert.equal(row, sh.data.findIndex(x => x[0] === 'אחוז נוכחות מינימלי לדוח לרבי') + 2, 'added at the end');
+  assert.deepEqual(Array.from(Q.readSettings_(envD.ss, tz).days), [0, 1, 2, 3, 4, 5]);
+  Q.setup(); assert.equal(sh.data[row - 1][1], 'א ב ג ד ה ו', 'setup keeps the value');
+  envD.userEdit('הגדרות', 'B' + row, 'garbage');
+  assert.deepEqual(Array.from(Q.readSettings_(envD.ss, tz).days), [0, 1, 2, 3, 4, 5], 'unreadable → the default');
+  // the tools screen
+  let g = W('gabbaiSettings', k, s);
+  assert.deepEqual(g.days, [0, 1, 2, 3, 4, 5]);
+  const base = { name: g.name, from: 0, to: 24, start: Q.addDays_(g.today, -13), end: g.end, threshold: 50, rebbe: 25 };
+  assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { days: [] })), /לפחות יום מניין אחד/);
+  assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { days: [6] })), /לפחות יום מניין אחד/, 'Shabbat is dropped');
+  g = W('gabbaiSaveSettings', k, s, Object.assign({}, base, { days: [4, 0, 1, 2, 3] }));
+  assert.deepEqual(g.days, [0, 1, 2, 3, 4]); assert.equal(sh.data[row - 1][1], 'א ב ג ד ה');
+  g = W('gabbaiSaveSettings', k, s, base);
+  assert.deepEqual(g.days, [0, 1, 2, 3, 4], 'left out → unchanged');
+  // a Friday is not counted, and can't be registered or imported
+  let fri = ''; for (let n = 1; n <= 7; n++) { const d = Q.addDays_(g.today, -n); if (Q.dow_(d) === 5) fri = d; }
+  const st = Q.computeStats_(Q.loadCtx_(envD.ss), base.start, g.today);
+  assert(st.days.length >= 8 && st.days.every(d => Q.dow_(d) <= 4), 'only Sunday–Thursday count: ' + st.days.join(','));
+  W('kioskSubmit', k, { phone: '0521111111', first: 'משה', last: 'כהן', session: s, date: Q.addDays_(fri, -1) });
+  const r = W('kioskSubmit', k, { phone: '0521111111', session: s, date: fri });
+  assert.equal(r.ok, false); assert(/ביום זה אין מניין.*א׳–ה׳/.test(r.message), r.message);
+  const imp = W('gabbaiParseImport', k, s, fri.slice(8, 10) + '.' + fri.slice(5, 7) + ': לוי', '');
+  assert.equal(imp.dateInfo[fri].offDay, true); assert.deepEqual(imp.days, [0, 1, 2, 3, 4]);
+  assert.equal(W('gabbaiQueueImport', k, s, imp.rows).rejected, 1);
+  // today: closed when today isn't a minyan day
+  const dw = Q.dow_(g.today);
+  if (dw !== 6) {
+    const others = [0, 1, 2, 3, 4, 5].filter(x => x !== dw);
+    W('gabbaiSaveSettings', k, s, Object.assign({}, base, { days: others }));
+    const init = W('kioskInit', k, '');
+    assert.equal(init.minyanDay, false); assert.deepEqual(init.days, others);
+    const self = W('kioskSubmit', k, { first: 'א', last: 'ב', device: 'mobile' });
+    assert.equal(self.ok, false); assert(/^היום אין מניין/.test(self.message), self.message);
+    W('gabbaiSaveSettings', k, s, Object.assign({}, base, { days: [dw] }));
+    assert.equal(W('kioskInit', k, '').minyanDay, true);
+  }
+  console.log('minyan weekdays OK');
+}
+
 console.log('\nALL OK');

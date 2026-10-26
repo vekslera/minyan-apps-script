@@ -38,7 +38,7 @@ function kioskInit_(key, session) {
   // The names (never the phone numbers) go to the page, which then suggests names without calling the server.
   const roster = peopleForReading_(ss).map(p => ({ id: p.id, first: p.first, last: p.last, aliases: p.aliases,
                                                     hint: p.phone ? p.phone.slice(-3) : '' }));
-  return { name: s.name, today: today, dow: dow_(today), open: isOpenHour_(s, tz),
+  return { name: s.name, today: today, dow: dow_(today), minyanDay: s.days.indexOf(dow_(today)) >= 0, days: s.days, open: isOpenHour_(s, tz),
            from: s.from, to: s.to, noMinyan: s.excluded.has(today), roster: roster, locationCheck: !!shulArea_(),
            session: session ? sessionValid_(key, session) : false };
 }
@@ -81,6 +81,7 @@ function kioskSubmit_(key, d) {
       if (date > today) return fail('אי אפשר לרשום לתאריך עתידי');
     }
     if (dow_(date) === 6) return fail('אין רישום בשבת');
+    if (s.days.indexOf(dow_(date)) < 0) return fail((date === today ? 'היום' : 'ביום זה') + ' אין מניין. המניין מתקיים בימים ' + daysLabel_(s.days));
     if (ctx.excluded.has(date)) return fail('תאריך זה מסומן כיום ללא מניין');
     if (!gabbai && !isOpenHour_(s, ctx.tz)) return fail('הרישום פתוח בין השעות ' + fmtHour_(s.from) + ' ל-' + fmtHour_(s.to));
 

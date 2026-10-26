@@ -31,6 +31,7 @@ function refreshClosed() {
   var i = S.info, why = '';
   if (!S.session) {
     if (i.dow === 6) why = 'שבת שלום<small>אין רישום בשבת</small>';
+    else if (i.minyanDay === false) why = 'היום אין מניין<small>המניין מתקיים בימים ' + daysLabel_(i.days) + '</small>';
     else if (i.noMinyan) why = 'היום אין רישום';
     else if (!i.open) why = 'הרישום סגור כעת<small>הרישום פתוח בין השעות ' + fmtHour_(i.from) + ' ל-' + fmtHour_(i.to) + '</small>';
     else if (DEVICE === 'desktop') why = 'רישום עצמי — מטלפון נייד או מטאבלט<small>במחשב אפשר לרשום רק במצב גבאי</small>';

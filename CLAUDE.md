@@ -59,15 +59,18 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
 
 - `Secrets.gs` (git-ignored): only set-once values — `ownerAccount`, `deploymentId` (the single source of the
   page address), `kioskKey`, `locationLog` (reserved). Template: `Secrets.gs.example`.
-- The הגדרות sheet: everything the gabbai changes (name, period, thresholds, hours, shul point, radius, GPS
-  tolerance, no-minyan dates in column E). Rows are found by label (`SET`, `SET_ROWS` in `Config.gs`);
+- The הגדרות sheet: everything the gabbai changes (name, period, thresholds, hours, minyan weekdays, shul point,
+  radius, GPS tolerance, no-minyan dates in column E). Rows are found by label (`SET`, `SET_ROWS` in `Config.gs`);
   new rows go **at the end** so existing rows keep their places. `setup()` (`migrateSettings_`) puts the
   sheet in the current layout, keeps values, and is safe to re-run.
 - The gabbai code: document properties only (`GABBAI_PIN`) — never in the Sheet, never in git.
 - Thresholds: lottery and report to the Rebbe (default 25); **0 = switched off** (tool stays visible, marked
   "כבוי", in the tools and in the Sheet menu). Hours are text in half-hour steps (`8:30`).
+- Minyan weekdays (`ימי המניין`, Hebrew letters, default `א ב ג ד ה ו`): `s.days` = weekday numbers 0–5. A day
+  counts when `isMinyanDay_` (a minyan weekday, not in column E); registration, gabbai mode and the import refuse
+  other weekdays. Never test `dow_ === 6` alone for "is there a minyan".
 - Scaling: decided on **option C** — a copy per minyan in the minyan's own Google account, updated centrally
-  (`deploy-all`, planned). The analysis is a doc the owner keeps; next: a "ימי המניין" setting (weekdays).
+  (`deploy-all`, planned). The analysis is a doc the owner keeps; next: a template Sheet + Hebrew install guide.
 
 ## Privacy
 

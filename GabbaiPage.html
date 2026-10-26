@@ -202,6 +202,9 @@ window.onerror = function (msg) {
   <div id="settingsNote"></div>
   <div class="card">
     <label class="field"><span>שם המניין</span><input id="setName" type="text" maxlength="60"></label>
+    <div class="field"><span>ימי המניין</span>
+      <div class="row" id="setDays" style="margin-top:4px"></div>
+      <small class="g-meta">רק בימים אלה יש רישום, והם נספרים באחוזים. בשבת אין רישום אף פעם.</small></div>
     <div class="row">
       <label>רישום עצמי משעה <select id="setFrom"></select></label>
       <label>עד שעה <select id="setTo"></select></label>
@@ -218,7 +221,7 @@ window.onerror = function (msg) {
   </div>
   <div class="card">
     <b>ימים ללא מניין</b>
-    <p class="lead">ימים שבהם אין מניין (למשל יום טוב) לא נספרים בחישוב האחוזים. שבתות לא נספרות ממילא.</p>
+    <p class="lead">תאריכים מסוימים שבהם אין מניין (למשל יום טוב) לא נספרים בחישוב האחוזים. שבתות וימים שאינם מימי המניין לא נספרים ממילא.</p>
     <div id="noMinyanList"></div>
     <div class="row"><input type="date" id="noMinyanDate"><button class="btn" id="noMinyanAdd" type="button">הוספה</button></div>
   </div>
