@@ -186,7 +186,7 @@ Then upload it with `clasp push` (route B: just save the file).
 **The הגדרות sheet.** The sheet is right-to-left, so column A is on the right. Rows are found by their label in column A, so their order doesn't matter, but `setup` keeps them in this order:
 
 | Row | Column A (setting) | Column B |
-|---|---|---|
+| --- | --- | --- |
 | 2 | שם המניין | Shown at the top of the page and in the reports |
 | 3 | תחילת התקופה | First day of the lottery period |
 | 4 | סוף התקופה | Last day of the period |
@@ -355,7 +355,7 @@ Its closing message lists what moved. After that, `gabbaiPin`, `lotteryThreshold
 ## 10. Troubleshooting
 
 | Symptom | Cause and fix |
-|---|---|
+| --- | --- |
 | Pages break with `ReferenceError: document is not defined` in **Executions**, or functions "not found" | `scripts/*.js` were uploaded as server code because `.clasp.json` lacks `"scriptExtensions": [".gs"]` and `"htmlExtensions": [".html", ".js"]`. Add them (see `.clasp.json.example`) and push again. |
 | `clasp push`: "A file with this name already exists … Admin" | Two files with the same name ignoring extension (e.g. an old `Admin.html` next to `Admin.gs`). Delete the old file and push again. |
 | `clasp push`: "User has not enabled the Apps Script API" | Turn it on at <https://script.google.com/home/usersettings>, wait a minute, retry. |
@@ -396,7 +396,7 @@ Private, git-ignored, only on your computer: `.clasp.json` (your Script ID), `sr
 **`src/`:**
 
 | File | What it holds |
-|---|---|
+| --- | --- |
 | `Setup.gs` | The מניין menu, `setup()` (first-time setup, and moving settings after an update), the הוראות (help) sheet |
 | `Config.gs` | Sheet names, column layouts, settings labels, matching thresholds |
 | `Kiosk.gs` | Server side of the registration page (`doGet`, `kiosk*`); `doGet` also serves the gabbai tools page |
@@ -429,7 +429,7 @@ Private, git-ignored, only on your computer: `.clasp.json` (your Script ID), `sr
 **`deploy/`** (run from anywhere; they work on the project folder above them):
 
 | File | What it holds |
-|---|---|
+| --- | --- |
 | `deploy.ps1`, `deploy.cmd` | Update this project's own minyan: push + new version of its page (through `minyanim.json` when it is listed there, else `src/Secrets.gs`) |
 | `deploy.sh` | The same for macOS/Linux, with the deployment ID from `src/Secrets.gs` |
 | `deploy-all.ps1`, `deploy-all.cmd` | Update every minyan in `minyanim.json` and the template ([§15](#15-more-minyanim-the-template-and-deploy-all)) |
