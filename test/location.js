@@ -44,8 +44,10 @@ const sent = [];
   await p.fill('#phone', '0521111111'); await p.waitForTimeout(300); await p.click('#submit'); await p.waitForTimeout(500);
   const rows = await p.$$eval('#timingRows > div', d => d.map(x => x.textContent));
   console.log('timing panel:\n  ' + rows.join('\n  '));
-  ['server built the page', 'page code running', 'kioskInit (server ', 'form ready', 'tap: register', 'GPS', 'kioskSubmit (server ', 'confirmation shown']
+  ['server built the page', 'page code running', "today's data came with the page", 'form ready', 'GPS — early reading started',
+   'tap: register', 'GPS — early reading, ±15 m', 'kioskSubmit (server ', 'confirmation shown']
     .forEach(l => assert(rows.some(r => r.includes(l)), 'timing row: ' + l));
+  assert(!rows.some(r => r.includes('kioskInit')), 'no second call when the page opens');
   const ph = await p.$eval('#timing', b => b.getBoundingClientRect().height);
   assert(ph < 110, 'compact panel (about 4 lines): ' + ph + ' px');
   await p.screenshot({ path: 'test/shots/l0-timing.png' });
@@ -56,6 +58,15 @@ const sent = [];
   assert.equal(await p.$('#timing'), null, 'no panel without &debug=1');
   await ctx.close();
 
+  // 1c. the early reading follows the person: page opened outside, walks in while typing → registered as inside
+  ({ ctx, p } = await open(Object.assign({ geolocation: Object.assign(north(900), { accuracy: 15 }) }, phone), { debug: '1' }));
+  await p.waitForTimeout(300);
+  await ctx.setGeolocation(Object.assign(north(25), { accuracy: 12 }));    // walked in
+  await p.waitForTimeout(300);
+  await p.fill('#phone', '0521111111'); await p.waitForTimeout(300); await p.click('#submit'); await p.waitForTimeout(500);
+  assert(/משה כהן/.test(await p.textContent('#doneTitle')), 'the latest early reading is used');
+  await ctx.close();
+
   // 2. outside → told so; walks in and retries → registered
   ({ ctx, p } = await open(Object.assign({ geolocation: Object.assign(north(850), { accuracy: 20 }) }, phone)));
   await p.fill('#last', 'לוי'); await p.fill('#first', 'דוד'); await p.click('#submit'); await p.waitForTimeout(500);
@@ -63,7 +74,7 @@ const sent = [];
   console.log('outside →', (await p.textContent('#whereTitle')).trim(), '|', (await p.textContent('#whereText')).trim().slice(0, 40));
   await p.screenshot({ path: 'test/shots/l1-outside.png' });
   await ctx.setGeolocation(Object.assign(north(40), { accuracy: 15 }));
-  await p.click('#whereRetry'); await p.waitForTimeout(500);
+  await p.click('#whereRetry'); await p.waitForTimeout(1500);
   console.log('after walking in + retry →', (await p.textContent('#doneTitle')).trim());
   assert(/דוד לוי/.test(await p.textContent('#doneTitle')));
   // 3. outside again → sends it for the gabbai's approval

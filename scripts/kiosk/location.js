@@ -12,6 +12,7 @@ function needsLocation() { return !!(S.info && S.info.locationCheck) && !S.sessi
  * Always a fresh reading (maximumAge 0): an earlier one may be from before the person walked in — or out.
  */
 function getLocation(cb) {
+  if (typeof stopEarlyLocation === 'function') stopEarlyLocation();   // one location request at a time
   var called = false, done = ttime('GPS');
   function finish(x) { if (!called) { called = true; done(null, x.error ? x.error : '±' + Math.round(x.acc) + ' m'); cb(x); } }
   if (!navigator.geolocation) return finish({ error: 'unsupported' });
@@ -23,6 +24,54 @@ function getLocation(cb) {
       finish({ error: err.code === 1 ? 'denied' : err.code === 3 ? 'timeout' : 'unavailable' });
     }, { enableHighAccuracy: true, timeout: LOC_TIMEOUT, maximumAge: 0 });
   } catch (e) { finish({ error: 'unavailable' }); }
+}
+
+// ---------- Early reading ----------
+// The GPS starts before the tap, so the position is usually ready when the person taps "רישום נוכחות":
+// at once when the phone already allows location, otherwise when they start typing (so the permission
+// question doesn't pop up the moment the page opens). The reading stays in the page and goes to the
+// server only with the registration — never stored. It restarts when the page comes back to the screen.
+var EARLY_MAX_AGE = 2 * 60 * 1000, EARLY_STOP = 3 * 60 * 1000;
+var EARLY = { watch: null, pos: null, waiting: false, stopTimer: null };
+
+function startEarlyLocation() {
+  if (!needsLocation() || !navigator.geolocation || EARLY.watch !== null || EARLY.waiting) return;
+  var go = function () { EARLY.waiting = false; watchEarly(); };
+  var onFirstInput = function () { $('form').removeEventListener('focusin', onFirstInput); go(); };
+  try {
+    navigator.permissions.query({ name: 'geolocation' }).then(function (p) {
+      if (p.state === 'granted') go();
+      else { EARLY.waiting = true; $('form').addEventListener('focusin', onFirstInput); }
+    }, function () { EARLY.waiting = true; $('form').addEventListener('focusin', onFirstInput); });
+  } catch (e) { EARLY.waiting = true; $('form').addEventListener('focusin', onFirstInput); }
+}
+function watchEarly() {
+  if (EARLY.watch !== null) return;
+  var done = ttime('GPS — early reading started');
+  try {
+    EARLY.watch = navigator.geolocation.watchPosition(function (pos) {
+      if (!EARLY.pos) done(null, '±' + Math.round(pos.coords.accuracy) + ' m');
+      EARLY.pos = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy, t: Date.now() };
+    }, function () { /* no early reading: the tap takes one, with the usual messages */ },
+    { enableHighAccuracy: true, maximumAge: 0, timeout: LOC_TIMEOUT });
+  } catch (e) { EARLY.watch = null; return; }
+  clearTimeout(EARLY.stopTimer);
+  EARLY.stopTimer = setTimeout(stopEarlyLocation, EARLY_STOP);       // spare the battery on a page left open
+}
+function stopEarlyLocation() {
+  if (EARLY.watch !== null) { try { navigator.geolocation.clearWatch(EARLY.watch); } catch (e) {} }
+  EARLY.watch = null;
+}
+/** The early reading, if it is recent enough to stand for "now". */
+function recentLocation() {
+  var p = EARLY.pos;
+  return p && Date.now() - p.t < EARLY_MAX_AGE ? { lat: p.lat, lng: p.lng, acc: p.acc, t: p.t } : null;
+}
+/** Back on screen after a while (phone in the pocket): forget the old reading and start again. */
+function onVisibility() {
+  if (document.hidden) { stopEarlyLocation(); return; }
+  EARLY.pos = null;
+  startEarlyLocation();
 }
 
 /**
@@ -92,7 +141,7 @@ function locationHelp(err, again) {
          '<p class="privacy">המיקום לא נשמר — הוא משמש רק לבדיקה שאתה בבית הכנסת.</p>';
 }
 function hideWhere() { show('where', false); show('form', true); }
-function retryWhere() { hideWhere(); resubmit(false); }
+function retryWhere() { hideWhere(); resubmit(false, true); }
 function sendForApproval() { hideWhere(); resubmit(true); }
 function cancelWhere() { hideWhere(); reset(); }
 

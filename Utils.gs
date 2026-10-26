@@ -188,6 +188,12 @@ function checkAdmin_(t) { if (!t || t !== adminToken_()) throw new Error('אין
 function todayKey_(tz) { return Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd'); }
 function keyToDate_(k, tz) { return Utilities.parseDate(k, tz, 'yyyy-MM-dd'); }
 function fmtKey_(k) { return k.slice(8, 10) + '/' + k.slice(5, 7) + '/' + k.slice(0, 4); }
+/** JSON that is safe inside a <script> block (no "</script>", no line separators that break JS). */
+function scriptJson_(v) {
+  return JSON.stringify(v).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+}
+
 /** Adds the server's own time (ms) to a result, for the &debug=1 timing panel. */
 function withMs_(t0, r) { if (r && typeof r === 'object') r._ms = Date.now() - t0; return r; }
 

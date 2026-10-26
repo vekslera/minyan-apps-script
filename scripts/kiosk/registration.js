@@ -2,9 +2,17 @@
 // Declarations only — nothing runs when the file loads; the page calls the start function.
 
 // ---------- Startup & state ----------
+/**
+ * The page arrives with today's data and the name list (INIT, from doGet), so the form shows at once.
+ * Only a saved gabbai login needs a server call first, to check that it is still valid.
+ */
 function init() {
   var saved = load('minyanSession');
-  call('kioskInit', [KEY, saved || ''], function (info) {
+  if (!saved && INIT && typeof INIT === 'object') { tmark('today\'s data came with the page'); return applyInit(INIT, ''); }
+  call('kioskInit', [KEY, saved || ''], function (info) { applyInit(info, saved); },
+       function (e) { $('loading').textContent = errText(e); });
+}
+function applyInit(info, saved) {
     S.info = info;
     S.roster = info.roster || S.roster;
     $('title').textContent = info.name || 'רישום נוכחות';
@@ -17,7 +25,7 @@ function init() {
     if (saved && info.session && !S.session) { S.session = saved; gabbaiActive(); gabbaiUi(true); reset(); }   // back in gabbai mode
     else if (saved && !info.session) store('minyanSession', null);
     refreshClosed();
-  }, function (e) { $('loading').textContent = errText(e); });
+    startEarlyLocation();
 }
 function refreshClosed() {
   var i = S.info, why = '';
@@ -49,10 +57,16 @@ function submit(ev) {
   tmark('tap: register');
   resubmit(false);
 }
-/** Sends the registration — with a fresh position first when this device must be in the shul. */
-function resubmit(outsideOk) {
+/**
+ * Sends the registration — with a position first when this device must be in the shul: the early reading
+ * when it is recent (taken while the person typed), otherwise a fresh one. fresh = always a new reading
+ * ("נסה שוב" after walking in).
+ */
+function resubmit(outsideOk, fresh) {
   if (!needsLocation()) { S.loc = null; return send(false); }
   if (outsideOk) return send(true);
+  var early = !fresh && recentLocation();
+  if (early) { S.loc = early; tmark('GPS — early reading, ±' + Math.round(early.acc) + ' m, ' + Math.round((Date.now() - early.t) / 1000) + ' s old'); return send(false); }
   setBusy(true, 'בודק מיקום…');
   getLocation(function (loc) { S.loc = loc; send(false); });
 }
@@ -93,6 +107,7 @@ function done(res) {
   show('form', false);
   show('done', true);
   tmark('confirmation shown');
+  stopEarlyLocation(); EARLY.pos = null;
   clearTimeout(S.resetTimer);
   S.resetTimer = setTimeout(reset, g ? 2000 : 6000);
 }
@@ -106,4 +121,5 @@ function reset() {
   refreshClosed();
   if (S.session) $('phone').focus();
   prefillPhone();
+  startEarlyLocation();
 }

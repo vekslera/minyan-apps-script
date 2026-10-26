@@ -20,7 +20,9 @@ function doGet(e) {
   let html = !ok ? page_('BadLinkPage')
     : tools ? page_('GabbaiPage').replace('__KEY__', () => key).replace(/__HOME__/g, () => link ? link + keep : '')
     : page_('KioskPage').replace('__KEY__', () => key).replace('__DEVICE__', () => forced)
-                        .replace('__TOOLS__', () => link ? link + '&view=gabbai' + keep : '');
+                        .replace('__TOOLS__', () => link ? link + '&view=gabbai' + keep : '')
+                        // Today's data and the name list go into the page itself: the form needs no second call.
+                        .replace('__INIT__', () => scriptJson_(kioskInit_(key, '')));
   html = html.replace('__DEBUG__', () => debug ? String(Date.now() - t0) : '');
   return HtmlService.createHtmlOutput(html)
     .setTitle(tools ? 'כלי גבאי — מניין' : 'רישום נוכחות במניין')

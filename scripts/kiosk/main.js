@@ -20,6 +20,7 @@ function startKiosk() {
   $('notMe').addEventListener('click', notMe);
   $('whereRetry').addEventListener('click', retryWhere);
   $('whereAllow').addEventListener('click', allowLocation);
+  document.addEventListener('visibilitychange', onVisibility);
   $('whereSend').addEventListener('click', sendForApproval);
   $('whereCancel').addEventListener('click', cancelWhere);
   $('locTest').addEventListener('click', testLocation);

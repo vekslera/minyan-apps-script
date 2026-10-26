@@ -132,7 +132,7 @@ window.onerror = function (msg) {
 
       <div class="msg err" id="msg" hidden></div>
       <button class="primary" id="submit" type="submit">רישום נוכחות</button>
-      <p class="locnote" id="locNote" hidden>בעת הרישום הטלפון יבקש גישה למיקום. המיקום לא נשמר — הוא משמש רק לבדיקה שאתה בבית הכנסת.</p>
+      <p class="locnote" id="locNote" hidden>הטלפון יבקש גישה למיקום. המיקום לא נשמר — הוא משמש רק לבדיקה שאתה בבית הכנסת.</p>
     </form>
 
     <div class="where" id="where" hidden>
@@ -175,6 +175,7 @@ window.onerror = function (msg) {
 var KEY = '__KEY__';
 var FORCED_DEVICE = '__DEVICE__';
 var DEBUG_MS = '__DEBUG__';
+var INIT = __INIT__;
 var TOOLS_URL = '__TOOLS__';
 </script>
 <script data-include="scripts/common/dom.js"></script>
