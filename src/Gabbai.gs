@@ -81,8 +81,9 @@ function gabbaiLink(key, session) {
   const s = readSettings_(ss, ss.getSpreadsheetTimeZone());
   const link = kioskLink_(s);
   // name, gabbai and dev: for the printable QR sign (scripts/gabbai/poster.js)
-  return { link: link, tools: link ? link + '&view=gabbai' : '', name: s.name,
-           gabbai: { name: s.gabbaiName, phone: s.gabbaiPhone }, dev: { name: DEVELOPER.name, phone: DEVELOPER.phone } };
+  return Object.assign({ link: link, tools: link ? link + '&view=gabbai' : '', name: s.name,
+           gabbai: { name: s.gabbaiName, phone: s.gabbaiPhone }, dev: { name: DEVELOPER.name, phone: DEVELOPER.phone } },
+           posterInfo_(s));                                   // Poster.gs: prize, thresholds, Hebrew dates
 }
 
 // ---- Settings: name, minyan weekdays, registration hours, period, thresholds, days without a minyan ----
@@ -90,12 +91,12 @@ function settingsForPage_() {
   const ss = SpreadsheetApp.getActive(), tz = ss.getSpreadsheetTimeZone();
   const s = readSettings_(ss, tz);
   return { name: s.name, from: s.from, to: s.to, start: s.start, end: s.end, threshold: s.threshold, rebbe: s.rebbe, days: s.days,
-           gabbaiName: s.gabbaiName, gabbaiPhone: s.gabbaiPhone,
+           gabbaiName: s.gabbaiName, gabbaiPhone: s.gabbaiPhone, prize: s.prize,
            excluded: Array.from(s.excluded).sort(), today: todayKey_(tz) };
 }
 function gabbaiSettings(key, session) { checkSession_(key, session); return settingsForPage_(); }
 
-/** d = {name, days, from, to, start, end, threshold, rebbe, gabbaiName, gabbaiPhone}. Checks everything first; saves all or nothing. */
+/** d = {name, days, from, to, start, end, threshold, rebbe, gabbaiName, gabbaiPhone, prize}. Checks everything first; saves all or nothing. */
 function gabbaiSaveSettings(key, session, d) {
   checkSession_(key, session);
   d = d || {};
@@ -127,17 +128,22 @@ function gabbaiSaveSettings(key, session, d) {
   if (days) v[SET.DAYS] = fmtDays_(days);
   if (gName !== null) v[SET.GNAME] = gName;
   if (gPhone !== null) v[SET.GPHONE] = gPhone;
+  if (d.prize !== undefined) {                                 // the lottery's prize, for the QR sign
+    const prize = clean_(d.prize);
+    if (prize.length > 60) throw new Error('שם הפרס ארוך מדי');
+    v[SET.PRIZE] = prize;
+  }
   v[SET.NAME] = name; v[SET.FROM] = fmtHour_(from); v[SET.TO] = fmtHour_(to); v[SET.PCT] = Math.round(thr * 10) / 10; v[SET.REBBE] = Math.round(reb * 10) / 10;
   v[SET.START] = keyToDate_(start, tz); v[SET.END] = keyToDate_(end, tz);
   withLock_(() => { textFormatHours_(); setSettings_(v); });
   return settingsForPage_();
 }
 
-/** The hour and phone cells hold text ("8:30", "052-…"), so Sheets doesn't turn them into times or numbers. */
+/** The hour, phone and prize cells hold text ("8:30", "052-…", "770$"), so Sheets doesn't turn them into times or numbers. */
 function textFormatHours_() {
   const sh = sheet_(SpreadsheetApp.getActive(), SH.SETTINGS);
   const labels = sh.getRange(1, 1, Math.max(sh.getLastRow(), 1), 1).getValues().map(r => String(r[0]).trim());
-  [SET.FROM, SET.TO, SET.GPHONE].forEach(l => { const i = labels.indexOf(l); if (i >= 0) sh.getRange(i + 1, 2).setNumberFormat('@'); });
+  [SET.FROM, SET.TO, SET.GPHONE, SET.PRIZE].forEach(l => { const i = labels.indexOf(l); if (i >= 0) sh.getRange(i + 1, 2).setNumberFormat('@'); });
 }
 
 /** Replaces the list of days without a minyan (column E of הגדרות). dates = ['yyyy-mm-dd', …]. */

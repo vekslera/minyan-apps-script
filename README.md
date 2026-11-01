@@ -199,6 +199,7 @@ Then upload it with `clasp push` (route B: just save the file).
 | 13 | ימי המניין | The weekdays the minyan meets, as Hebrew letters: `א ב ג ד ה ו` (Sunday–Friday, the default) or a range like `א-ה` (Sunday–Thursday). Only these days count toward the percentages, and only on them is registration open (also in gabbai mode and in the WhatsApp import). Shabbat never. Unreadable or empty = Sunday–Friday |
 | 14–15 | שם הגבאי / טלפון הגבאי | Optional. Shown on the printable QR sign as the person to ask when someone can't register. Empty = the sign names only the developer. The phone is kept as text (`050-1234567`) |
 | 16 | חשבון Google של המניין | **Filled in by setup, read-only:** the Google account that owns the Sheet. Editing the cell brings a warning, and a change is put back at once. Information for whoever looks after the minyan; error alerts mention it too |
+| 17 | פרס ההגרלה | Optional. Shown on the printable QR sign: "מבצע!!! הגרלה על …". Empty = "מבצע!!! הגרלה!". Kept as text (so `770$` stays as typed) |
 
 - **Values go in column B.** Column C is only an explanation, and a value typed there is ignored.
 - **Days with no minyan.** Column **E**, one date per cell, for single dates with no registration (e.g. Yom Tov). They don't count toward the percentage. Weekdays the minyan never meets go in row 13, not here.
@@ -299,7 +300,14 @@ A web page with the gabbai's work, for when the Sheet isn't at hand. It needs th
   - **הגרלה** — shows who takes part, warns about entries still waiting for review and about an earlier draw, and asks for a second tap before drawing. The draw is logged in **הגרלות**.
   - **כפילויות** — pairs that look like one person. Tick "למזג" and choose which record to keep (the one with more days is preselected); attendance moves to it.
   - **קישור ו-QR** — the registration link with a QR code, copy and share, and **דף QR להדפסה (PDF)**: an A4 sign to print and hang in the shul, or to send.
-    - **On the sign:** בס"ד at the top right; the minyan's name (or "רישום למניין"); a large QR code; how to register; and whom to ask when the camera doesn't scan. That is the gabbai (name and phone from **הגדרות**), with the developer below in a smaller bold line (16 pt, against the gabbai's 21–26 pt); with no gabbai details, only the developer.
+    - **On the sign**, top to bottom:
+      - בס"ד at the top right, and the minyan's name (or "רישום למניין") in large print.
+      - The lottery: "מבצע!!! הגרלה על …" (the prize from **הגדרות**) and who takes part (the lottery threshold). Left out when the lottery is off (0%).
+      - Who is mentioned in the report to the Rebbe (its threshold). Left out when the report is off (0%).
+      - The period as Hebrew dates ("מט״ו בחשוון תשפ״ז עד …").
+      - "סרקו את הקוד…", a QR code about 5 cm wide, and the four registration steps.
+      - A wide line, then in large bold print: whom to ask (the gabbai's name and phone from **הגדרות**, without the word "גבאי"), and the developer for technical trouble. With no gabbai details, only the developer.
+      - When some lines are left out, the content is centered on the page.
     - **How it is made:** the page draws it in the browser (`scripts/gabbai/poster.js`) and makes the PDF with jsPDF from cdnjs, loaded only when the button is pressed. No new Google permission is needed.
     - **Getting it:** **הורדת PDF** downloads `minyan-QR.pdf`, and **שיתוף** appears where the phone can share files. If the download doesn't work, long-press the picture to save it.
   - **הגדרות** — the gabbai's name and phone (for the QR sign), the minyan's name, the minyan's weekdays (a box per day, Sunday to Friday; at least one), the self-registration hours (half-hour steps: 8:00, 8:30, 9:00 …), the period, the lottery threshold, the report-to-the-Rebbe threshold, and the days without a minyan (add or remove dates). Saved to the הגדרות sheet.
@@ -414,6 +422,7 @@ Private, git-ignored, only on your computer: `.clasp.json` (your Script ID), `sr
 | `Duplicates.gs` | Finding and merging duplicate people (shared by the Sheet menu and the tools page) |
 | `Utils.gs` | Dates, settings, keys, private-settings loader, small helpers |
 | `Account.gs` | The read-only row with the minyan's Google account (filled in by setup, put back if edited) |
+| `Poster.gs` | The QR sign's data besides the link: the prize, both thresholds, the period as Hebrew dates (`hebDateLong_`) |
 | `Notify.gs` | Error alerts and the daily check, emailed to the maintainer ([§16](#16-error-alerts-to-the-maintainer-email)); the test alert; also `doGet`, which reports a page that fails to build |
 | `KioskPage.html` | The registration page: markup and styles |
 | `GabbaiPage.html` | The gabbai tools page: markup and styles |

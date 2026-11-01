@@ -40,6 +40,7 @@ function renderSettings(g) {
   $('setPct').value = g.threshold;
   $('setRebbe').value = g.rebbe;
   $('setGName').value = g.gabbaiName || ''; $('setGPhone').value = g.gabbaiPhone || '';
+  $('setPrize').value = g.prize || '';
   var list = g.excluded;
   $('noMinyanList').innerHTML = list.length
     ? list.map(function (k, i) { return '<span class="nm">' + esc(dlabel(k)) + '/' + k.slice(0, 4) + '<button type="button" title="הסרה" data-i="' + i + '" class="nmDel">×</button></span>'; }).join('')
@@ -55,7 +56,7 @@ function saveSettings() {
   var d = { name: $('setName').value.trim(), from: Number($('setFrom').value), to: Number($('setTo').value),
             start: $('setStart').value, end: $('setEnd').value, threshold: Number($('setPct').value),
             rebbe: Number($('setRebbe').value), days: chosenDays(),
-            gabbaiName: $('setGName').value.trim(), gabbaiPhone: $('setGPhone').value.trim() };
+            gabbaiName: $('setGName').value.trim(), gabbaiPhone: $('setGPhone').value.trim(), prize: $('setPrize').value.trim() };
   if (d.gabbaiPhone && !validPhone_(normPhone(d.gabbaiPhone))) return flash('settingsNote', 'err', 'טלפון הגבאי אינו תקין');
   if (!d.days.length) return flash('settingsNote', 'err', 'יש לבחור לפחות יום מניין אחד');
   if (d.from >= d.to) return flash('settingsNote', 'err', '"משעה" צריכה להיות לפני "עד שעה"');

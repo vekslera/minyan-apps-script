@@ -37,6 +37,7 @@ function readSettings_(ss, tz) {
   return { name: String(map[SET.NAME] || 'מניין שחרית').trim(), start: toKey_(map[SET.START], tz), end: toKey_(map[SET.END], tz),
            days: parseDays_(map[SET.DAYS]) || DEFAULT_DAYS.slice(),       // weekdays 0 (Sunday) … 5 (Friday)
            gabbaiName: String(map[SET.GNAME] == null ? '' : map[SET.GNAME]).trim(), gabbaiPhone: phoneCell_(map[SET.GPHONE]),
+           prize: String(map[SET.PRIZE] == null ? '' : map[SET.PRIZE]).trim(),
            threshold: num(map[SET.PCT], 75), rebbe: num(map[SET.REBBE], 25), from: num(map[SET.FROM], 5), to: num(map[SET.TO], 11),   // hours; 8.5 = 8:30
            // The gabbai code is kept out of sight (script properties). Until setup() moves it there,
            // the old places still work: Secrets.gs, then the old "קוד גבאי" row.

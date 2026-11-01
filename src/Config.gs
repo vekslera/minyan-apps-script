@@ -39,6 +39,7 @@ const SET = {
   GNAME: 'שם הגבאי',
   GPHONE: 'טלפון הגבאי',
   ACCOUNT: 'חשבון Google של המניין',
+  PRIZE: 'פרס ההגרלה',
 };
 // The developer, on the printable QR sign (with the gabbai, or alone when the gabbai's details aren't set).
 const DEVELOPER = { name: 'אלכס וקסלר', phone: '052-8353205' };
@@ -61,6 +62,7 @@ const SET_ROWS = [
   [SET.GNAME, 'מופיע בדף ה-QR להדפסה: למי לפנות מי שלא מצליח להירשם. ריק = רק פרטי המפתח'],
   [SET.GPHONE, 'טלפון לסמס, מופיע בדף ה-QR להדפסה'],
   [SET.ACCOUNT, 'נרשם אוטומטית בהגדרה ראשונית: החשבון שהגיליון שייך לו. לא לעריכה'],
+  [SET.PRIZE, 'מופיע בדף ה-QR להדפסה: "מבצע!!! הגרלה על …", למשל טיסה לרבי. ריק = בלי שם פרס'],
 ];
 
 // Name-matching thresholds (0..1)

@@ -63,7 +63,9 @@ Minyan attendance tracker: a Google Sheet with a bound Apps Script project. Peop
   file as "download", without ".pdf".
 - The printable QR sign (`scripts/gabbai/poster.js`) is drawn on a canvas in the browser (the browser shapes the
   Hebrew) and wrapped in a PDF by jsPDF from cdnjs — no server work and no new permission. The developer's
-  details are `DEVELOPER` in `Config.gs`; the gabbai's are settings rows (`SET.GNAME`, `SET.GPHONE`).
+  details are `DEVELOPER` in `Config.gs`; the gabbai's are settings rows (`SET.GNAME`, `SET.GPHONE`); the prize is
+  `SET.PRIZE`. `Poster.gs` (`posterInfo_`, hooked into `gabbaiLink`) adds the prize, thresholds and Hebrew dates;
+  lines whose feature is off (0%) or missing are left out, and the content is centered vertically.
 
 ## Settings and secrets
 

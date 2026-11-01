@@ -722,6 +722,16 @@ G.menuKioskLink(); assert(env.ui.lastDialog.includes('/exec?k=' + key)); console
   assert.equal(Q.readSettings_(envD.ss, tz).gabbaiPhone, '050-1112233');
   g = W('gabbaiSaveSettings', k, s, Object.assign({}, base, { gabbaiName: '', gabbaiPhone: '' }));
   assert.equal(g.gabbaiName, ''); assert.equal(g.gabbaiPhone, '');
+  // the lottery's prize (for the QR sign) and the sign's data
+  g = W('gabbaiSaveSettings', k, s, Object.assign({}, base, { prize: ' 770$ לטיסה  לרבי ' }));
+  assert.equal(g.prize, '770$ לטיסה לרבי'); assert.equal(gRow('פרס ההגרלה')[1], '770$ לטיסה לרבי', 'kept as text');
+  assert(sh.data.findIndex(x => x[0] === 'פרס ההגרלה') > sh.data.findIndex(x => x[0] === 'טלפון הגבאי'), 'a new row at the end');
+  assert.throws(() => W('gabbaiSaveSettings', k, s, Object.assign({}, base, { prize: 'x'.repeat(61) })), /ארוך מדי/);
+  ln = W('gabbaiLink', k, s);
+  assert.equal(ln.prize, '770$ לטיסה לרבי'); assert.equal(ln.threshold, base.threshold); assert.equal(ln.rebbe, base.rebbe);
+  assert.equal(ln.from, Q.hebDateLong_(base.start)); assert(/^[א-ת״׳]+ ב[א-ת]/.test(ln.from), ln.from);
+  assert.equal(Q.hebDateLong_('2026-10-26'), 'ט״ו בחשוון תשפ״ז'); assert.equal(Q.hebDateLong_('2027-02-25'), 'י״ח באדר א׳ תשפ״ז');
+  g = W('gabbaiSaveSettings', k, s, base); assert.equal(g.prize, '770$ לטיסה לרבי', 'left out → unchanged');
   console.log('gabbai details OK');
 }
 

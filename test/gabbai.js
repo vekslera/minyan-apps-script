@@ -136,12 +136,21 @@ const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebK
   // the printable QR sign: the texts, with and without the gabbai's details
   const tx = await p.evaluate(() => [posterTexts({ name: '', dev: { name: 'מפתח', phone: '050-0000000' } }),
     posterTexts({ name: 'מניין לדוגמה', gabbai: { name: 'ישראל', phone: '050-1111111' }, dev: { name: 'מפתח', phone: '050-0000000' } }),
-    posterTexts({ name: 'מניין לדוגמה', gabbai: { name: 'ישראל', phone: '' }, dev: { name: 'מפתח', phone: '050-0000000' } })]);
+    posterTexts({ name: 'מניין לדוגמה', gabbai: { name: 'ישראל', phone: '' }, dev: { name: 'מפתח', phone: '050-0000000' } }),
+    posterTexts({ name: 'מניין לדוגמה', prize: 'פרס לדוגמה', threshold: 70, rebbe: 25, from: 'א׳ בכסלו', to: 'ב׳ בטבת', dev: {} }),
+    posterTexts({ name: 'מניין לדוגמה', prize: 'פרס לדוגמה', threshold: 0, rebbe: 0, from: 'א׳ בכסלו', to: '', dev: {} }),
+    posterTexts({ name: 'מניין לדוגמה', prize: '', threshold: 60, rebbe: 0, dev: {} })]);
   assert.equal(tx[0].title, 'רישום למניין', 'no name → "רישום למניין"');
   assert.equal(tx[0].who, 'גש למפתח או שלח סמס למספר'); assert.equal(tx[0].phone, '050-0000000'); assert.equal(tx[0].dev, '');
-  assert.equal(tx[1].who, 'גש לגבאי, ישראל, או שלח סמס למספר'); assert.equal(tx[1].phone, '050-1111111');
-  assert(/מפתח, 050-0000000/.test(tx[1].dev), 'the developer too');
-  assert.equal(tx[2].who, 'גש לגבאי, ישראל'); assert.equal(tx[2].phone, '');
+  assert.equal(tx[1].who, 'גש לישראל או שלח סמס למספר', 'no "גבאי" before the name'); assert.equal(tx[1].phone, '050-1111111');
+  assert.equal(tx[1].dev, 'תקלה טכנית? פנה למפתח, למספר 050-0000000', 'the developer too');
+  assert.equal(tx[2].who, 'גש לישראל'); assert.equal(tx[2].phone, '');
+  // the lottery, the report to the Rebbe and the period; left out when switched off or missing
+  assert.equal(tx[3].promo, 'מבצע!!! הגרלה על פרס לדוגמה'); assert.equal(tx[3].lottery, 'משתתפים בהגרלה: מי שהגיע 70% מהתפילות.');
+  assert.equal(tx[3].rebbe, 'יוזכרו בדו"ח מיוחד לרבי: מי שהגיע 25% מהתפילות.'); assert.equal(tx[3].dates, 'תאריכי הרישום: מא׳ בכסלו עד ב׳ בטבת.');
+  assert.equal(tx[3].steps.length, 4);
+  assert.deepEqual([tx[4].promo, tx[4].lottery, tx[4].rebbe, tx[4].dates], ['', '', '', ''], 'lottery and report off, no end date');
+  assert.equal(tx[5].promo, 'מבצע!!! הגרלה!', 'no prize');
   assert.equal(tx[1].top, 'בס"ד');
   if (LIBS) {
     const [dl] = await Promise.all([
